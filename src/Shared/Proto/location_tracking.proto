@@ -1,0 +1,39 @@
+syntax = "proto3";
+
+package LocationTracking;
+
+// Сервис для передачи координат курьера
+service LocationTrackingService {
+  rpc StreamLocation (stream UpdateLocationRequest) returns (stream LocationUpdate);
+  rpc GetCourierLocation (GetLocationRequest) returns (CourierLocation);
+}
+
+// Запрос на обновление локации
+message UpdateLocationRequest {
+  string courier_id = 1; // GUID as string
+  double latitude = 2;
+  double longitude = 3;
+  int32 accuracy = 4;
+  int64 timestamp_ms = 5;
+}
+
+// Ответ об обновлении локации
+message LocationUpdate {
+  bool success = 1;
+  string message = 2;
+  string courier_id = 3;
+}
+
+// Запрос на получение локации курьера
+message GetLocationRequest {
+  string courier_id = 1;
+}
+
+// Информация о локации курьера
+message CourierLocation {
+  string courier_id = 1;
+  double latitude = 2;
+  double longitude = 3;
+  int64 last_update_ms = 4;
+  int32 status = 5; // 0=offline, 1=online, 2=on_delivery, 3=resting
+}

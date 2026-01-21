@@ -1,0 +1,10 @@
+﻿@OrderService_HostAddress = http://localhost:5001
+
+POST {{OrderService_HostAddress}}/api/orders
+Content-Type: application/json
+
+{
+  "fromAddress": "A",
+  "toAddress": "B"
+}
+###

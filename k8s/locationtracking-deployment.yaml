@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: locationtracking
+  labels:
+    app: locationtracking
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: locationtracking
+  template:
+    metadata:
+      labels:
+        app: locationtracking
+    spec:
+      containers:
+        - name: locationtracking
+          image: your-registry/locationtracking:latest
+          ports:
+            - containerPort: 5003
+          env:
+            - name: Redis__Connection
+              value: "redis:6379"
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 80
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 80
+            initialDelaySeconds: 10
+            periodSeconds: 20
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: locationtracking
+spec:
+  selector:
+    app: locationtracking
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 5003

@@ -1,0 +1,33 @@
+﻿syntax = "proto3";
+
+option csharp_namespace = "Shared.Proto";
+
+service OrderGrpc {
+  rpc CreateOrder (CreateOrderRequest) returns (CreateOrderResponse);
+}
+
+message CreateOrderRequest {
+  string customerId = 1;
+  string fromAddress = 2;
+  string toAddress = 3;
+  double fromLatitude = 4;
+  double fromLongitude = 5;
+  double toLatitude = 6;
+  double toLongitude = 7;
+  string description = 8;
+  int32 weightGrams = 9;
+  int64 costCents = 10;
+  string courierNote = 11;
+  repeated OrderItem items = 12;
+}
+
+message OrderItem {
+  string productId = 1;
+  string name = 2;
+  int32 price = 3;
+  int32 quantity = 4;
+}
+
+message CreateOrderResponse {
+  string orderId = 1;
+}

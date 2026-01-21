@@ -1,0 +1,54 @@
+<Project>
+  <!-- Common Project Settings -->
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    
+    <!-- Assembly Info -->
+    <Company>Delivery Platform</Company>
+    <Product>Delivery Platform</Product>
+    <Description>Microservices-based Delivery Platform</Description>
+    <Version>0.1.0</Version>
+  </PropertyGroup>
+
+  <!-- NuGet Package Versions (centralized) -->
+  <ItemGroup>
+    <!-- Data Access & ORM -->
+    <PackageReference Update="Npgsql.EntityFrameworkCore.PostgreSQL" Version="9.0.0" />
+    <PackageReference Update="Microsoft.EntityFrameworkCore.Tools" Version="9.0.0" />
+    
+    <!-- Caching -->
+    <PackageReference Update="StackExchange.Redis" Version="2.8.0" />
+    
+    <!-- Messaging -->
+    <PackageReference Update="Confluent.Kafka" Version="2.4.0" />
+    <PackageReference Update="MassTransit.Kafka" Version="8.1.6" />
+    
+    <!-- Logging & Observability -->
+    <PackageReference Update="Serilog.AspNetCore" Version="8.0.1" />
+    <PackageReference Update="Serilog.Sinks.Console" Version="5.1.0" />
+    <PackageReference Update="OpenTelemetry.Exporter.Console" Version="1.8.0" />
+    <PackageReference Update="OpenTelemetry.Extensions.Hosting" Version="1.8.0" />
+    <PackageReference Update="OpenTelemetry.Instrumentation.AspNetCore" Version="1.8.1" />
+    <PackageReference Update="OpenTelemetry.Instrumentation.Http" Version="1.8.1" />
+    
+    <!-- gRPC -->
+    <PackageReference Update="Grpc.AspNetCore" Version="2.64.0" />
+    <PackageReference Update="Google.Protobuf" Version="3.25.1" />
+    <PackageReference Update="Grpc.Tools" Version="2.64.0" />
+    
+    <!-- Real-time -->
+    <PackageReference Update="Microsoft.AspNetCore.SignalR.Protocols.MessagePack" Version="9.0.0" />
+    
+    <!-- Resilience & Health Checks -->
+    <PackageReference Update="Polly" Version="8.2.0" />
+    <PackageReference Update="Polly.CircuitBreaker" Version="8.2.0" />
+    
+    <!-- Testing -->
+    <PackageReference Update="xunit" Version="2.6.6" />
+    <PackageReference Update="xunit.runner.visualstudio" Version="2.5.6" />
+    <PackageReference Update="Moq" Version="4.20.70" />
+  </ItemGroup>
+</Project>
