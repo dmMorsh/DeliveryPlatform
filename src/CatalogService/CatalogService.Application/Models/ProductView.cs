@@ -1,6 +1,3 @@
 ﻿namespace CatalogService.Application.Models;
 
-public class ProductView
-{
-    
-}
+public record ProductView(Guid Id, string Name, string Description, long PriceCents, int StockQuantity, DateTime CreatedAt);

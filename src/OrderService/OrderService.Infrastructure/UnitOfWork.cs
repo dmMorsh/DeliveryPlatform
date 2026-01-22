@@ -1,4 +1,3 @@
-using OrderService.Application;
 using OrderService.Application.Interfaces;
 using OrderService.Application.Models;
 using OrderService.Infrastructure.Persistence;

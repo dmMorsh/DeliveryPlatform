@@ -1,5 +1,5 @@
+using CourierService.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
-using CourierService.Data;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;

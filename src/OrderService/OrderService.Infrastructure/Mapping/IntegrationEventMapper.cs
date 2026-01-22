@@ -1,7 +1,8 @@
 using OrderService.Application.Interfaces;
 using OrderService.Domain;
+using OrderService.Domain.Events;
+using OrderService.Domain.SeedWork;
 using Shared.Contracts.Events;
-using System.Linq;
 
 namespace OrderService.Infrastructure.Mapping;
 

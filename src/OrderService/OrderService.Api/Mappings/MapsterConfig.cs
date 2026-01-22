@@ -1,7 +1,5 @@
 using Mapster;
 using Shared.Proto;
-using ProtoOrderItem = Shared.Proto.OrderItem;
-using DomainOrderItem = OrderService.Domain.OrderItem;
 
 namespace OrderService.Api.Mappings;
 

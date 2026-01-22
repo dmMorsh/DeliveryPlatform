@@ -1,3 +1,5 @@
+using OrderService.Domain.SeedWork;
+
 namespace OrderService.Domain;
 
 public abstract class AggregateRoot : Entity

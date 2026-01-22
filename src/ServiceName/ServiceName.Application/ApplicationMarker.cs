@@ -1,5 +1,3 @@
 ﻿namespace ServiceName.Application;
 
-public class ApplicationMarker
-{
-}
+public sealed class ApplicationMarker;

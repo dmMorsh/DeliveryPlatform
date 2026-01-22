@@ -1,6 +1,4 @@
-using System;
-
-namespace OrderService.Domain;
+namespace OrderService.Domain.SeedWork;
 
 public abstract class DomainEvent
 {

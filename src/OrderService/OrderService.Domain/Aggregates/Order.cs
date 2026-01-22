@@ -1,3 +1,4 @@
+using OrderService.Domain.Events;
 using OrderService.Domain.ValueObjects;
 
 namespace OrderService.Domain;

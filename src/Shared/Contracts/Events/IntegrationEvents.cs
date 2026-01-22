@@ -1,6 +1,3 @@
-using System;
-using System.Collections.Generic;
-
 namespace Shared.Contracts.Events;
 
 public abstract class IntegrationEvent

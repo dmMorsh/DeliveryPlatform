@@ -1,7 +1,7 @@
 using CourierService.Domain.Events;
 using Shared.Contracts.Events;
 
-namespace CourierService.Services;
+namespace CourierService.Application.Mapping;
 
 public interface ICourierIntegrationEventMapper
 {

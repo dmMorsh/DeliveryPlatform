@@ -1,4 +1,7 @@
-namespace CourierService.Infrastructure;
+using Shared.Contracts.Events;
+using Shared.Utilities;
+
+namespace CourierService.Application.Models;
 
 public class OutboxMessage
 {
@@ -13,4 +16,14 @@ public class OutboxMessage
     public int RetryCount { get; set; }
     public DateTime? NextRetryAt { get; set; }
     public string? LastError { get; set; }
+    
+    public static OutboxMessage From(IntegrationEvent evt)
+        => new()
+        {
+            Id = Guid.NewGuid(),
+            AggregateId = evt.AggregateId,
+            Type = evt.EventType,
+            Payload = EventSerializer.SerializeEvent(evt),
+            OccurredAt = evt.Timestamp
+        };
 }

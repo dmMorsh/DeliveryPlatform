@@ -1,5 +1,3 @@
 ﻿namespace InventoryService.Application;
 
-public class ApplicationMarker
-{
-}
+public sealed class ApplicationMarker;

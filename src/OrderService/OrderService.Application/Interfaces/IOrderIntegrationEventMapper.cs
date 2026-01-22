@@ -1,4 +1,5 @@
 using OrderService.Domain;
+using OrderService.Domain.SeedWork;
 using Shared.Contracts.Events;
 
 namespace OrderService.Application.Interfaces;

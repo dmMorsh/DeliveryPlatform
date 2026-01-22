@@ -1,6 +1,10 @@
 using Microsoft.AspNetCore.Mvc;
+using MediatR;
 using Shared.Contracts;
-using CourierService.Services;
+using CourierService.Application.Commands.RegisterCourier;
+using CourierService.Application.Commands.UpdateCourierStatus;
+using CourierService.Application.Queries.GetCourier;
+using CourierService.Application.Queries.GetActiveCouriers;
 
 namespace CourierService.Controllers;
 
@@ -8,19 +12,19 @@ namespace CourierService.Controllers;
 [Route("api/[controller]")]
 public class CouriersController : ControllerBase
 {
-    private readonly CourierApplicationService _courierService;
+    private readonly IMediator _mediator;
     private readonly ILogger<CouriersController> _logger;
 
-    public CouriersController(CourierApplicationService courierService, ILogger<CouriersController> logger)
+    public CouriersController(IMediator mediator, ILogger<CouriersController> logger)
     {
-        _courierService = courierService;
+        _mediator = mediator;
         _logger = logger;
     }
 
     [HttpGet("{id}")]
     public async Task<IActionResult> GetCourier(Guid id)
     {
-        var result = await _courierService.GetCourierAsync(id);
+        var result = await _mediator.Send(new GetCourierQuery(id));
         if (!result.Success)
             return NotFound(result);
         return Ok(result);
@@ -32,7 +36,7 @@ public class CouriersController : ControllerBase
         if (!ModelState.IsValid)
             return BadRequest(ModelState);
 
-        var result = await _courierService.CreateCourierAsync(dto);
+        var result = await _mediator.Send(new RegisterCourierCommand(dto));
         if (!result.Success)
             return BadRequest(result);
 
@@ -42,7 +46,7 @@ public class CouriersController : ControllerBase
     [HttpPut("{id}")]
     public async Task<IActionResult> UpdateCourier(Guid id, [FromBody] UpdateCourierDto dto)
     {
-        var result = await _courierService.UpdateCourierAsync(id, dto);
+        var result = await _mediator.Send(new UpdateCourierStatusCommand(id, dto));
         if (!result.Success)
             return BadRequest(result);
         return Ok(result);
@@ -51,7 +55,7 @@ public class CouriersController : ControllerBase
     [HttpGet("active")]
     public async Task<IActionResult> GetActiveCouriers()
     {
-        var result = await _courierService.GetActiveCouriersAsync();
+        var result = await _mediator.Send(new GetActiveCouriersQuery());
         if (!result.Success)
             return BadRequest(result);
         return Ok(result);

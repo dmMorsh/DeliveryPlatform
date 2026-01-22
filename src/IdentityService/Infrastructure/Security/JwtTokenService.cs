@@ -2,7 +2,6 @@
 using System.Security.Claims;
 using System.Text;
 using IdentityService.Domain.Users;
-using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 
 namespace IdentityService.Infrastructure.Security;

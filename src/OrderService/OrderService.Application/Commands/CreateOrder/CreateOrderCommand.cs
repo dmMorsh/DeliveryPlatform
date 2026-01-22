@@ -1,5 +1,4 @@
 using MediatR;
-using Shared.Contracts;
 using Shared.Utilities;
 
 namespace OrderService.Application.Commands.CreateOrder;

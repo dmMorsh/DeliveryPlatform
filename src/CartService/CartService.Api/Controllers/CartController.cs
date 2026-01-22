@@ -1,11 +1,7 @@
-using CartService.Api.Services;
-using CartService.Application.Interfaces;
-using CartService.Application.Models;
-using CartService.Domain.Aggregates;
-using CartService.Domain.Entities;
-using CartService.Infrastructure.Persistence;
+using CartService.Application.Commands.AddItem;
+using CartService.Application.Commands.Checkout;
 using Microsoft.AspNetCore.Mvc;
-using Shared.Proto;
+using MediatR;
 
 namespace CartService.Api.Controllers;
 
@@ -13,108 +9,47 @@ namespace CartService.Api.Controllers;
 [Route("cart")]
 public class CartController : ControllerBase
 {
-    private readonly CartDbContext _db;
-    private readonly OrderGrpc.OrderGrpcClient _orderClient;
-    private readonly ICartRepository _repo;
-    private readonly Shared.Services.IEventProducer _producer;
-    private readonly ICartIntegrationEventMapper _mapper;
+    private readonly IMediator _mediator;
 
-    public CartController(CartDbContext db, OrderGrpc.OrderGrpcClient orderClient, ICartRepository repo, Shared.Services.IEventProducer producer, ICartIntegrationEventMapper mapper)
+    public CartController(IMediator mediator)
     {
-        _db = db;
-        _orderClient = orderClient;
-        _repo = repo;
-        _producer = producer;
-        _mapper = mapper;
+        _mediator = mediator;
     }
 
     [HttpPost("items")]
-    public async Task<IActionResult> AddItem()
+    public async Task<IActionResult> AddItem([FromBody] AddItemRequest request)
     {
-        var customerId = Guid.NewGuid(); // временно
+        var customerId = Guid.NewGuid(); // TODO: Get from Identity/JWT
 
-        var cart = await _repo.GetCartByCustomerIdAsync(customerId) ?? new Cart(customerId);
+        var cmd = new AddItemToCartCommand(
+            customerId,
+            request.ProductId,
+            request.Name,
+            request.Price,
+            request.Quantity
+        );
 
-        cart.AddItem(new CartItem(
-            Guid.NewGuid(),
-            "Burger",
-            350,
-            1));
+        var result = await _mediator.Send(cmd);
+        
+        if (!result.Success)
+            return BadRequest(result);
 
-        await _repo.CreateOrUpdateAsync(cart);
-
-        // persist domain events to outbox for reliable delivery
-        foreach (var de in cart.DomainEvents)
-        {
-            var ie = _mapper.MapFromDomainEvent(de);
-            if (ie == null) continue;
-
-            _db.OutboxMessages.Add(new OutboxMessage
-            {
-                Id = Guid.NewGuid(),
-                AggregateId = ie.AggregateId,
-                Type = ie.EventType,
-                Payload = Shared.Utilities.EventSerializer.SerializeEvent(ie),
-                OccurredAt = ie.Timestamp
-            });
-        }
-        await _db.SaveChangesAsync();
-        cart.ClearDomainEvents();
-
-        return Ok();
+        return Ok(result);
     }
     
     [HttpPost("checkout")]
-    public async Task<IActionResult> Checkout([FromBody] CheckoutRequest request)
+    public async Task<IActionResult> Checkout()
     {
-        var customerId = Guid.NewGuid(); // временно, вместо Identity
+        var customerId = Guid.NewGuid(); // TODO: Get from Identity/JWT
 
-        var cart = await _repo.GetCartByCustomerIdAsync(customerId);
+        var cmd = new CheckoutCartCommand(customerId);
+        var result = await _mediator.Send(cmd);
 
-        if (cart == null || !cart.Items.Any())
-            return BadRequest("Cart is empty");
+        if (!result.Success)
+            return BadRequest(result);
 
-        var grpcRequest = new CreateOrderRequest
-        {
-            CustomerId = customerId.ToString()
-        };
-        
-        grpcRequest.Items.AddRange(cart.Items.Select(i => new OrderItem
-        {
-            ProductId = i.ProductId.ToString(),
-            Name = i.Name,
-            Price = i.Price,
-            Quantity = i.Quantity
-        }));
-
-        var response = await _orderClient.CreateOrderAsync(grpcRequest);
-
-        // trigger checkout on aggregate
-        cart.Checkout();
-        await _repo.CreateOrUpdateAsync(cart);
-
-        // persist checkout event(s) to outbox
-        foreach (var de in cart.DomainEvents)
-        {
-            var ie = _mapper.MapFromDomainEvent(de);
-            if (ie == null) continue;
-
-            _db.OutboxMessages.Add(new OutboxMessage
-            {
-                Id = Guid.NewGuid(),
-                AggregateId = ie.AggregateId,
-                Type = ie.EventType,
-                Payload = Shared.Utilities.EventSerializer.SerializeEvent(ie),
-                OccurredAt = ie.Timestamp
-            });
-        }
-        await _db.SaveChangesAsync();
-        cart.ClearDomainEvents();
-
-        return Ok(new
-        {
-            orderId = response.OrderId
-        });
+        return Ok(new { cartId = result.Data });
     }
-
 }
+
+public record AddItemRequest(Guid ProductId, string Name, int Price, int Quantity);

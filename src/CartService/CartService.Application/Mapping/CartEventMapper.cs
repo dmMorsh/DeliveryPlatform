@@ -1,7 +1,7 @@
 using CartService.Domain.Events;
 using Shared.Contracts.Events;
 
-namespace CartService.Api.Services;
+namespace CartService.Application.Mapping;
 
 public interface ICartIntegrationEventMapper
 {

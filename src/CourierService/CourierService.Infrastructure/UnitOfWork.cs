@@ -1,8 +1,8 @@
-using Microsoft.EntityFrameworkCore;
+using CourierService.Application.Interfaces;
+using CourierService.Application.Models;
+using CourierService.Infrastructure.Persistence;
 
-using CourierService.Infrastructure;
-
-namespace CourierService.Data;
+namespace CourierService.Infrastructure;
 
 public class UnitOfWork : IUnitOfWork
 {
@@ -13,19 +13,11 @@ public class UnitOfWork : IUnitOfWork
         _db = db;
     }
 
-    public async Task SaveChangesAsync(CancellationToken ct = default)
+    public async Task SaveChangesAsync(List<OutboxMessage> outboxMessages, CancellationToken ct = default)
     {
-        // Ensure atomic commit of all staged changes (aggregates + outbox messages)
-        await using var tx = await _db.Database.BeginTransactionAsync(ct);
-        try
-        {
-            await _db.SaveChangesAsync(ct);
-            await tx.CommitAsync(ct);
-        }
-        catch
-        {
-            await tx.RollbackAsync(ct);
-            throw;
-        }
+        if (outboxMessages.Count > 0)
+            _db.OutboxMessages.AddRange(outboxMessages);
+
+        await _db.SaveChangesAsync(ct);
     }
 }

@@ -7,33 +7,33 @@ namespace CartService.Api.Repositories;
 
 public class CartRepository : ICartRepository
 {
-    private readonly CartDbContext _db;
+    private readonly CartDbContext _context;
 
-    public CartRepository(CartDbContext db)
+    public CartRepository(CartDbContext context)
     {
-        _db = db;
+        _context = context;
     }
 
-    public async Task<Cart?> GetCartByCustomerIdAsync(Guid customerId)
+    public async Task<Cart?> GetCartByCustomerIdAsync(Guid customerId, CancellationToken ct = default)
     {
-        return await _db.Carts.Include(c => c.Items).FirstOrDefaultAsync(c => c.CustomerId == customerId);
+        return await _context.Carts.Include(c => c.Items).FirstOrDefaultAsync(c => c.CustomerId == customerId, ct);
     }
 
-    public async Task<Cart> CreateOrUpdateAsync(Cart cart)
+    public async Task<Cart> CreateOrUpdateAsync(Cart cart, CancellationToken ct = default)
     {
-        var existing = await _db.Carts.FindAsync(cart.Id);
+        var existing = await _context.Carts.FindAsync(cart.Id);
         if (existing == null)
         {
-            _db.Carts.Add(cart);
+            _context.Carts.Add(cart);
         }
         else
         {
-            _db.Entry(existing).CurrentValues.SetValues(cart);
+            _context.Entry(existing).CurrentValues.SetValues(cart);
             // update owned collection
-            _db.Entry(existing).Collection(e => e.Items).CurrentValue = cart.Items.ToList();
+            _context.Entry(existing).Collection(e => e.Items).CurrentValue = cart.Items.ToList();
         }
 
-        await _db.SaveChangesAsync();
+        await _context.SaveChangesAsync();
         return cart;
     }
 }

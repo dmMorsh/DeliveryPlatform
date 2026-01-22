@@ -1,9 +1,13 @@
 using Microsoft.EntityFrameworkCore;
 using Serilog;
-using CourierService.Data;
+using CourierService.Application;
+using CourierService.Application.Interfaces;
+using CourierService.Application.Mapping;
+using CourierService.Infrastructure;
+using CourierService.Infrastructure.Persistence;
 using CourierService.Repositories;
-using CourierService.Services;
 using Shared.Services;
+using MediatR;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -13,6 +17,7 @@ builder.Host.UseSerilog((ctx, cfg) =>
 
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
+builder.Services.AddMediatR(typeof(ApplicationMarker).Assembly);
 
 var connectionString = builder.Configuration.GetConnectionString("PostgreSQL") 
     ?? "Host=localhost;Port=5432;Database=delivery_db;Username=postgres;Password=postgres;";
@@ -26,7 +31,6 @@ builder.Services.AddSingleton<IEventProducer, KafkaEventProducer>();
 builder.Services.AddHostedService<CourierService.Infrastructure.OutboxProcessor>();
 
 builder.Services.AddScoped<ICourierRepository, CourierRepository>();
-builder.Services.AddScoped<CourierApplicationService>();
 // Mapper for domain->integration events for courier
 builder.Services.AddSingleton<ICourierIntegrationEventMapper, CourierEventMapper>();
 // Unit of Work

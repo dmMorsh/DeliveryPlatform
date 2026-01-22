@@ -1,5 +1,4 @@
 using Microsoft.EntityFrameworkCore;
-using OrderService.Application;
 using OrderService.Application.Models;
 using OrderService.Domain;
 

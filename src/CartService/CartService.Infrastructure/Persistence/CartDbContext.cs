@@ -8,19 +8,14 @@ public class CartDbContext : DbContext
 {
     public DbSet<Cart> Carts => Set<Cart>();
     public DbSet<OutboxMessage> OutboxMessages => Set<OutboxMessage>();
-
-    protected override void OnConfiguring(DbContextOptionsBuilder options)
-    {
-        options.UseNpgsql(
-            "Host=localhost;Port=5432;Database=delivery_db;Username=postgres;Password=postgres");
-    }
-
+    
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        modelBuilder.Entity<Cart>(b =>
+        modelBuilder.Entity<Cart>(entity =>
         {
-            b.HasKey(x => x.Id);
-            b.OwnsMany(x => x.Items);
+            entity.HasKey(x => x.Id);
+            entity.Ignore(e => e.DomainEvents);
+            entity.OwnsMany(x => x.Items);
         });
     }
 }

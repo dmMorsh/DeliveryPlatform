@@ -1,4 +1,6 @@
-namespace OrderService.Domain;
+using OrderService.Domain.SeedWork;
+
+namespace OrderService.Domain.Events;
 
 public class OrderCreatedDomainEvent : DomainEvent
 {

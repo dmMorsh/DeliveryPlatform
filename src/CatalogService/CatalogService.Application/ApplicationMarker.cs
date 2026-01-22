@@ -1,5 +1,3 @@
 ﻿namespace CatalogService.Application;
 
-public class ApplicationMarker
-{
-}
+public sealed class ApplicationMarker;

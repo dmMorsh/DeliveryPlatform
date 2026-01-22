@@ -8,14 +8,14 @@ using OrderService.Application.Models;
 
 namespace OrderService.Application.Commands.CreateOrder;
 
-public class CreateOrderHandler : IRequestHandler<CreateOrderCommand, ApiResponse<OrderView>>
+public class CreateOrderCommandHandler : IRequestHandler<CreateOrderCommand, ApiResponse<OrderView>>
 {
     private readonly IOrderRepository _repository;
     private readonly IUnitOfWork _uow;
     private readonly IOrderIntegrationEventMapper _eventMapper;
-    private readonly ILogger<CreateOrderHandler> _logger;
+    private readonly ILogger<CreateOrderCommandHandler> _logger;
 
-    public CreateOrderHandler(IOrderRepository repository, IUnitOfWork uow, IOrderIntegrationEventMapper eventMapper, ILogger<CreateOrderHandler> logger)
+    public CreateOrderCommandHandler(IOrderRepository repository, IUnitOfWork uow, IOrderIntegrationEventMapper eventMapper, ILogger<CreateOrderCommandHandler> logger)
     {
         _repository = repository;
         _uow = uow;

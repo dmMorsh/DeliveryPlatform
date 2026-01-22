@@ -16,4 +16,10 @@
         <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="9.0.1" />
     </ItemGroup>
 
+    <ItemGroup>
+        <ProjectReference Include="..\CatalogService.Application\CatalogService.Application.csproj" />
+        <ProjectReference Include="..\CatalogService.Infrastructure\CatalogService.Infrastructure.csproj" />
+        <ProjectReference Include="..\..\Shared\Shared.csproj" />
+    </ItemGroup>
+
 </Project>

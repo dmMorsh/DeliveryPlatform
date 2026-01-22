@@ -7,8 +7,12 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <Folder Include="Persistence\" />
       <Folder Include="Repositories\" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\CatalogService.Domain\CatalogService.Domain.csproj" />
+        <ProjectReference Include="..\CatalogService.Application\CatalogService.Application.csproj" />
     </ItemGroup>
 
     <ItemGroup>

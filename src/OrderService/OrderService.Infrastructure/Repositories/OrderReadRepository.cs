@@ -7,16 +7,16 @@ namespace OrderService.Infrastructure.Repositories;
 
 public class OrderReadRepository : IOrderReadRepository
 {
-    private readonly OrderDbContext _db;
+    private readonly OrderDbContext _context;
 
-    public OrderReadRepository(OrderDbContext db)
+    public OrderReadRepository(OrderDbContext context)
     {
-        _db = db;
+        _context = context;
     }
 
     public async Task<OrderView?> GetByIdAsync(Guid id, CancellationToken ct)
     {
-        return await _db.Orders
+        return await _context.Orders
             .AsNoTracking()
             .Where(o => o.Id == id)
             .Select(o => new OrderView
@@ -40,7 +40,7 @@ public class OrderReadRepository : IOrderReadRepository
 
     public async Task<List<OrderView>> GetByClientIdAsync(Guid clientId, CancellationToken ct)
     {
-        return await _db.Orders
+        return await _context.Orders
             .Where(o => o.ClientId == clientId)
             .OrderByDescending(o => o.CreatedAt)
             .Select(o=> new OrderView

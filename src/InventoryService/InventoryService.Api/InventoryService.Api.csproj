@@ -16,4 +16,10 @@
         <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="9.0.1" />
     </ItemGroup>
 
+    <ItemGroup>
+        <ProjectReference Include="..\InventoryService.Application\InventoryService.Application.csproj" />
+        <ProjectReference Include="..\InventoryService.Infrastructure\InventoryService.Infrastructure.csproj" />
+        <ProjectReference Include="..\..\Shared\Shared.csproj" />
+    </ItemGroup>
+
 </Project>
