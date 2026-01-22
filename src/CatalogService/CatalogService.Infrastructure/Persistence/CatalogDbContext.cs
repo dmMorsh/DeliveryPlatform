@@ -6,15 +6,23 @@ namespace CatalogService.Infrastructure.Persistence;
 
 public class CatalogDbContext : DbContext
 {
+    public CatalogDbContext(DbContextOptions<CatalogDbContext> options) : base(options)
+    {
+    }
+
     public DbSet<Product> Products => Set<Product>();
     public DbSet<OutboxMessage> OutboxMessages => Set<OutboxMessage>();
-    
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        base.OnModelCreating(modelBuilder);
+        modelBuilder.HasDefaultSchema("catalog");
         modelBuilder.Entity<Product>(entity =>
         {
             entity.HasKey(x => x.Id);
             entity.Ignore(e => e.DomainEvents);
+            entity.OwnsOne(e => e.Price);
+            entity.OwnsOne(e => e.Weight);
         });
     }
 }

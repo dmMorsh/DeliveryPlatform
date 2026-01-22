@@ -2,9 +2,16 @@
 
 namespace CatalogService.Domain.ValueObjects;
 
-public class Weight(decimal value) : ValueObject
+public class Weight : ValueObject
 {
-    public decimal Value { get; } = value;
+    private Weight() { }
+    
+    public Weight(decimal value)
+    {
+        Value = value;
+    }
+
+    public decimal Value { get; }
 
     protected override IEnumerable<object?> GetEqualityComponents()
     {

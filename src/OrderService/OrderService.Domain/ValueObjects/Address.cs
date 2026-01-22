@@ -2,6 +2,7 @@
 
 public class Address : ValueObject
 {
+    private Address() { }
     public string Street { get; }
     public double Latitude { get; }
     public double Longitude { get; }

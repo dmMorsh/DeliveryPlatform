@@ -11,6 +11,8 @@ public class Product : AggregateRoot
     public Weight Weight { get; private set; }
     public bool IsActive { get; private set; }
 
+    private Product() {}
+    
     public Product(string name, Money price, Weight weight)
     {
         Id = Guid.NewGuid();

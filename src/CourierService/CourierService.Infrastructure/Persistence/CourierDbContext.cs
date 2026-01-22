@@ -17,7 +17,7 @@ public class CourierDbContext : DbContext
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
-
+        modelBuilder.HasDefaultSchema("couriers");
         modelBuilder.Entity<Courier>(entity =>
         {
             entity.HasKey(e => e.Id);

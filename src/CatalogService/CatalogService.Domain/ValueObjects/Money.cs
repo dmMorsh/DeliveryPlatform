@@ -4,6 +4,8 @@ namespace CatalogService.Domain.ValueObjects;
 
 public class Money : ValueObject
 {
+    private Money() { }
+    
     public Money(decimal amount, string currency)
     {
         Amount = amount;
