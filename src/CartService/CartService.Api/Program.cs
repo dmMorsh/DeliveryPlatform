@@ -1,10 +1,14 @@
+using CartService.Api.Repositories;
 using CartService.Application;
 using CartService.Application.Interfaces;
 using CartService.Application.Mapping;
 using CartService.Infrastructure;
+using CartService.Infrastructure.Outbox;
 using CartService.Infrastructure.Persistence;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Shared.Proto;
+using Shared.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -27,20 +31,20 @@ else
 
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
-builder.Services.AddGrpcClient<Shared.Proto.OrderGrpc.OrderGrpcClient>(o =>
+builder.Services.AddGrpcClient<OrderGrpc.OrderGrpcClient>(o =>
 {
     o.Address = new Uri("http://localhost:5001");
 });
 // Kafka Event Producer
-builder.Services.AddSingleton<Shared.Services.IEventProducer, Shared.Services.KafkaEventProducer>();
+builder.Services.AddSingleton<IEventProducer, KafkaEventProducer>();
 
 // Cart DDD services
 builder.Services.AddMediatR(typeof(ApplicationMarker).Assembly);
-builder.Services.AddScoped<ICartRepository, CartService.Api.Repositories.CartRepository>();
+builder.Services.AddScoped<ICartRepository, CartRepository>();
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddSingleton<ICartIntegrationEventMapper, CartEventMapper>();
 // Outbox processor
-builder.Services.AddHostedService<CartService.Infrastructure.Outbox.OutboxProcessor>();
+builder.Services.AddHostedService<OutboxProcessor>();
 
 var app = builder.Build();
 

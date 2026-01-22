@@ -40,7 +40,7 @@ else
 builder.Services.AddSingleton<IEventProducer, KafkaEventProducer>();
 
 // Outbox processor
-builder.Services.AddHostedService<CourierService.Infrastructure.OutboxProcessor>();
+builder.Services.AddHostedService<OutboxProcessor>();
 
 builder.Services.AddScoped<ICourierRepository, CourierRepository>();
 // Mapper for domain->integration events for courier
