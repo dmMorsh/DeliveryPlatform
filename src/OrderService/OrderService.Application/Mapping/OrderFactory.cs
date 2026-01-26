@@ -1,4 +1,4 @@
-using OrderService.Domain;
+using OrderService.Domain.Aggregates;
 using OrderService.Domain.Entities;
 
 namespace OrderService.Application.Mapping;

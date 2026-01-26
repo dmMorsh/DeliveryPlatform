@@ -1,8 +1,9 @@
 using OrderService.Domain.Entities;
 using OrderService.Domain.Events;
+using OrderService.Domain.SeedWork;
 using OrderService.Domain.ValueObjects;
 
-namespace OrderService.Domain;
+namespace OrderService.Domain.Aggregates;
 
 public enum OrderStatus
 {
@@ -32,13 +33,6 @@ public class Order : AggregateRoot
 
     private List<OrderItem> _items = new();
     public IReadOnlyCollection<OrderItem> Items => _items.AsReadOnly();
-
-    // Domain events raised by this aggregate
-    //private readonly List<DomainEvent> _domainEvents = new();
-    //public IReadOnlyCollection<DomainEvent> DomainEvents => _domainEvents.AsReadOnly();
-
-    //public void AddDomainEvent(DomainEvent evt) => _domainEvents.Add(evt);
-    //public void ClearDomainEvents() => _domainEvents.Clear();
 
     public void AssignCourier(Guid courierId)
     {

@@ -25,7 +25,7 @@ public class CartController : ControllerBase
 
         var (data, statusCode, error) = await _proxyService.ProxyPostAsync<dynamic>(
             "cart-service",
-            "/api/cart",
+            "/api/cart/items",
             request,
             ct
         );

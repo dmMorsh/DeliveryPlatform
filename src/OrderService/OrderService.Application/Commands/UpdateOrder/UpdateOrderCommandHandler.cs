@@ -3,7 +3,7 @@ using MediatR;
 using Microsoft.Extensions.Logging;
 using OrderService.Application.Interfaces;
 using OrderService.Application.Models;
-using OrderService.Domain;
+using OrderService.Domain.Aggregates;
 using Shared.Utilities;
 
 namespace OrderService.Application.Commands.UpdateOrder;

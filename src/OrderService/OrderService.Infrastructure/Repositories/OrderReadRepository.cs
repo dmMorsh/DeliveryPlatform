@@ -1,6 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using OrderService.Application;
 using OrderService.Application.Interfaces;
+using OrderService.Application.Models;
 using OrderService.Infrastructure.Persistence;
 
 namespace OrderService.Infrastructure.Repositories;
@@ -23,17 +23,11 @@ public class OrderReadRepository : IOrderReadRepository
             {
                 Id = o.Id,
                 OrderNumber = o.OrderNumber,
-                Status = int.Parse(o.Status.ToString()),//o.Status.ToString(),
+                Status = (int)o.Status,
                 FromAddress = o.From.Street,
                 ToAddress = o.To.Street,
                 CostCents = o.CostCents.Amount,
-                // Items = o.Items.Select(i => new OrderItemDto
-                // {
-                //     ProductId = i.ProductId,
-                //     Name = i.Name,
-                //     Price = i.Price,
-                //     Quantity = i.Quantity
-                // }).ToList()
+                Items = o.Items.Select(i => new OrderViewItem(i.ProductId,i.Name,i.Price, i.Quantity)).ToArray()
             })
             .FirstOrDefaultAsync(ct);
     }
@@ -47,10 +41,11 @@ public class OrderReadRepository : IOrderReadRepository
             {
                 Id = o.Id,
                 OrderNumber = o.OrderNumber,
-                Status = int.Parse(o.Status.ToString()),
+                Status = (int)o.Status,
                 FromAddress = o.From.Street,
                 ToAddress = o.To.Street,
                 CostCents = o.CostCents.Amount,
+                Items = o.Items.Select(i => new OrderViewItem(i.ProductId,i.Name,i.Price, i.Quantity)).ToArray()
             })
             .ToListAsync(ct);
     }

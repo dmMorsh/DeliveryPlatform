@@ -1,4 +1,4 @@
-using OrderService.Domain;
+using OrderService.Domain.Aggregates;
 
 namespace OrderService.Application.Interfaces;
 

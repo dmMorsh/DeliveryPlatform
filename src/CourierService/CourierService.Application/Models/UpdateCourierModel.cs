@@ -1,6 +1,6 @@
 ﻿namespace CourierService.Application.Models;
 
-public class UpdateCourierModel
+public record UpdateCourierModel
 {
     public int? Status { get; set; }
     public double? CurrentLatitude { get; set; }

@@ -1,6 +1,6 @@
 ﻿namespace CourierService.Application.Models;
 
-public class CourierView
+public record CourierView
 {
     public Guid Id { get; set; }
     public string FullName { get; set; } = string.Empty;

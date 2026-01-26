@@ -1,6 +1,6 @@
 using CourierService.Domain.Aggregates;
 
-namespace CourierService.Repositories;
+namespace CourierService.Application.Interfaces;
 
 public interface ICourierRepository
 {

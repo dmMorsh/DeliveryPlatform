@@ -1,5 +1,5 @@
 using OrderService.Application.Interfaces;
-using OrderService.Domain;
+using OrderService.Domain.Aggregates;
 using OrderService.Domain.Events;
 using Shared.Contracts.Events;
 

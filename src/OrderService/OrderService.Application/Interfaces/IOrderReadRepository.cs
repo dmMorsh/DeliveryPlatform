@@ -1,4 +1,6 @@
-﻿namespace OrderService.Application.Interfaces;
+﻿using OrderService.Application.Models;
+
+namespace OrderService.Application.Interfaces;
 
 public interface IOrderReadRepository
 {

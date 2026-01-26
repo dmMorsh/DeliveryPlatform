@@ -1,6 +1,7 @@
 ﻿namespace InventoryService.Application.Models;
 
-public class StockView
+public record StockView
 {
-    
+    public Guid ProductId { get; set; }
+    public int AvailableQuantity { get; set; }
 }

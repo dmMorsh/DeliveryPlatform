@@ -1,6 +1,7 @@
 using CartService.Application.Commands.AddItem;
 using CartService.Application.Commands.Checkout;
 using CartService.Application.Models;
+using CartService.Application.Queries.GetCart;
 using Microsoft.AspNetCore.Mvc;
 using MediatR;
 
@@ -16,8 +17,25 @@ public class CartController : ControllerBase
     {
         _mediator = mediator;
     }
+    
+    [HttpGet]
+    public async Task<IActionResult> GetCart(CancellationToken ct)
+    {
+        var customerId = GetCustomerIdFromContext();
+        if (customerId == Guid.Empty)
+            return Unauthorized(new { error = "Customer ID not found in context" });
 
-    [HttpPost]
+        var query = new GetCartQuery(customerId);
+
+        var result = await _mediator.Send(query, ct);
+        
+        if (!result.Success)
+            return BadRequest(result);
+
+        return Ok(result);
+    }
+
+    [HttpPost("items")]
     public async Task<IActionResult> AddItem([FromBody] AddItemModel model, CancellationToken ct)
     {
         var customerId = GetCustomerIdFromContext();

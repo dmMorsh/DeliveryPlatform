@@ -1,4 +1,6 @@
-﻿namespace OrderService.Domain.ValueObjects;
+﻿using OrderService.Domain.SeedWork;
+
+namespace OrderService.Domain.ValueObjects;
 
 public class Address : ValueObject
 {

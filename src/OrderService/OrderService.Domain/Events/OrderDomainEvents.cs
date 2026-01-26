@@ -1,3 +1,4 @@
+using OrderService.Domain.Aggregates;
 using OrderService.Domain.SeedWork;
 
 namespace OrderService.Domain.Events;

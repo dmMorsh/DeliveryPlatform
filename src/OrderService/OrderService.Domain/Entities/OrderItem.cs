@@ -1,3 +1,5 @@
+using OrderService.Domain.SeedWork;
+
 namespace OrderService.Domain.Entities;
 
 public class OrderItem : Entity

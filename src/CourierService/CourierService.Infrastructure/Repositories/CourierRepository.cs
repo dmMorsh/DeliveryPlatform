@@ -1,8 +1,9 @@
+using CourierService.Application.Interfaces;
 using CourierService.Domain.Aggregates;
 using CourierService.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
-namespace CourierService.Repositories;
+namespace CourierService.Infrastructure.Repositories;
 
 public class CourierRepository : ICourierRepository
 {

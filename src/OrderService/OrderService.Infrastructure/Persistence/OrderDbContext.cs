@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using OrderService.Application.Models;
-using OrderService.Domain;
+using OrderService.Domain.Aggregates;
 
 namespace OrderService.Infrastructure.Persistence;
 

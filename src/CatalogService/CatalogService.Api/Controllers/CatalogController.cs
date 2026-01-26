@@ -36,9 +36,9 @@ public class CatalogController : ControllerBase
     [HttpGet("{id}")]
     public async Task<IActionResult> GetProductById(Guid id, CancellationToken ct)
     {
-        var cmd = new GetProductByIdQuery(id);
+        var query = new GetProductByIdQuery(id);
         
-        var result = await _mediator.Send(cmd, ct);
+        var result = await _mediator.Send(query, ct);
 
         if (!result.Success)
             return BadRequest(result);
@@ -51,7 +51,7 @@ public class CatalogController : ControllerBase
         [FromQuery] SearchProductsRequest request,
         CancellationToken ct)
     {
-        var cmd = new SearchProductsQuery(
+        var query = new SearchProductsQuery(
             request.Text,
             request.CategoryId,
             request.MinPrice,
@@ -62,7 +62,7 @@ public class CatalogController : ControllerBase
             request.PageSize
         );
 
-        var result = await _mediator.Send(cmd, ct);
+        var result = await _mediator.Send(query, ct);
 
         if (!result.Success)
             return BadRequest(result);

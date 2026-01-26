@@ -1,6 +1,6 @@
-﻿namespace OrderService.Application;
+﻿namespace OrderService.Application.Models;
 
-public class OrderView
+public record OrderView
 {
     public Guid Id { get; set; }
     public string OrderNumber { get; set; } = string.Empty;
@@ -21,4 +21,7 @@ public class OrderView
     public DateTime? AssignedAt { get; set; }
     public DateTime? DeliveredAt { get; set; }
     public DateTime UpdatedAt { get; set; }
+    public IReadOnlyCollection<OrderViewItem> Items { get; init; } = Array.Empty<OrderViewItem>();
 }
+
+public record OrderViewItem(Guid ProductId,  string Name, int Price, int Quantity);

@@ -25,9 +25,9 @@ public class OrdersController : ControllerBase
     [HttpGet("{id}")]
     public async Task<IActionResult> GetOrder(Guid id, CancellationToken ct)
     {
-        var cmd = new GetOrderQuery(id);
+        var query = new GetOrderQuery(id);
         
-        var result = await _mediator.Send(cmd, ct);
+        var result = await _mediator.Send(query, ct);
         if (!result.Success)
             return NotFound(result);
         
@@ -71,9 +71,9 @@ public class OrdersController : ControllerBase
     [HttpGet("client/{clientId}")]
     public async Task<IActionResult> GetClientOrders(Guid clientId, CancellationToken ct)
     {
-        var cmd = new GetClientOrdersQuery(clientId);
+        var query = new GetClientOrdersQuery(clientId);
         
-        var result = await _mediator.Send(cmd, ct);
+        var result = await _mediator.Send(query, ct);
         if (!result.Success)
             return NotFound(result);
         

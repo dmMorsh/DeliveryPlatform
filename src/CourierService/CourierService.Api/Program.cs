@@ -8,7 +8,7 @@ using CourierService.Application.Services;
 using CourierService.Infrastructure;
 using CourierService.Infrastructure.Outbox;
 using CourierService.Infrastructure.Persistence;
-using CourierService.Repositories;
+using CourierService.Infrastructure.Repositories;
 using Shared.Services;
 using MediatR;
 

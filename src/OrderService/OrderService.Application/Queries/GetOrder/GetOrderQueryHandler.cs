@@ -1,5 +1,6 @@
 ﻿using MediatR;
 using OrderService.Application.Interfaces;
+using OrderService.Application.Models;
 using Shared.Utilities;
 
 namespace OrderService.Application.Queries.GetOrder;

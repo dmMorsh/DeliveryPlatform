@@ -9,7 +9,7 @@
     <ItemGroup>
       <Folder Include="Commands\AdjustStock\" />
       <Folder Include="Commands\ReleaseStock\" />
-      <Folder Include="Queries\" />
+      <Folder Include="Queries\CheckAvailability\" />
     </ItemGroup>
     
     <ItemGroup>

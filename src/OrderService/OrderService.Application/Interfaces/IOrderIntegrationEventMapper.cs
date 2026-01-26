@@ -1,4 +1,4 @@
-using OrderService.Domain;
+using OrderService.Domain.Aggregates;
 using Shared.Contracts.Events;
 
 namespace OrderService.Application.Interfaces;

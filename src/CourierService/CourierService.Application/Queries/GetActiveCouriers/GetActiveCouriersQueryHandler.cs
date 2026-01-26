@@ -1,8 +1,8 @@
+using CourierService.Application.Interfaces;
 using CourierService.Application.Models;
 using MediatR;
 using Mapster;
 using Shared.Utilities;
-using CourierService.Repositories;
 using Microsoft.Extensions.Logging;
 
 namespace CourierService.Application.Queries.GetActiveCouriers;

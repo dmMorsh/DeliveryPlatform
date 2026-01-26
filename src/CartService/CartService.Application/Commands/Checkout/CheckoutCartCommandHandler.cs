@@ -23,7 +23,7 @@ public class CheckoutCartCommandHandler : IRequestHandler<CheckoutCartCommand, A
     {
         var cart = await _repo.GetCartByCustomerIdAsync(request.CustomerId, ct);
 
-        if (cart == null || !cart.Items.Any())
+        if (cart == null || cart.Items.Count == 0)
             return ApiResponse<string>.ErrorResponse("Cart is empty or not found");
 
         cart.Checkout();

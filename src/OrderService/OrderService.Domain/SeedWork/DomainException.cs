@@ -1,4 +1,4 @@
-namespace OrderService.Domain;
+namespace OrderService.Domain.SeedWork;
 
 public sealed class DomainException : Exception
 {

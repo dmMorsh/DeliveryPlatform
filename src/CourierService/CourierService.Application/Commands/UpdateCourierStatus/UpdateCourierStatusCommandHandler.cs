@@ -5,7 +5,6 @@ using Shared.Utilities;
 using CourierService.Domain.Aggregates;
 using CourierService.Application.Mapping;
 using CourierService.Application.Models;
-using CourierService.Repositories;
 using Microsoft.Extensions.Logging;
 
 namespace CourierService.Application.Commands.UpdateCourierStatus;

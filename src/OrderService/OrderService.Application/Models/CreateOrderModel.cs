@@ -2,7 +2,7 @@
 
 namespace OrderService.Application.Models;
 
-public class CreateOrderModel
+public record CreateOrderModel
 {
     [Required(ErrorMessage = "ClientId is required")]
     public Guid ClientId { get; set; }
