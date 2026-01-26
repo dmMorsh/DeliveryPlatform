@@ -33,4 +33,9 @@ public class ProductRepository : IProductRepository
         }
         return Task.CompletedTask;
     }
+
+    public Task<IEnumerable<Product>> SearchAsync(string? requestSearchTerm, CancellationToken ct = default)
+    {
+        throw new NotImplementedException();
+    }
 }

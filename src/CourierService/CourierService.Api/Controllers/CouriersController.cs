@@ -1,42 +1,40 @@
-using Microsoft.AspNetCore.Mvc;
-using MediatR;
-using Shared.Contracts;
 using CourierService.Application.Commands.RegisterCourier;
 using CourierService.Application.Commands.UpdateCourierStatus;
-using CourierService.Application.Queries.GetCourier;
+using CourierService.Application.Models;
 using CourierService.Application.Queries.GetActiveCouriers;
+using CourierService.Application.Queries.GetCourier;
+using MediatR;
+using Microsoft.AspNetCore.Mvc;
 
-namespace CourierService.Controllers;
+namespace CourierService.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
 public class CouriersController : ControllerBase
 {
     private readonly IMediator _mediator;
-    private readonly ILogger<CouriersController> _logger;
 
-    public CouriersController(IMediator mediator, ILogger<CouriersController> logger)
+    public CouriersController(IMediator mediator)
     {
         _mediator = mediator;
-        _logger = logger;
     }
 
     [HttpGet("{id}")]
-    public async Task<IActionResult> GetCourier(Guid id)
+    public async Task<IActionResult> GetCourier(Guid id, CancellationToken ct)
     {
-        var result = await _mediator.Send(new GetCourierQuery(id));
+        var result = await _mediator.Send(new GetCourierQuery(id), ct);
         if (!result.Success)
             return NotFound(result);
         return Ok(result);
     }
 
     [HttpPost]
-    public async Task<IActionResult> CreateCourier([FromBody] CreateCourierDto dto)
+    public async Task<IActionResult> CreateCourier([FromBody] CreateCourierModel model, CancellationToken ct)
     {
         if (!ModelState.IsValid)
             return BadRequest(ModelState);
 
-        var result = await _mediator.Send(new RegisterCourierCommand(dto));
+        var result = await _mediator.Send(new RegisterCourierCommand(model), ct);
         if (!result.Success)
             return BadRequest(result);
 
@@ -44,18 +42,18 @@ public class CouriersController : ControllerBase
     }
 
     [HttpPut("{id}")]
-    public async Task<IActionResult> UpdateCourier(Guid id, [FromBody] UpdateCourierDto dto)
+    public async Task<IActionResult> UpdateCourier(Guid id, [FromBody] UpdateCourierModel model, CancellationToken ct)
     {
-        var result = await _mediator.Send(new UpdateCourierStatusCommand(id, dto));
+        var result = await _mediator.Send(new UpdateCourierStatusCommand(id, model), ct);
         if (!result.Success)
             return BadRequest(result);
         return Ok(result);
     }
 
     [HttpGet("active")]
-    public async Task<IActionResult> GetActiveCouriers()
+    public async Task<IActionResult> GetActiveCouriers(CancellationToken ct)
     {
-        var result = await _mediator.Send(new GetActiveCouriersQuery());
+        var result = await _mediator.Send(new GetActiveCouriersQuery(), ct);
         if (!result.Success)
             return BadRequest(result);
         return Ok(result);

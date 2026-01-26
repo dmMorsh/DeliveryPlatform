@@ -12,8 +12,12 @@ public class CourierRegisteredEvent : IntegrationEvent
     
     public override string EventType => "courier.registered";
     public override int Version => 1;
-    public override string AggregateType => "courier";
-    public override Guid AggregateId => CourierId;
+    public override string AggregateType => "Courier";
+    public override Guid AggregateId 
+    { 
+        get => CourierId;
+        set => CourierId = value;
+    }
 }
 
 /// <summary>
@@ -24,12 +28,17 @@ public class CourierStatusChangedEvent : IntegrationEvent
     public Guid CourierId { get; set; }
     public int PreviousStatus { get; set; }
     public int NewStatus { get; set; }
-    public string? Reason { get; set; }
+    //public string? Reason { get; set; }
+    public DateTime ChangedAt { get; set; }
     
     public override string EventType => "courier.status.changed";
     public override int Version => 1;
-    public override string AggregateType => "courier";
-    public override Guid AggregateId => CourierId;
+    public override string AggregateType => "Courier";
+    public override Guid AggregateId 
+    { 
+        get => CourierId;
+        set => CourierId = value;
+    }
 }
 
 /// <summary>
@@ -40,12 +49,17 @@ public class CourierLocationUpdatedEvent : IntegrationEvent
     public Guid CourierId { get; set; }
     public double Latitude { get; set; }
     public double Longitude { get; set; }
-    public int? Accuracy { get; set; }
+    //public int? Accuracy { get; set; }
+    public DateTime UpdatedAt { get; set; }
     
     public override string EventType => "courier.location.updated";
     public override int Version => 1;
-    public override string AggregateType => "courier";
-    public override Guid AggregateId => CourierId;
+    public override string AggregateType => "Courier";
+    public override Guid AggregateId 
+    { 
+        get => CourierId;
+        set => CourierId = value;
+    }
 }
 
 /// <summary>
@@ -61,5 +75,10 @@ public class CourierRatingUpdatedEvent : IntegrationEvent
     public override string EventType => "courier.rating.updated";
     public override int Version => 1;
     public override string AggregateType => "courier";
-    public override Guid AggregateId => CourierId;
+    public override Guid AggregateId 
+    { 
+        get => CourierId;
+        set => CourierId = value;
+    }
 }
+

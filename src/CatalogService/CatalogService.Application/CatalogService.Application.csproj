@@ -9,8 +9,6 @@
     <ItemGroup>
       <Folder Include="Commands\CreateProduct\" />
       <Folder Include="Commands\UpdateProduct\" />
-      <Folder Include="Queries\GetProductById\" />
-      <Folder Include="Queries\SearchProducts\" />
     </ItemGroup>
     
     <ItemGroup>

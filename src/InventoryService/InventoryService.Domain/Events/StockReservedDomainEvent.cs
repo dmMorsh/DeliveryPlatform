@@ -2,4 +2,9 @@
 
 namespace InventoryService.Domain.Events;
 
-public sealed class StockReservedDomainEvent(Guid ProductId, Guid OrderId, int Quantity ) : DomainEvent;
+public sealed class StockReservedDomainEvent : DomainEvent
+{
+    public Guid ProductId { get; set; }
+    public Guid OrderId { get; set; }
+    public int Quantity { get; set; }
+}

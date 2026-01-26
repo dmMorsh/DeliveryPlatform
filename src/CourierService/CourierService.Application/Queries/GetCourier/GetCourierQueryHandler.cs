@@ -1,13 +1,13 @@
+using CourierService.Application.Models;
 using MediatR;
 using Mapster;
-using Shared.Contracts;
 using Shared.Utilities;
 using CourierService.Repositories;
 using Microsoft.Extensions.Logging;
 
 namespace CourierService.Application.Queries.GetCourier;
 
-public class GetCourierQueryHandler : IRequestHandler<GetCourierQuery, ApiResponse<CourierDto>>
+public class GetCourierQueryHandler : IRequestHandler<GetCourierQuery, ApiResponse<CourierView>>
 {
     private readonly ICourierRepository _repository;
     private readonly ILogger<GetCourierQueryHandler> _logger;
@@ -18,22 +18,22 @@ public class GetCourierQueryHandler : IRequestHandler<GetCourierQuery, ApiRespon
         _logger = logger;
     }
 
-    public async Task<ApiResponse<CourierDto>> Handle(GetCourierQuery request, CancellationToken cancellationToken)
+    public async Task<ApiResponse<CourierView>> Handle(GetCourierQuery request, CancellationToken cancellationToken)
     {
         try
         {
             var courier = await _repository.GetCourierByIdAsync(request.CourierId);
             if (courier == null)
-                return ApiResponse<CourierDto>.ErrorResponse($"Courier {request.CourierId} not found");
+                return ApiResponse<CourierView>.ErrorResponse($"Courier {request.CourierId} not found");
 
-            var result = courier.Adapt<CourierDto>();
+            var result = courier.Adapt<CourierView>();
             result.Status = (int)courier.Status;
-            return ApiResponse<CourierDto>.SuccessResponse(result);
+            return ApiResponse<CourierView>.SuccessResponse(result);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error getting courier {CourierId}", request.CourierId);
-            return ApiResponse<CourierDto>.ErrorResponse("Internal server error");
+            return ApiResponse<CourierView>.ErrorResponse("Internal server error");
         }
     }
 }

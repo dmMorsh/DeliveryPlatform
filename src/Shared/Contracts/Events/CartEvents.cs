@@ -9,7 +9,11 @@ public class CartItemAddedEvent : IntegrationEvent
     public override string EventType => "cart.item.added";
     public override int Version => 1;
     public override string AggregateType => "cart";
-    public override Guid AggregateId => CartId;
+    public override Guid AggregateId 
+    { 
+        get => CartId;
+        set => CartId = value;
+    }
 }
 
 public class CartCheckedOutEvent : IntegrationEvent
@@ -20,5 +24,9 @@ public class CartCheckedOutEvent : IntegrationEvent
     public override string EventType => "cart.checked_out";
     public override int Version => 1;
     public override string AggregateType => "cart";
-    public override Guid AggregateId => CartId;
+    public override Guid AggregateId 
+    { 
+        get => CartId;
+        set => CartId = value;
+    }
 }

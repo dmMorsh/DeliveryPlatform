@@ -2,7 +2,6 @@ using CourierService.Application.Models;
 using CourierService.Domain.Aggregates;
 using Microsoft.EntityFrameworkCore;
 
-///application domain infrastucture interface
 namespace CourierService.Infrastructure.Persistence;
 
 public class CourierDbContext : DbContext

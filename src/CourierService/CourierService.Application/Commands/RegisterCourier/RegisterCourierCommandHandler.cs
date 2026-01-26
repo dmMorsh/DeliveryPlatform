@@ -1,7 +1,6 @@
 using CourierService.Application.Interfaces;
 using MediatR;
 using Mapster;
-using Shared.Contracts;
 using Shared.Utilities;
 using CourierService.Domain.Aggregates;
 using CourierService.Application.Mapping;
@@ -11,17 +10,17 @@ using Microsoft.Extensions.Logging;
 
 namespace CourierService.Application.Commands.RegisterCourier;
 
-public class RegisterCourierCommandHandler : IRequestHandler<RegisterCourierCommand, ApiResponse<CourierDto>>
+public class RegisterCourierCommandHandler : IRequestHandler<RegisterCourierCommand, ApiResponse<CourierView>>
 {
     private readonly ICourierRepository _repository;
     private readonly IUnitOfWork _uow;
-    private readonly ICourierIntegrationEventMapper _eventMapper;
+    private readonly ICourierEventMapper _eventMapper;
     private readonly ILogger<RegisterCourierCommandHandler> _logger;
 
     public RegisterCourierCommandHandler(
         ICourierRepository repository,
         IUnitOfWork uow,
-        ICourierIntegrationEventMapper eventMapper,
+        ICourierEventMapper eventMapper,
         ILogger<RegisterCourierCommandHandler> logger)
     {
         _repository = repository;
@@ -30,18 +29,18 @@ public class RegisterCourierCommandHandler : IRequestHandler<RegisterCourierComm
         _logger = logger;
     }
 
-    public async Task<ApiResponse<CourierDto>> Handle(RegisterCourierCommand request, CancellationToken cancellationToken)
+    public async Task<ApiResponse<CourierView>> Handle(RegisterCourierCommand request, CancellationToken cancellationToken)
     {
         try
         {
-            var dto = request.Dto;
+            var dto = request.Model;
 
             if (string.IsNullOrWhiteSpace(dto.FullName) || string.IsNullOrWhiteSpace(dto.Phone))
-                return ApiResponse<CourierDto>.ErrorResponse("Name and phone are required");
+                return ApiResponse<CourierView>.ErrorResponse("Name and phone are required");
 
             var existingCourier = await _repository.GetCourierByPhoneAsync(dto.Phone);
             if (existingCourier != null)
-                return ApiResponse<CourierDto>.ErrorResponse("Courier with this phone already exists");
+                return ApiResponse<CourierView>.ErrorResponse("Courier with this phone already exists");
 
             var courier = Courier.Register(dto.FullName, dto.Phone, dto.Email, dto.DocumentNumber);
 
@@ -61,14 +60,14 @@ public class RegisterCourierCommandHandler : IRequestHandler<RegisterCourierComm
             await _uow.SaveChangesAsync(outboxMessages, cancellationToken);
             created.ClearDomainEvents();
 
-            var result = created.Adapt<CourierDto>();
+            var result = created.Adapt<CourierView>();
             result.Status = (int)created.Status;
-            return ApiResponse<CourierDto>.SuccessResponse(result, "Courier created successfully");
+            return ApiResponse<CourierView>.SuccessResponse(result, "Courier created successfully");
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error creating courier");
-            return ApiResponse<CourierDto>.ErrorResponse("Internal server error");
+            return ApiResponse<CourierView>.ErrorResponse("Internal server error");
         }
     }
 }

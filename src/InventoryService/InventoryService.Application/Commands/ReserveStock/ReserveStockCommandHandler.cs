@@ -1,5 +1,6 @@
 ﻿using InventoryService.Application.Interfaces;
 using InventoryService.Application.Models;
+using InventoryService.Domain.Events;
 using Mapster;
 using MediatR;
 using Shared.Utilities;
@@ -11,13 +12,16 @@ public class ReserveStockCommandHandler
 {
     private readonly IStockItemRepository _repository;
     private readonly IUnitOfWork _uow;
+    private readonly IStockIntegrationEventMapper _eventMapper;
 
     public ReserveStockCommandHandler(
         IStockItemRepository repository,
-        IUnitOfWork uow)
+        IUnitOfWork uow,
+        IStockIntegrationEventMapper eventMapper)
     {
         _repository = repository;
         _uow = uow;
+        _eventMapper = eventMapper;
     }
 
     public async Task<ApiResponse<StockView>> Handle(
@@ -29,16 +33,20 @@ public class ReserveStockCommandHandler
                     ?? throw new NotFoundException("Stock item not found");
 
         stock.Reserve(request.Quantity, request.OrderId);
-//TODO fix event. add payload
-        var outboxMessages = stock.DomainEvents
-            .Select(de => new OutboxMessage
+
+        var outboxMessages = new List<OutboxMessage>();
+
+        foreach (var domainEvent in stock.DomainEvents)
+        {
+            if (domainEvent is StockReservedDomainEvent stockReservedEvent)
             {
-                Id = new Guid(),
-                AggregateId = stock.Id,
-                Type =  de.GetType().Name,
-                    
-            })
-            .ToList();
+                var integrationEvent = _eventMapper.MapStockReservedEvent(
+                    stockReservedEvent.ProductId,
+                    stockReservedEvent.OrderId,
+                    stockReservedEvent.Quantity);
+                outboxMessages.Add(OutboxMessage.From(integrationEvent));
+            }
+        }
         
         await _uow.SaveChangesAsync(outboxMessages, ct);
         stock.ClearDomainEvents();

@@ -5,6 +5,7 @@ package LocationTracking;
 // Сервис для передачи координат курьера
 service LocationTrackingService {
   rpc StreamLocation (stream UpdateLocationRequest) returns (stream LocationUpdate);
+  rpc UpdateLocation (UpdateLocationRequest) returns (LocationUpdate);
   rpc GetCourierLocation (GetLocationRequest) returns (CourierLocation);
 }
 

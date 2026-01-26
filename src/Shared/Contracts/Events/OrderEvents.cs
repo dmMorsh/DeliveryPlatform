@@ -5,8 +5,17 @@ namespace Shared.Contracts.Events;
 /// </summary>
 public class OrderCreatedEvent : IntegrationEvent
 {
+    public override string EventType => "order.created";
+    public override int Version => 1;
+    public override string AggregateType => "Order";
+    public override Guid AggregateId 
+    { 
+        get => OrderId;
+        set => OrderId = value;
+    }
+    
     public Guid OrderId { get; set; }
-    public string OrderNumber { get; set; } = string.Empty;
+    public string? OrderNumber { get; set; }
     public Guid ClientId { get; set; }
     public string FromAddress { get; set; } = string.Empty;
     public string ToAddress { get; set; } = string.Empty;
@@ -16,22 +25,18 @@ public class OrderCreatedEvent : IntegrationEvent
     public double ToLongitude { get; set; }
     public decimal CostCents { get; set; }
     public DateTime CreatedAt { get; set; }
-    public List<OrderItemSnapshot> Items { get; set; } = new();
-    
-    public override string EventType => "order.created";
-    public override int Version => 1;
-    public override string AggregateType => "order";
-    public override Guid AggregateId => OrderId;
+    public List<OrderEItemSnapshot> Items { get; set; } = new();
+    public string? Description { get; set; }
 }
 
 /// <summary>
 /// Снимок позиции заказа для событий
 /// </summary>
-public class OrderItemSnapshot
+public class OrderEItemSnapshot
 {
     public Guid ProductId { get; set; }
     public string Name { get; set; } = string.Empty;
-    public int Price { get; set; }
+    public long PriceCents { get; set; }
     public int Quantity { get; set; }
 }
 
@@ -40,31 +45,38 @@ public class OrderItemSnapshot
 /// </summary>
 public class OrderAssignedEvent : IntegrationEvent
 {
+    public override string EventType => "order.assigned";
+    public override int Version => 1;
+    public override string AggregateType => "Order";
+    public override Guid AggregateId 
+    { 
+        get => OrderId;
+        set => OrderId = value;
+    }
+    
     public Guid OrderId { get; set; }
     public Guid CourierId { get; set; }
     public string CourierName { get; set; } = string.Empty;
-    public string CourierPhone { get; set; } = string.Empty;
-    
-    public override string EventType => "order.assigned";
-    public override int Version => 1;
-    public override string AggregateType => "order";
-    public override Guid AggregateId => OrderId;
+    public string? CourierPhone { get; set; }
 }
 
-/// <summary>
-/// Event: Статус заказа изменился
-/// </summary>
 public class OrderStatusChangedEvent : IntegrationEvent
 {
+    public override string EventType => "order.status.changed";
+    public override int Version => 1;
+    public override string AggregateType => "Order";
+    public override Guid AggregateId 
+    { 
+        get => OrderId;
+        set => OrderId = value;
+    }
+    
     public Guid OrderId { get; set; }
     public int PreviousStatus { get; set; }
     public int NewStatus { get; set; }
     public string Reason { get; set; } = string.Empty;
-    
-    public override string EventType => "order.status.changed";
-    public override int Version => 1;
-    public override string AggregateType => "order";
-    public override Guid AggregateId => OrderId;
+    public int OldStatus { get; set; }
+    public DateTime ChangedAt { get; set; }
 }
 
 /// <summary>
@@ -72,14 +84,18 @@ public class OrderStatusChangedEvent : IntegrationEvent
 /// </summary>
 public class OrderDeliveredEvent : IntegrationEvent
 {
+    public override string EventType => "order.delivered";
+    public override int Version => 1;
+    public override string AggregateType => "Order";
+    public override Guid AggregateId 
+    { 
+        get => OrderId;
+        set => OrderId = value;
+    }
+    
     public Guid OrderId { get; set; }
     public Guid CourierId { get; set; }
     public DateTime DeliveredAt { get; set; }
     public string? Signature { get; set; }
     public string? Notes { get; set; }
-    
-    public override string EventType => "order.delivered";
-    public override int Version => 1;
-    public override string AggregateType => "order";
-    public override Guid AggregateId => OrderId;
 }

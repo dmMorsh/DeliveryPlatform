@@ -1,12 +1,13 @@
 using CartService.Application.Commands.AddItem;
 using CartService.Application.Commands.Checkout;
+using CartService.Application.Models;
 using Microsoft.AspNetCore.Mvc;
 using MediatR;
 
 namespace CartService.Api.Controllers;
 
 [ApiController]
-[Route("cart")]
+[Route("api/[controller]")]
 public class CartController : ControllerBase
 {
     private readonly IMediator _mediator;
@@ -16,20 +17,16 @@ public class CartController : ControllerBase
         _mediator = mediator;
     }
 
-    [HttpPost("items")]
-    public async Task<IActionResult> AddItem([FromBody] AddItemRequest request)
+    [HttpPost]
+    public async Task<IActionResult> AddItem([FromBody] AddItemModel model, CancellationToken ct)
     {
-        var customerId = Guid.NewGuid(); // TODO: Get from Identity/JWT
+        var customerId = GetCustomerIdFromContext();
+        if (customerId == Guid.Empty)
+            return Unauthorized(new { error = "Customer ID not found in context" });
 
-        var cmd = new AddItemToCartCommand(
-            customerId,
-            request.ProductId,
-            request.Name,
-            request.Price,
-            request.Quantity
-        );
+        var cmd = new AddItemToCartCommand(customerId, model);
 
-        var result = await _mediator.Send(cmd);
+        var result = await _mediator.Send(cmd, ct);
         
         if (!result.Success)
             return BadRequest(result);
@@ -38,18 +35,33 @@ public class CartController : ControllerBase
     }
     
     [HttpPost("checkout")]
-    public async Task<IActionResult> Checkout()
+    public async Task<IActionResult> Checkout(CancellationToken ct)
     {
-        var customerId = Guid.NewGuid(); // TODO: Get from Identity/JWT
+        var customerId = GetCustomerIdFromContext();
+        if (customerId == Guid.Empty)
+            return Unauthorized(new { error = "Customer ID not found in context" });
 
         var cmd = new CheckoutCartCommand(customerId);
-        var result = await _mediator.Send(cmd);
+        var result = await _mediator.Send(cmd, ct);
 
         if (!result.Success)
             return BadRequest(result);
 
         return Ok(new { cartId = result.Data });
     }
-}
 
-public record AddItemRequest(Guid ProductId, string Name, int Price, int Quantity);
+    private Guid GetCustomerIdFromContext()
+    {
+        // Try to get from JWT claims first
+        var userIdClaim = User?.FindFirst("sub") ?? User?.FindFirst("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier");
+        if (userIdClaim != null && Guid.TryParse(userIdClaim.Value, out var customerId))
+            return customerId;
+
+        // Fallback to User.Identity.Name if available (though should use claims)
+        if (!string.IsNullOrEmpty(User?.Identity?.Name) && Guid.TryParse(User.Identity.Name, out var nameGuid))
+            return nameGuid;
+
+        // Return empty GUID if not found - will be handled by caller
+        return Guid.Empty;
+    }
+}

@@ -12,7 +12,7 @@
     </ItemGroup>
 
     <ItemGroup>
-      <Folder Include="Commands\" />
+      <Folder Include="Commands\RemoveItem\" />
       <Folder Include="Queries\" />
     </ItemGroup>
     

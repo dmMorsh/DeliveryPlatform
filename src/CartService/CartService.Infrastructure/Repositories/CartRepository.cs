@@ -3,7 +3,7 @@ using CartService.Domain.Aggregates;
 using CartService.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
-namespace CartService.Api.Repositories;
+namespace CartService.Infrastructure.Repositories;
 
 public class CartRepository : ICartRepository
 {

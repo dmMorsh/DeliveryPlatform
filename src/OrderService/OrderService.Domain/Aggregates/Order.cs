@@ -1,3 +1,4 @@
+using OrderService.Domain.Entities;
 using OrderService.Domain.Events;
 using OrderService.Domain.ValueObjects;
 
@@ -78,8 +79,8 @@ public class Order : AggregateRoot
         string? courierNote,
         List<OrderItem>? items = null)
     {
-        if (!items.Any())
-            throw new  DomainException("Order must contain items");
+        if (items == null || !items.Any())
+            throw new DomainException("Order must contain items");
 
         var order = new Order
         {
@@ -98,7 +99,16 @@ public class Order : AggregateRoot
             _items = items ?? new List<OrderItem>()
         };
 
-        order.AddDomainEvent(new OrderCreatedDomainEvent { OrderId = order.Id });
+        order.AddDomainEvent(new OrderCreatedDomainEvent {
+            OrderId = order.Id,
+            AggregateId = order.Id,
+            OrderNumber = order.OrderNumber,
+            ClientId = order.ClientId,
+            FromAddress = order.From.Street,
+            ToAddress = order.To.Street,
+            CostCents = order.CostCents.Amount,
+            Description = order.Description
+        });
 
         return order;
     }

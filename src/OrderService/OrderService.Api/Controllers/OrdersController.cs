@@ -1,8 +1,9 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
-using OrderService.Application;
 using OrderService.Application.Commands.CreateOrder;
 using OrderService.Application.Commands.UpdateOrder;
+using OrderService.Application.Models;
+using OrderService.Application.Queries.GetClientOrders;
 using OrderService.Application.Queries.GetOrder;
 
 namespace OrderService.Api.Controllers;
@@ -12,12 +13,9 @@ namespace OrderService.Api.Controllers;
 public class OrdersController : ControllerBase
 {
     private readonly IMediator _mediator;
-    
-    private readonly ILogger<OrdersController> _logger;//TODO удалить?
 
-    public OrdersController(ILogger<OrdersController> logger, IMediator mediator)
+    public OrdersController(IMediator mediator)
     {
-        _logger = logger;
         _mediator = mediator;
     }
 
@@ -25,11 +23,11 @@ public class OrdersController : ControllerBase
     /// Получить заказ по ID
     /// </summary>
     [HttpGet("{id}")]
-    public async Task<IActionResult> GetOrder(Guid id)
+    public async Task<IActionResult> GetOrder(Guid id, CancellationToken ct)
     {
         var cmd = new GetOrderQuery(id);
         
-        var result = await _mediator.Send(cmd);
+        var result = await _mediator.Send(cmd, ct);
         if (!result.Success)
             return NotFound(result);
         
@@ -40,14 +38,14 @@ public class OrdersController : ControllerBase
     /// Создать новый заказ
     /// </summary>
     [HttpPost]
-    public async Task<IActionResult> CreateOrder([FromBody] CreateOrderModel createModel)
+    public async Task<IActionResult> CreateOrder([FromBody] CreateOrderModel createModel, CancellationToken ct)
     {
         if (!ModelState.IsValid)
             return BadRequest(ModelState);
         
         var cmd = new CreateOrderCommand(createModel);
 
-        var result = await _mediator.Send(cmd);
+        var result = await _mediator.Send(cmd, ct);
         if (!result.Success)
             return BadRequest(result);
 
@@ -58,10 +56,10 @@ public class OrdersController : ControllerBase
     /// Обновить заказ
     /// </summary>
     [HttpPut("{id}")]
-    public async Task<IActionResult> UpdateOrder(Guid id, [FromBody] UpdateOrderModel updateOrderModel)
+    public async Task<IActionResult> UpdateOrder(Guid id, [FromBody] UpdateOrderModel updateOrderModel, CancellationToken ct)
     {
         var cmd = new UpdateOrderCommand(id, updateOrderModel);
-        var result = await _mediator.Send(cmd);
+        var result = await _mediator.Send(cmd, ct);
         if (!result.Success)
             return BadRequest(result);
         return Ok(result);
@@ -70,14 +68,17 @@ public class OrdersController : ControllerBase
     /// <summary>
     /// Получить заказы клиента
     /// </summary>
-    // [HttpGet("client/{clientId}")]
-    // public async Task<IActionResult> GetClientOrders(Guid clientId)
-    // {
-    //     var result = await _orderService.GetClientOrdersAsync(clientId);
-    //     if (!result.Success)
-    //         return BadRequest(result);
-    //     return Ok(result);
-    // }
+    [HttpGet("client/{clientId}")]
+    public async Task<IActionResult> GetClientOrders(Guid clientId, CancellationToken ct)
+    {
+        var cmd = new GetClientOrdersQuery(clientId);
+        
+        var result = await _mediator.Send(cmd, ct);
+        if (!result.Success)
+            return NotFound(result);
+        
+        return Ok(result);
+    }
 
     /// <summary>
     /// Health check

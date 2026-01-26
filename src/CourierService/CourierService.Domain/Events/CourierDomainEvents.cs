@@ -1,32 +1,28 @@
 using CourierService.Domain.Aggregates;
+using CourierService.Domain.SeedWork;
 
 namespace CourierService.Domain.Events;
 
-public abstract class CourierDomainEvent
-{
-    public DateTime OccurredAt { get; } = DateTime.UtcNow;
-}
-
-public class CourierRegisteredDomainEvent : CourierDomainEvent
+public class CourierRegisteredDomainEvent : DomainEvent
 {
     public Guid CourierId { get; init; }
 }
 
-public class CourierStatusChangedDomainEvent : CourierDomainEvent
+public class CourierStatusChangedDomainEvent : DomainEvent
 {
     public Guid CourierId { get; init; }
     public CourierStatus PreviousStatus { get; init; }
     public CourierStatus NewStatus { get; init; }
 }
 
-public class CourierLocationUpdatedDomainEvent : CourierDomainEvent
+public class CourierLocationUpdatedDomainEvent : DomainEvent
 {
     public Guid CourierId { get; init; }
     public double Latitude { get; init; }
     public double Longitude { get; init; }
 }
 
-public class CourierRatingUpdatedDomainEvent : CourierDomainEvent
+public class CourierRatingUpdatedDomainEvent : DomainEvent
 {
     public Guid CourierId { get; init; }
     public double Rating { get; init; }

@@ -1,45 +1,84 @@
 using OrderService.Application.Interfaces;
 using OrderService.Domain;
 using OrderService.Domain.Events;
-using OrderService.Domain.SeedWork;
 using Shared.Contracts.Events;
 
 namespace OrderService.Infrastructure.Mapping;
 
 public class IntegrationEventMapper : IOrderIntegrationEventMapper
 {
-    public OrderCreatedEvent MapToOrderCreatedEvent(Order order)
+    public OrderAssignedEvent MapOrderAssignedEvent(Order order, Guid courierId, string courierName, string? courierPhone = null)
     {
-        return new OrderCreatedEvent
+        return new OrderAssignedEvent
         {
+            AggregateId = order.Id,
             OrderId = order.Id,
-            OrderNumber = order.OrderNumber,
-            ClientId = order.ClientId,
-            FromAddress = order.From.Street,
-            ToAddress = order.To.Street,
-            FromLatitude = order.From.Latitude,
-            FromLongitude = order.From.Longitude,
-            ToLatitude = order.To.Latitude,
-            ToLongitude = order.To.Longitude,
-            CostCents = order.CostCents.Amount,
-            CreatedAt = order.CreatedAt,
-            Items = order.Items.Select(i => new OrderItemSnapshot
-            {
-                ProductId = i.ProductId,
-                Name = i.Name,
-                Price = i.Price,
-                Quantity = i.Quantity
-            }).ToList()
+            CourierId = courierId,
+            CourierName = courierName,
+            CourierPhone = courierPhone
         };
     }
 
-    public IntegrationEvent? MapFromDomainEvent(DomainEvent domainEvent)
+    public OrderStatusChangedEvent MapOrderStatusChangedEvent(Order order, int oldStatus, int newStatus)
+    {
+        return new OrderStatusChangedEvent
+        {
+            AggregateId = order.Id,
+            OrderId = order.Id,
+            OldStatus = oldStatus,
+            NewStatus = newStatus,
+            ChangedAt = DateTime.UtcNow
+        };
+    }
+
+    public OrderDeliveredEvent MapOrderDeliveredEvent(Order order, Guid courierId)
+    {
+        return new OrderDeliveredEvent
+        {
+            AggregateId = order.Id,
+            OrderId = order.Id,
+            CourierId = courierId,
+            DeliveredAt = DateTime.UtcNow
+        };
+    }
+
+    public IntegrationEvent? MapFromDomainEvent(Domain.SeedWork.DomainEvent domainEvent)
     {
         return domainEvent switch
         {
-            OrderCreatedDomainEvent e => new OrderCreatedEvent { OrderId = e.OrderId, Timestamp = e.OccurredAt },
-            OrderAssignedDomainEvent e => new OrderAssignedEvent { OrderId = e.OrderId, CourierId = e.CourierId, Timestamp = e.OccurredAt },
-            OrderStatusChangedDomainEvent e => new OrderStatusChangedEvent { OrderId = e.OrderId, PreviousStatus = (int)e.PreviousStatus, NewStatus = (int)e.NewStatus, Timestamp = e.OccurredAt },
+            OrderCreatedDomainEvent e => new OrderCreatedEvent 
+            { 
+                AggregateId = e.AggregateId,
+                OrderNumber = e.OrderNumber,
+                ClientId = e.ClientId,
+                FromAddress = e.FromAddress,
+                ToAddress = e.ToAddress,
+                CostCents = e.CostCents,
+                Description = e.Description,
+                Timestamp = e.OccurredAt,
+                Items = e.Items.Select(i => new OrderEItemSnapshot
+                {
+                    ProductId = i.ProductId,
+                    Name = i.Name,
+                    PriceCents = i.PriceCents,
+                    Quantity = i.Quantity
+                }).ToList()
+            },
+            OrderAssignedDomainEvent e => new OrderAssignedEvent 
+            { 
+                AggregateId = e.AggregateId,
+                OrderId = e.OrderId, 
+                CourierId = e.CourierId, 
+                Timestamp = e.OccurredAt 
+            },
+            OrderStatusChangedDomainEvent e => new OrderStatusChangedEvent 
+            { 
+                AggregateId = e.AggregateId,
+                OrderId = e.OrderId, 
+                OldStatus = (int)e.PreviousStatus,
+                NewStatus = (int)e.NewStatus,
+                Timestamp = e.OccurredAt 
+            },
             _ => null
         };
     }

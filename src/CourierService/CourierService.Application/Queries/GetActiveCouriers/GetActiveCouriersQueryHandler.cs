@@ -1,13 +1,13 @@
+using CourierService.Application.Models;
 using MediatR;
 using Mapster;
-using Shared.Contracts;
 using Shared.Utilities;
 using CourierService.Repositories;
 using Microsoft.Extensions.Logging;
 
 namespace CourierService.Application.Queries.GetActiveCouriers;
 
-public class GetActiveCouriersQueryHandler : IRequestHandler<GetActiveCouriersQuery, ApiResponse<List<CourierDto>>>
+public class GetActiveCouriersQueryHandler : IRequestHandler<GetActiveCouriersQuery, ApiResponse<List<CourierView>>>
 {
     private readonly ICourierRepository _repository;
     private readonly ILogger<GetActiveCouriersQueryHandler> _logger;
@@ -18,23 +18,23 @@ public class GetActiveCouriersQueryHandler : IRequestHandler<GetActiveCouriersQu
         _logger = logger;
     }
 
-    public async Task<ApiResponse<List<CourierDto>>> Handle(GetActiveCouriersQuery request, CancellationToken cancellationToken)
+    public async Task<ApiResponse<List<CourierView>>> Handle(GetActiveCouriersQuery request, CancellationToken cancellationToken)
     {
         try
         {
             var couriers = await _repository.GetActiveCouriersAsync();
             var dtos = couriers.Select(c =>
             {
-                var dto = c.Adapt<CourierDto>();
+                var dto = c.Adapt<CourierView>();
                 dto.Status = (int)c.Status;
                 return dto;
             }).ToList();
-            return ApiResponse<List<CourierDto>>.SuccessResponse(dtos);
+            return ApiResponse<List<CourierView>>.SuccessResponse(dtos);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error getting active couriers");
-            return ApiResponse<List<CourierDto>>.ErrorResponse("Internal server error");
+            return ApiResponse<List<CourierView>>.ErrorResponse("Internal server error");
         }
     }
 }

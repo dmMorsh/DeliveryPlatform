@@ -43,10 +43,10 @@ public class StockItem : AggregateRoot
 
         ReservedQuantity += quantity;
 
-        AddDomainEvent(new StockReservedDomainEvent(
-            ProductId,
-            orderId,
-            quantity));
+        AddDomainEvent(new StockReservedDomainEvent{
+            ProductId = ProductId,
+            OrderId = orderId,
+            Quantity = quantity});
     }
 
     public void Release(int quantity, Guid orderId)
@@ -54,12 +54,15 @@ public class StockItem : AggregateRoot
         if (quantity <= 0)
             throw new DomainException("Quantity must be positive");
 
+        if (ReservedQuantity < quantity)
+            throw new DomainException("Cannot release more than reserved");
+
         ReservedQuantity -= quantity;
 
-        AddDomainEvent(new StockReleasedDomainEvent(
-            ProductId,
-            orderId,
-            quantity));
+        AddDomainEvent(new StockReleasedDomainEvent{
+            ProductId = ProductId,
+            OrderId = orderId,
+            Quantity = quantity});
     }
 
     public void CommitReservation(int quantity)

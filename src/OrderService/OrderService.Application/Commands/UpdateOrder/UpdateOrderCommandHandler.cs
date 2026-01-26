@@ -37,6 +37,7 @@ public class UpdateOrderCommandHandler
             return ApiResponse<OrderView>.ErrorResponse("Order not found");
 
         var dto = request.Model;
+        var oldStatus = order.Status;
 
         if (dto.Status.HasValue)
             order.ChangeStatus((OrderStatus)dto.Status.Value);
@@ -54,6 +55,20 @@ public class UpdateOrderCommandHandler
                 return OutboxMessage.From(ie!);
             })
             .ToList();
+
+        // Add status changed event if status was modified
+        if (dto.Status.HasValue && oldStatus != order.Status)
+        {
+            var statusChangeEvent = _eventMapper.MapOrderStatusChangedEvent(order, (int)oldStatus, (int)order.Status);
+            outboxMessages.Add(OutboxMessage.From(statusChangeEvent));
+        }
+
+        // Add order assigned event if courier was assigned
+        if (dto.CourierId.HasValue && order.CourierId == dto.CourierId.Value)
+        {
+            var assignedEvent = _eventMapper.MapOrderAssignedEvent(order, dto.CourierId.Value, dto.CourierName ?? "Unknown");
+            outboxMessages.Add(OutboxMessage.From(assignedEvent));
+        }
 
         await _uow.SaveChangesAsync(outboxMessages, ct);
         order.ClearDomainEvents();

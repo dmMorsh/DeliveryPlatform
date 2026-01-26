@@ -1,11 +1,11 @@
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using OrderService.Infrastructure.Persistence;
 using Shared.Services;
 
-namespace OrderService.Infrastructure;
+namespace OrderService.Infrastructure.Outbox;
 
 public class OutboxProcessor : BackgroundService
 {
@@ -48,13 +48,11 @@ public class OutboxProcessor : BackgroundService
     {
         using var scope = _scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<OrderDbContext>();
-
-        var now = DateTime.UtcNow;
-
+        
         var messages = await db.OutboxMessages
             .FromSqlRaw("""
                 SELECT *
-                    FROM "OutboxMessages" 
+                    FROM "order"."OutboxMessages" 
                     where "PublishedAt" IS NULL
                       AND ("NextRetryAt" IS NULL OR "NextRetryAt" <= NOW())
                     ORDER BY "OccurredAt"

@@ -1,4 +1,5 @@
 using Mapster;
+using OrderService.Application.Models;
 using Shared.Proto;
 
 namespace OrderService.Api.Mappings;
@@ -21,7 +22,7 @@ public static class MapsterConfig
         //     .MapWith(src => src);
 
         // Map gRPC request -> application DTO
-        TypeAdapterConfig<CreateOrderRequest, Application.CreateOrderModel>
+        TypeAdapterConfig<CreateOrderRequest, CreateOrderModel>
             .NewConfig()
             .Map(dest => dest.ClientId, src => Guid.Parse(src.CustomerId))
             .Map(dest => dest.FromAddress, src => src.FromAddress)

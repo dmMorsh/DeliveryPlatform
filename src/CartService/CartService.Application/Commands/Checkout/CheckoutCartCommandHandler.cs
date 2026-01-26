@@ -1,5 +1,7 @@
 using MediatR;
 using CartService.Application.Interfaces;
+using CartService.Application.Mapping;
+using CartService.Domain.Events;
 using Shared.Utilities;
 
 namespace CartService.Application.Commands.Checkout;
@@ -8,11 +10,13 @@ public class CheckoutCartCommandHandler : IRequestHandler<CheckoutCartCommand, A
 {
     private readonly ICartRepository _repo;
     private readonly IUnitOfWork _uow;
+    private readonly ICartIntegrationEventMapper _eventMapper;
 
-    public CheckoutCartCommandHandler(ICartRepository repo, IUnitOfWork uow)
+    public CheckoutCartCommandHandler(ICartRepository repo, IUnitOfWork uow, ICartIntegrationEventMapper eventMapper)
     {
         _repo = repo;
         _uow = uow;
+        _eventMapper = eventMapper;
     }
 
     public async Task<ApiResponse<string>> Handle(CheckoutCartCommand request, CancellationToken ct)
@@ -25,15 +29,19 @@ public class CheckoutCartCommandHandler : IRequestHandler<CheckoutCartCommand, A
         cart.Checkout();
         await _repo.CreateOrUpdateAsync(cart, ct);
 
-        var outboxMessages = cart.DomainEvents
-            .Select(de => new Models.OutboxMessage
+        var outboxMessages = new List<Models.OutboxMessage>();
+        
+        foreach (var domainEvent in cart.DomainEvents)
+        {
+            if (domainEvent is CartDomainEvent cartEvent)
             {
-                Id = Guid.NewGuid(),
-                AggregateId = cart.Id,
-                Type = de.GetType().Name,
-                OccurredAt = DateTime.UtcNow
-            })
-            .ToList();
+                var integrationEvent = _eventMapper.MapFromDomainEvent(cartEvent);
+                if (integrationEvent != null)
+                {
+                    outboxMessages.Add(Models.OutboxMessage.From(integrationEvent));
+                }
+            }
+        }
 
         await _uow.SaveChangesAsync(outboxMessages, ct);
         cart.ClearDomainEvents();

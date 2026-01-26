@@ -3,9 +3,9 @@
 public class Address : ValueObject
 {
     private Address() { }
-    public string Street { get; }
-    public double Latitude { get; }
-    public double Longitude { get; }
+    public string Street { get; private set; }
+    public double Latitude { get; private set; }
+    public double Longitude { get; private set; }
 
     public Address(string street, double latitude, double longitude)
     {

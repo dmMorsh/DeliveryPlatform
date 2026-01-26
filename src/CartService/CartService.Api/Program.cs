@@ -1,14 +1,16 @@
-using CartService.Api.Repositories;
 using CartService.Application;
 using CartService.Application.Interfaces;
 using CartService.Application.Mapping;
+using CartService.Application.Services;
 using CartService.Infrastructure;
 using CartService.Infrastructure.Outbox;
 using CartService.Infrastructure.Persistence;
+using CartService.Infrastructure.Repositories;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Shared.Proto;
 using Shared.Services;
+using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -37,14 +39,19 @@ builder.Services.AddGrpcClient<OrderGrpc.OrderGrpcClient>(o =>
 });
 // Kafka Event Producer
 builder.Services.AddSingleton<IEventProducer, KafkaEventProducer>();
+// Ensure Kafka topics exist on startup
+builder.Services.AddHostedService<KafkaTopicBootstrapper>();
 
 // Cart DDD services
 builder.Services.AddMediatR(typeof(ApplicationMarker).Assembly);
 builder.Services.AddScoped<ICartRepository, CartRepository>();
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddSingleton<ICartIntegrationEventMapper, CartEventMapper>();
+// Event Consumer from OrderService
+builder.Services.AddSingleton<OrderEventConsumer>();
 // Outbox processor
-builder.Services.AddHostedService<OutboxProcessor>();
+if (!useInMemory)
+    builder.Services.AddHostedService<OutboxProcessor>();
 
 var app = builder.Build();
 
@@ -56,5 +63,34 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 app.UseHttpsRedirection();
+
+if (!useInMemory)
+{
+    using var scope = app.Services.CreateScope();
+    var dbContext = scope.ServiceProvider.GetRequiredService<CartDbContext>();
+    dbContext.Database.Migrate();
+    Log.Information("Database migration completed for CartService");
+}
+else
+{
+    Log.Information("Using in-memory database; skipping migrations.");
+}
+
+// Start Kafka consumer in background
+var consumer = app.Services.GetRequiredService<OrderEventConsumer>();
+var cts = new CancellationTokenSource();
+
+_ = Task.Run(async () =>
+{
+    Log.Information("Starting CartService Kafka consumer (listening to order.events)...");
+    await consumer.StartConsumingAsync(cts.Token);
+}, cts.Token);
+
+// Register shutdown handler
+app.Lifetime.ApplicationStopping.Register(() =>
+{
+    Log.Information("Stopping CartService consumer...");
+    cts.Cancel();
+});
 
 app.Run();

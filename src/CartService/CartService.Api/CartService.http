@@ -1,4 +1,4 @@
-@CartService_HostAddress = http://localhost:5237
+@CartService_HostAddress = http://localhost:5202
 
 GET {{CartService_HostAddress}}/weatherforecast/
 Accept: application/json

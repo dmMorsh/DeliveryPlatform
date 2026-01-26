@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using MediatR;
 using Mapster;
 using OrderService.Application.Commands.CreateOrder;
+using OrderService.Application.Models;
 using Shared.Proto;
 
 namespace OrderService.Api.Grpc;
@@ -19,7 +20,7 @@ public class OrderGrpcService: OrderGrpc.OrderGrpcBase
 
     public override async Task<CreateOrderResponse> CreateOrder(CreateOrderRequest request, ServerCallContext context)
     {
-        var createOrderModel = request.Adapt<Application.CreateOrderModel>();
+        var createOrderModel = request.Adapt<CreateOrderModel>();
         var cmd = new CreateOrderCommand(createOrderModel);
 
         var res = await _mediator.Send(cmd);

@@ -44,19 +44,11 @@ public class CourierRepository : ICourierRepository
         if (courier == null)
             return null;
 
-        // Assume domain methods were applied to the passed aggregate
-        courier.Status = updatedCourier.Status;
-        courier.CurrentLatitude = updatedCourier.CurrentLatitude ?? courier.CurrentLatitude;
-        courier.CurrentLongitude = updatedCourier.CurrentLongitude ?? courier.CurrentLongitude;
-        courier.LastLocationUpdate = updatedCourier.LastLocationUpdate ?? courier.LastLocationUpdate;
-        courier.IsActive = updatedCourier.IsActive;
-        courier.Rating = updatedCourier.Rating;
-        courier.CompletedDeliveries = updatedCourier.CompletedDeliveries;
-        courier.UpdatedAt = updatedCourier.UpdatedAt;
-
-        _context.Couriers.Update(courier);
+        // The domain aggregate should be updated through its behavior methods
+        // EF Core will track changes automatically
+        _context.Couriers.Update(updatedCourier);
         // Do not call SaveChanges here; UnitOfWork will commit
-        return courier;
+        return updatedCourier;
     }
 
     public async Task<(List<Courier> Items, int Total)> GetCouriersPagedAsync(int page = 1, int pageSize = 20)

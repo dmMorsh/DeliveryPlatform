@@ -1,8 +1,7 @@
-namespace OrderService.Domain;
+namespace OrderService.Domain.Entities;
 
 public class OrderItem : Entity
 {
-    public Guid Id { get; private set; }
     public Guid ProductId { get; private set; }
     public string Name { get; private set; } = null!;
     public int Price { get; private set; }

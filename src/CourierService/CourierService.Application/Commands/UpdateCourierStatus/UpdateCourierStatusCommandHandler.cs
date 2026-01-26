@@ -1,7 +1,6 @@
 using CourierService.Application.Interfaces;
 using MediatR;
 using Mapster;
-using Shared.Contracts;
 using Shared.Utilities;
 using CourierService.Domain.Aggregates;
 using CourierService.Application.Mapping;
@@ -11,17 +10,17 @@ using Microsoft.Extensions.Logging;
 
 namespace CourierService.Application.Commands.UpdateCourierStatus;
 
-public class UpdateCourierStatusCommandHandler : IRequestHandler<UpdateCourierStatusCommand, ApiResponse<CourierDto>>
+public class UpdateCourierStatusCommandHandler : IRequestHandler<UpdateCourierStatusCommand, ApiResponse<CourierView>>
 {
     private readonly ICourierRepository _repository;
     private readonly IUnitOfWork _uow;
-    private readonly ICourierIntegrationEventMapper _eventMapper;
+    private readonly ICourierEventMapper _eventMapper;
     private readonly ILogger<UpdateCourierStatusCommandHandler> _logger;
 
     public UpdateCourierStatusCommandHandler(
         ICourierRepository repository,
         IUnitOfWork uow,
-        ICourierIntegrationEventMapper eventMapper,
+        ICourierEventMapper eventMapper,
         ILogger<UpdateCourierStatusCommandHandler> logger)
     {
         _repository = repository;
@@ -30,15 +29,15 @@ public class UpdateCourierStatusCommandHandler : IRequestHandler<UpdateCourierSt
         _logger = logger;
     }
 
-    public async Task<ApiResponse<CourierDto>> Handle(UpdateCourierStatusCommand request, CancellationToken cancellationToken)
+    public async Task<ApiResponse<CourierView>> Handle(UpdateCourierStatusCommand request, CancellationToken cancellationToken)
     {
         try
         {
             var courier = await _repository.GetCourierByIdAsync(request.CourierId);
             if (courier == null)
-                return ApiResponse<CourierDto>.ErrorResponse($"Courier {request.CourierId} not found");
+                return ApiResponse<CourierView>.ErrorResponse($"Courier {request.CourierId} not found");
 
-            var dto = request.Dto;
+            var dto = request.Model;
             var oldStatus = courier.Status;
 
             if (dto.Status.HasValue && Enum.IsDefined(typeof(CourierStatus), dto.Status.Value))
@@ -50,11 +49,12 @@ public class UpdateCourierStatusCommandHandler : IRequestHandler<UpdateCourierSt
             }
 
             if (dto.IsActive.HasValue)
-                courier.IsActive = dto.IsActive.Value;
+                if (!dto.IsActive.Value)
+                    courier.Deactivate();
 
             var updated = await _repository.UpdateCourierAsync(courier);
             if (updated == null)
-                return ApiResponse<CourierDto>.ErrorResponse("Failed to update courier");
+                return ApiResponse<CourierView>.ErrorResponse("Failed to update courier");
 
             _logger.LogInformation("Courier {CourierId} updated: {OldStatus} -> {NewStatus}", request.CourierId, oldStatus, courier.Status);
 
@@ -66,19 +66,39 @@ public class UpdateCourierStatusCommandHandler : IRequestHandler<UpdateCourierSt
                     return OutboxMessage.From(ie!);
                 })
                 .ToList();
+
+            // Add status changed event if status was modified
+            if (dto.Status.HasValue && oldStatus != updated.Status)
+            {
+                var statusChangeEvent = _eventMapper.MapCourierStatusChangedEvent(
+                    updated.Id,
+                    (int)oldStatus,
+                    (int)updated.Status);
+                outboxMessages.Add(OutboxMessage.From(statusChangeEvent));
+            }
+
+            // Add location updated event if location was provided
+            if (dto.CurrentLatitude.HasValue && dto.CurrentLongitude.HasValue)
+            {
+                var locationEvent = _eventMapper.MapLocationUpdatedEvent(
+                    updated.Id,
+                    dto.CurrentLatitude.Value,
+                    dto.CurrentLongitude.Value);
+                outboxMessages.Add(OutboxMessage.From(locationEvent));
+            }
             
             // Commit aggregate atomically
             await _uow.SaveChangesAsync(outboxMessages, cancellationToken);
             updated.ClearDomainEvents();
 
-            var result = updated.Adapt<CourierDto>();
+            var result = updated.Adapt<CourierView>();
             result.Status = (int)updated.Status;
-            return ApiResponse<CourierDto>.SuccessResponse(result, "Courier updated successfully");
+            return ApiResponse<CourierView>.SuccessResponse(result, "Courier updated successfully");
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error updating courier {CourierId}", request.CourierId);
-            return ApiResponse<CourierDto>.ErrorResponse("Internal server error");
+            return ApiResponse<CourierView>.ErrorResponse("Internal server error");
         }
     }
 }

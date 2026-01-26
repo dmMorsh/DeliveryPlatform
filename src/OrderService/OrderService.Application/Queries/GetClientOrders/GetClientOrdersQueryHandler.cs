@@ -1,10 +1,11 @@
 ﻿using MediatR;
 using OrderService.Application.Interfaces;
+using Shared.Utilities;
 
 namespace OrderService.Application.Queries.GetClientOrders;
 
 public class GetClientOrdersQueryHandler
-    : IRequestHandler<GetClientOrdersQuery, List<OrderView>>
+    : IRequestHandler<GetClientOrdersQuery, ApiResponse<IEnumerable<OrderView>>>
 {
     private readonly IOrderReadRepository _readRepo;
 
@@ -13,10 +14,14 @@ public class GetClientOrdersQueryHandler
         _readRepo = readRepo;
     }
 
-    public async Task<List<OrderView>> Handle(
+    public async Task<ApiResponse<IEnumerable<OrderView>>> Handle(
         GetClientOrdersQuery request,
         CancellationToken ct)
     {
-        return await _readRepo.GetByClientIdAsync(request.ClientId, ct);
+        var res = await _readRepo.GetByClientIdAsync(request.ClientId, ct);
+        if (res.Any())
+            return ApiResponse<IEnumerable<OrderView>>.SuccessResponse(res, "Orders provided successfully");
+        
+        return ApiResponse<IEnumerable<OrderView>>.ErrorResponse("No orders found");
     }
 }

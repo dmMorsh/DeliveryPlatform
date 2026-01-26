@@ -12,7 +12,7 @@ public static class EventSerializer
     /// </summary>
     public static string SerializeEvent(IntegrationEvent @event)
     {
-        var json = System.Text.Json.JsonSerializer.Serialize(@event);
+        var json = System.Text.Json.JsonSerializer.Serialize(@event, @event.GetType());
         return json;
     }
 

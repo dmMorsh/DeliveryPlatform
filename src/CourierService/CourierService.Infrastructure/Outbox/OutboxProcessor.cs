@@ -5,12 +5,12 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Shared.Services;
 
-namespace CourierService.Infrastructure;
+namespace CourierService.Infrastructure.Outbox;
 
 public class OutboxProcessor : BackgroundService
 {
     private const int BatchSize = 50;
-    private static readonly TimeSpan PollDelay = TimeSpan.FromMilliseconds(5000);
+    private static readonly TimeSpan PollDelay = TimeSpan.FromMilliseconds(500000);
     private static readonly TimeSpan MaxRetryDelay = TimeSpan.FromMinutes(5);
 
     private readonly IServiceScopeFactory _scopeFactory;
@@ -49,7 +49,7 @@ public class OutboxProcessor : BackgroundService
         var messages = await db.OutboxMessages
             .FromSqlRaw("""
                 SELECT *
-                    FROM "OutboxMessages" 
+                    FROM "couriers"."OutboxMessages" 
                     where "PublishedAt" IS NULL
                       AND ("NextRetryAt" IS NULL OR "NextRetryAt" <= NOW())
                     ORDER BY "OccurredAt"

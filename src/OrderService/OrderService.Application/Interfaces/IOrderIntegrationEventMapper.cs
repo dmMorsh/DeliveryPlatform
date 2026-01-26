@@ -1,11 +1,12 @@
 using OrderService.Domain;
-using OrderService.Domain.SeedWork;
 using Shared.Contracts.Events;
 
 namespace OrderService.Application.Interfaces;
 
 public interface IOrderIntegrationEventMapper
 {
-    OrderCreatedEvent MapToOrderCreatedEvent(Order order);
-    IntegrationEvent? MapFromDomainEvent(DomainEvent domainEvent);
+    OrderAssignedEvent MapOrderAssignedEvent(Order order, Guid courierId, string courierName, string? courierPhone = null);
+    OrderStatusChangedEvent MapOrderStatusChangedEvent(Order order, int oldStatus, int newStatus);
+    OrderDeliveredEvent MapOrderDeliveredEvent(Order order, Guid courierId);
+    IntegrationEvent? MapFromDomainEvent(Domain.SeedWork.DomainEvent domainEvent);
 }

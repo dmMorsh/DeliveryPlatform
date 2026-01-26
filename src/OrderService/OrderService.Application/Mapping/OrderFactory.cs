@@ -1,4 +1,5 @@
 using OrderService.Domain;
+using OrderService.Domain.Entities;
 
 namespace OrderService.Application.Mapping;
 

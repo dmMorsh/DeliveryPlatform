@@ -11,7 +11,7 @@ public class Weight : ValueObject
         Value = value;
     }
 
-    public decimal Value { get; }
+    public decimal Value { get; private set; }
 
     protected override IEnumerable<object?> GetEqualityComponents()
     {

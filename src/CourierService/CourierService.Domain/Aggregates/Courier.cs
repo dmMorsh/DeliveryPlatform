@@ -1,4 +1,5 @@
 using CourierService.Domain.Events;
+using CourierService.Domain.SeedWork;
 
 namespace CourierService.Domain.Aggregates;
 
@@ -10,29 +11,28 @@ public enum CourierStatus
     Resting = 3
 }
 
-public class Courier
+public class Courier : AggregateRoot
 {
-    public Guid Id { get; set; }
-    public string FullName { get; set; } = string.Empty;
-    public string Phone { get; set; } = string.Empty;
-    public string Email { get; set; } = string.Empty;
-    public string DocumentNumber { get; set; } = string.Empty;
-    public CourierStatus Status { get; set; } = CourierStatus.Offline;
-    public double? CurrentLatitude { get; set; }
-    public double? CurrentLongitude { get; set; }
-    public DateTime? LastLocationUpdate { get; set; }
-    public double Rating { get; set; } = 5.0;
-    public int CompletedDeliveries { get; set; } = 0;
-    public bool IsActive { get; set; } = true;
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+    public string FullName { get; private set; } = string.Empty;
+    public string Phone { get; private set; } = string.Empty;
+    public string Email { get; private set; } = string.Empty;
+    public string DocumentNumber { get; private set; } = string.Empty;
+    public CourierStatus Status { get; private set; } = CourierStatus.Offline;
+    public double? CurrentLatitude { get; private set; }
+    public double? CurrentLongitude { get; private set; }
+    public DateTime? LastLocationUpdate { get; private set; }
+    public double Rating { get; private set; } = 5.0;
+    public int CompletedDeliveries { get; private set; } = 0;
+    public bool IsActive { get; private set; } = true;
+    public DateTime CreatedAt { get; private set; } = DateTime.UtcNow;
+    public DateTime UpdatedAt { get; private set; } = DateTime.UtcNow;
 
-    // Domain events
-    private readonly List<CourierDomainEvent> _domainEvents = new();
-    public IReadOnlyCollection<CourierDomainEvent> DomainEvents => _domainEvents.AsReadOnly();
+    private Courier() { }
 
-    public void AddDomainEvent(CourierDomainEvent evt) => _domainEvents.Add(evt);
-    public void ClearDomainEvents() => _domainEvents.Clear();
+    public void Deactivate()
+    {
+        IsActive = false;
+    }
 
     // Factory for registering new courier
     public static Courier Register(string fullName, string phone, string email, string documentNumber)

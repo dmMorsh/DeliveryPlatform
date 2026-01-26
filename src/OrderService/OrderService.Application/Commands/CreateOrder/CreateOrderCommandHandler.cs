@@ -1,10 +1,10 @@
 using MediatR;
 using Microsoft.Extensions.Logging;
 using OrderService.Application.Interfaces;
-using OrderService.Domain;
 using Shared.Utilities;
 using Mapster;
 using OrderService.Application.Models;
+using OrderService.Domain.Entities;
 
 namespace OrderService.Application.Commands.CreateOrder;
 
@@ -54,12 +54,12 @@ public class CreateOrderCommandHandler : IRequestHandler<CreateOrderCommand, Api
         await _repository.CreateOrderAsync(order, ct);
         
         var outboxMessages = order.DomainEvents
-            .Select(de =>
-            {
-                var ie = _eventMapper.MapFromDomainEvent(de);
-                return OutboxMessage.From(ie!);
-            })
+            .Select(de => _eventMapper.MapFromDomainEvent(de))
+            .Where(ie => ie != null)
+            .Select(ie => OutboxMessage.From(ie!))
             .ToList();
+
+        // OrderCreated snapshot now comes from DomainEvent -> IntegrationEvent mapping
 
         await _uow.SaveChangesAsync(outboxMessages, ct);
         order.ClearDomainEvents();

@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using InventoryService.Application.Commands.ReserveStock;
+using InventoryService.Application.Models;
 
 namespace InventoryService.Api.Controllers;
 
@@ -16,10 +17,10 @@ public class StockController : ControllerBase
     }
 
     [HttpPost("{productId}/reserve")]
-    public async Task<IActionResult> Reserve(Guid productId, [FromBody] ReserveStockRequest request)
+    public async Task<IActionResult> Reserve(Guid productId, [FromBody] ReserveStockModel model, CancellationToken ct)
     {
-        var cmd = new ReserveStockCommand(productId, request.OrderId, request.Quantity);
-        var result = await _mediator.Send(cmd);
+        var cmd = new ReserveStockCommand(productId, model.OrderId, model.Quantity);
+        var result = await _mediator.Send(cmd, ct);
         
         if (!result.Success)
             return BadRequest(result);
@@ -27,5 +28,3 @@ public class StockController : ControllerBase
         return Ok(result);
     }
 }
-
-public record ReserveStockRequest(Guid OrderId, int Quantity);

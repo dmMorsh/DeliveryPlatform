@@ -1,5 +1,6 @@
 using MediatR;
 using CartService.Application.Interfaces;
+using CartService.Application.Mapping;
 using CartService.Domain.Aggregates;
 using CartService.Domain.Entities;
 using Shared.Utilities;
@@ -10,11 +11,13 @@ public class AddItemToCartCommandHandler : IRequestHandler<AddItemToCartCommand,
 {
     private readonly ICartRepository _repo;
     private readonly IUnitOfWork _uow;
+    private readonly ICartIntegrationEventMapper _eventMapper;
 
-    public AddItemToCartCommandHandler(ICartRepository repo, IUnitOfWork uow)
+    public AddItemToCartCommandHandler(ICartRepository repo, IUnitOfWork uow, ICartIntegrationEventMapper eventMapper)
     {
         _repo = repo;
         _uow = uow;
+        _eventMapper = eventMapper;
     }
 
     public async Task<ApiResponse<string>> Handle(AddItemToCartCommand request, CancellationToken ct)
@@ -22,20 +25,22 @@ public class AddItemToCartCommandHandler : IRequestHandler<AddItemToCartCommand,
         var cart = await _repo.GetCartByCustomerIdAsync(request.CustomerId, ct) 
                    ?? new Cart(request.CustomerId);
 
-        var item = new CartItem(request.ProductId, request.Name, request.Price, request.Quantity);
+        var model = request.Model;
+        var item = new CartItem(model.ProductId, model.Name, model.Price, model.Quantity);
         cart.AddItem(item);
 
         await _repo.CreateOrUpdateAsync(cart, ct);
         
-        var outboxMessages = cart.DomainEvents
-            .Select(de => new Models.OutboxMessage
+        var outboxMessages = new List<Models.OutboxMessage>();
+        
+        foreach (var domainEvent in cart.DomainEvents)
+        {
+            var integrationEvent = _eventMapper.MapFromDomainEvent(domainEvent);
+            if (integrationEvent != null)
             {
-                Id = Guid.NewGuid(),
-                AggregateId = cart.Id,
-                Type = de.GetType().Name,
-                OccurredAt = DateTime.UtcNow
-            })
-            .ToList();
+                outboxMessages.Add(Models.OutboxMessage.From(integrationEvent));
+            }
+        }
 
         await _uow.SaveChangesAsync(outboxMessages, ct);
         cart.ClearDomainEvents();

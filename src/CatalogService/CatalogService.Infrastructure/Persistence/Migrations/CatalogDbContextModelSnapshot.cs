@@ -69,6 +69,9 @@ namespace CatalogService.Infrastructure.Persistence.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<string>("Description")
+                        .HasColumnType("text");
+
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean");
 
@@ -88,6 +91,13 @@ namespace CatalogService.Infrastructure.Persistence.Migrations
                             b1.Property<Guid>("ProductId")
                                 .HasColumnType("uuid");
 
+                            b1.Property<decimal>("Amount")
+                                .HasColumnType("numeric");
+
+                            b1.Property<string>("Currency")
+                                .IsRequired()
+                                .HasColumnType("text");
+
                             b1.HasKey("ProductId");
 
                             b1.ToTable("Products", "catalog");
@@ -100,6 +110,9 @@ namespace CatalogService.Infrastructure.Persistence.Migrations
                         {
                             b1.Property<Guid>("ProductId")
                                 .HasColumnType("uuid");
+
+                            b1.Property<decimal>("Value")
+                                .HasColumnType("numeric");
 
                             b1.HasKey("ProductId");
 

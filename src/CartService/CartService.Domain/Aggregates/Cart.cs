@@ -6,18 +6,11 @@ namespace CartService.Domain.Aggregates;
 
 public class Cart : AggregateRoot
 {
-    public Guid Id { get; private set; }
     public Guid CustomerId { get; private set; }
     public DateTime UpdatedAt { get; private set; }
 
     private readonly List<CartItem> _items = new();
     public IReadOnlyCollection<CartItem> Items => _items;
-
-    // domain events
-    private readonly List<CartDomainEvent> _domainEvents = new();
-    public IReadOnlyCollection<CartDomainEvent> DomainEvents => _domainEvents.AsReadOnly();
-    private void AddDomainEvent(CartDomainEvent e) => _domainEvents.Add(e);
-    public void ClearDomainEvents() => _domainEvents.Clear();
 
     private Cart() { }
 

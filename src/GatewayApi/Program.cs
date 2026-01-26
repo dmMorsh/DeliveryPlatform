@@ -1,10 +1,14 @@
 using Serilog;
 using GatewayApi.Services;
+using Shared.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Host.UseSerilog((ctx, cfg) =>
-    cfg.WriteTo.Console()
+    cfg.WriteTo.Console(outputTemplate: "[{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz}] [{Level:u3}] [{SourceContext}] {Message:lj}{NewLine}{Exception}")
+       .WriteTo.File("logs/gateway-YYYY-MM-DD.log", 
+           rollingInterval: RollingInterval.Day, 
+           outputTemplate: "[{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz}] [{Level:u3}] [{SourceContext}] {Message:lj}{NewLine}{Exception}")
        .MinimumLevel.Information());
 
 // Регистрация сервисов
@@ -12,6 +16,9 @@ builder.Services.AddControllers();
 builder.Services.AddOpenApi();
 builder.Services.AddHttpClient();
 builder.Services.AddScoped<IProxyService, ProxyService>();
+// gRPC Location Tracking Client for GatewayApi
+builder.Services.AddScoped<ILocationTrackingClient>(sp => 
+    new LocationTrackingClientImpl(sp.GetRequiredService<IConfiguration>(), sp.GetRequiredService<ILogger<LocationTrackingClientImpl>>()));
 
 // CORS для всех источников (Development mode)
 builder.Services.AddCors(options =>
@@ -38,7 +45,7 @@ app.MapHealthChecks("/health");
 
 var logger = app.Services.GetRequiredService<ILogger<Program>>();
 logger.LogInformation("Gateway API started. Service URLs - OrderService: {OrderService}, CourierService: {CourierService}",
-    builder.Configuration["Services:OrderServiceUrl"] ?? "http://localhost:5001",
-    builder.Configuration["Services:CourierServiceUrl"] ?? "http://localhost:5002");
+    builder.Configuration["Services:OrderServiceUrl"] ?? "http://localhost:5204",
+    builder.Configuration["Services:CourierServiceUrl"] ?? "http://localhost:5205");
 
 app.Run();

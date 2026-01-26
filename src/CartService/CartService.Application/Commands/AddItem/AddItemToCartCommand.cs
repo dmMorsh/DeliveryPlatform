@@ -1,12 +1,7 @@
+using CartService.Application.Models;
 using MediatR;
 using Shared.Utilities;
 
 namespace CartService.Application.Commands.AddItem;
 
-public record AddItemToCartCommand(
-    Guid CustomerId,
-    Guid ProductId,
-    string Name,
-    int Price,
-    int Quantity
-) : IRequest<ApiResponse<string>>;
+public record AddItemToCartCommand(Guid CustomerId, AddItemModel Model) : IRequest<ApiResponse<string>>;

@@ -1,6 +1,7 @@
 using MediatR;
 using CatalogService.Application.Interfaces;
 using CatalogService.Application.Models;
+using CatalogService.Domain.Events;
 using CatalogService.Domain.ValueObjects;
 using Shared.Utilities;
 
@@ -10,11 +11,13 @@ public class UpdateProductCommandHandler : IRequestHandler<UpdateProductCommand,
 {
     private readonly IProductRepository _repo;
     private readonly IUnitOfWork _uow;
+    private readonly IProductIntegrationEventMapper _eventMapper;
 
-    public UpdateProductCommandHandler(IProductRepository repo, IUnitOfWork uow)
+    public UpdateProductCommandHandler(IProductRepository repo, IUnitOfWork uow, IProductIntegrationEventMapper eventMapper)
     {
         _repo = repo;
         _uow = uow;
+        _eventMapper = eventMapper;
     }
 
     public async Task<ApiResponse<ProductView>> Handle(UpdateProductCommand request, CancellationToken ct)
@@ -24,31 +27,46 @@ public class UpdateProductCommandHandler : IRequestHandler<UpdateProductCommand,
         if (product == null)
             return ApiResponse<ProductView>.ErrorResponse("Product not found");
 
-        if (request.PriceCents.HasValue)
+        var model = request.UpdateProductModel;
+        
+        if (model.PriceCents.HasValue && product.Price.Amount != model.PriceCents)
         {
-            var newPrice = new Money(request.PriceCents.Value, "USD");
+            var newPrice = new Money(model.PriceCents.Value, model.Currency ?? product.Price.Currency);
             product.ChangePrice(newPrice);
         }
 
-        // Note: Product aggregate doesn't expose Name/Description update directly
-        // This is a limitation of the current design - consider extending Product aggregate
+        if (!string.IsNullOrWhiteSpace(model.Description) && product.Description != model.Description)
+        {
+            product.ChangeDescription(model.Description);
+        }
 
+        if (model.IsActive.HasValue && product.IsActive != model.IsActive)
+        {
+            if(model.IsActive.Value) 
+                product.Activate();
+            else product.Deactivate();
+        }
+        
         await _repo.UpdateAsync(product, ct);
 
-        var outboxMessages = product.DomainEvents
-            .Select(de => new OutboxMessage
+        var outboxMessages = new List<OutboxMessage>();
+
+        foreach (var domainEvent in product.DomainEvents)
+        {
+            if (domainEvent is ProductPriceChanged priceChangedEvent)
             {
-                Id = Guid.NewGuid(),
-                AggregateId = product.Id,
-                Type = de.GetType().Name,
-                OccurredAt = DateTime.UtcNow
-            })
-            .ToList();
+                var integrationEvent = _eventMapper.MapProductPriceChangedEvent(
+                    product.Id, 
+                    priceChangedEvent.OldPrice.Amount, 
+                    priceChangedEvent.NewPrice.Amount);
+                outboxMessages.Add(OutboxMessage.From(integrationEvent));
+            }
+        }
 
         await _uow.SaveChangesAsync(outboxMessages, ct);
         product.ClearDomainEvents();
 
-        var view = new ProductView(product.Id, product.Name, "", (long)product.Price.Amount, 0, DateTime.UtcNow);
+        var view = new ProductView(product.Id, product.Name, product.Description, product.Price.Amount, product.Price.Currency);
         return ApiResponse<ProductView>.SuccessResponse(view, "Product updated successfully");
     }
 }

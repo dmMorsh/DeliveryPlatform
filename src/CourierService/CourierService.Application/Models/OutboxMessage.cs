@@ -24,6 +24,7 @@ public class OutboxMessage
             AggregateId = evt.AggregateId,
             Type = evt.EventType,
             Payload = EventSerializer.SerializeEvent(evt),
+            Topic = (evt.AggregateType ?? "events").ToLowerInvariant() + ".events",
             OccurredAt = evt.Timestamp
         };
 }

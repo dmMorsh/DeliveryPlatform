@@ -7,9 +7,9 @@ namespace GatewayApi.Services;
 /// </summary>
 public interface IProxyService
 {
-    Task<(T? Data, int StatusCode, string? Error)> ProxyPostAsync<T>(string serviceName, string path, object body);
-    Task<(T? Data, int StatusCode, string? Error)> ProxyGetAsync<T>(string serviceName, string path);
-    Task<(T? Data, int StatusCode, string? Error)> ProxyPutAsync<T>(string serviceName, string path, object body);
+    Task<(T? Data, int StatusCode, string? Error)> ProxyPostAsync<T>(string serviceName, string path, object body, CancellationToken ct = default);
+    Task<(T? Data, int StatusCode, string? Error)> ProxyGetAsync<T>(string serviceName, string path, CancellationToken ct = default);
+    Task<(T? Data, int StatusCode, string? Error)> ProxyPutAsync<T>(string serviceName, string path, object body, CancellationToken ct = default);
 }
 
 public class ProxyService : IProxyService
@@ -26,13 +26,16 @@ public class ProxyService : IProxyService
         // Получаем URLs сервисов из конфигурации
         _serviceUrls = new Dictionary<string, string>
         {
-            ["order-service"] = config["Services:OrderServiceUrl"] ?? "http://localhost:5001",
-            ["courier-service"] = config["Services:CourierServiceUrl"] ?? "http://localhost:5002",
-            ["location-tracking"] = config["Services:LocationTrackingUrl"] ?? "http://localhost:5003"
+            ["catalog-service"] = config["Services:CatalogServiceUrl"] ?? "http://localhost:5201",
+            ["cart-service"] = config["Services:CartServiceUrl"] ?? "http://localhost:5202",
+            ["inventory-service"] = config["Services:InventoryServiceUrl"] ?? "http://localhost:5203",
+            ["order-service"] = config["Services:OrderServiceUrl"] ?? "http://localhost:5204",
+            ["courier-service"] = config["Services:CourierServiceUrl"] ?? "http://localhost:5205",
+            ["location-tracking"] = config["Services:LocationTrackingUrl"] ?? "http://localhost:5127"
         };
     }
 
-    public async Task<(T? Data, int StatusCode, string? Error)> ProxyPostAsync<T>(string serviceName, string path, object body)
+    public async Task<(T? Data, int StatusCode, string? Error)> ProxyPostAsync<T>(string serviceName, string path, object body, CancellationToken ct = default)
     {
         try
         {
@@ -47,7 +50,7 @@ public class ProxyService : IProxyService
             
             _logger.LogInformation("Proxying POST request to {Url}", url);
 
-            var response = await client.PostAsJsonAsync(url, body);
+            var response = await client.PostAsJsonAsync(url, body, ct);
             var content = await response.Content.ReadAsStringAsync();
 
             if (response.IsSuccessStatusCode)
@@ -71,7 +74,7 @@ public class ProxyService : IProxyService
         }
     }
 
-    public async Task<(T? Data, int StatusCode, string? Error)> ProxyGetAsync<T>(string serviceName, string path)
+    public async Task<(T? Data, int StatusCode, string? Error)> ProxyGetAsync<T>(string serviceName, string path, CancellationToken ct = default)
     {
         try
         {
@@ -86,7 +89,7 @@ public class ProxyService : IProxyService
 
             _logger.LogInformation("Proxying GET request to {Url}", url);
 
-            var response = await client.GetAsync(url);
+            var response = await client.GetAsync(url, ct);
             var content = await response.Content.ReadAsStringAsync();
 
             if (response.IsSuccessStatusCode)
@@ -111,7 +114,7 @@ public class ProxyService : IProxyService
         }
     }
 
-    public async Task<(T? Data, int StatusCode, string? Error)> ProxyPutAsync<T>(string serviceName, string path, object body)
+    public async Task<(T? Data, int StatusCode, string? Error)> ProxyPutAsync<T>(string serviceName, string path, object body, CancellationToken ct = default)
     {
         try
         {
@@ -126,7 +129,7 @@ public class ProxyService : IProxyService
 
             _logger.LogInformation("Proxying PUT request to {Url}", url);
 
-            var response = await client.PutAsJsonAsync(url, body);
+            var response = await client.PutAsJsonAsync(url, body, ct);
             var content = await response.Content.ReadAsStringAsync();
 
             if (response.IsSuccessStatusCode)
