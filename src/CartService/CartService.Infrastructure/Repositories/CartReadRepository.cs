@@ -21,7 +21,7 @@ public class CartReadRepository : ICartReadRepository
             .Select(c => new CartView
             { 
                 Id = c.Id,
-                Items = c.Items.Select(ci => new CartViewItem(ci.ProductId, ci.Name, ci.Price, ci.Quantity)).ToArray(), 
+                Items = c.Items.Select(ci => new CartViewItem(ci.ProductId, ci.Name, ci.PriceCents, ci.Quantity)).ToArray(), 
             })
             .FirstOrDefaultAsync(ct);
     }

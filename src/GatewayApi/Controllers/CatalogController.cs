@@ -32,6 +32,7 @@ public class CatalogController : ControllerBase
         var (data, statusCode, error) = await _proxyService.ProxyPostAsync<dynamic>(
             "catalog-service",
             "/api/catalog",
+            HttpContext,
             request,
             ct
         );
@@ -59,6 +60,7 @@ public class CatalogController : ControllerBase
         var (data, statusCode, error) = await _proxyService.ProxyPutAsync<dynamic>(
             "catalog-service",
             $"/api/catalog/{request.Id}",
+            HttpContext,
             request, 
             ct
         );
@@ -82,6 +84,7 @@ public class CatalogController : ControllerBase
         var (data, statusCode, error) = await _proxyService.ProxyGetAsync<dynamic>(
             "catalog-service",
             $"/api/catalog/search{queryString}",
+            HttpContext,
             ct
         );
 
@@ -102,6 +105,7 @@ public class CatalogController : ControllerBase
         var (data, statusCode, error) = await _proxyService.ProxyGetAsync<dynamic>(
             "catalog-service",
             $"/api/catalog/{id}",
+            HttpContext,
             ct);
         if (statusCode >= 200 && statusCode < 300)
         { 

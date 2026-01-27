@@ -1,18 +1,3 @@
-// var builder = WebApplication.CreateBuilder(args);
-//
-// // Add services to the container.
-//
-// builder.Services.AddControllers();
-//
-// var app = builder.Build();
-//
-// // Configure the HTTP request pipeline.
-//
-// app.UseAuthorization();
-//
-// app.MapControllers();
-//
-// app.Run();
 using IdentityService.Infrastructure.Security;
 using IdentityService.Domain.Users;
 using IdentityService.Infrastructure.Persistence;
@@ -52,6 +37,11 @@ builder.Services.AddControllers();
 builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
 
 var app = builder.Build();
+
+using var scope = app.Services.CreateScope();
+var dbContext = scope.ServiceProvider.GetRequiredService<IdentityDbContext>();
+dbContext.Database.Migrate();
+Log.Information("Database migration completed for OrderService");
 
 app.MapControllers();
 app.Run();

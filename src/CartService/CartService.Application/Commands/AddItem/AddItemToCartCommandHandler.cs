@@ -26,7 +26,7 @@ public class AddItemToCartCommandHandler : IRequestHandler<AddItemToCartCommand,
                    ?? new Cart(request.CustomerId);
 
         var model = request.Model;
-        var item = new CartItem(model.ProductId, model.Name, model.Price, model.Quantity);
+        var item = new CartItem(model.ProductId, model.Name, model.PriceCents, model.Quantity);
         cart.AddItem(item);
 
         await _repo.CreateOrUpdateAsync(cart, ct);

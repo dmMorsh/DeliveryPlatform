@@ -1,3 +1,4 @@
+using System.Net.Http.Headers;
 using System.Text.Json;
 
 namespace GatewayApi.Services;
@@ -7,9 +8,9 @@ namespace GatewayApi.Services;
 /// </summary>
 public interface IProxyService
 {
-    Task<(T? Data, int StatusCode, string? Error)> ProxyPostAsync<T>(string serviceName, string path, object body, CancellationToken ct = default);
-    Task<(T? Data, int StatusCode, string? Error)> ProxyGetAsync<T>(string serviceName, string path, CancellationToken ct = default);
-    Task<(T? Data, int StatusCode, string? Error)> ProxyPutAsync<T>(string serviceName, string path, object body, CancellationToken ct = default);
+    Task<(T? Data, int StatusCode, string? Error)> ProxyPostAsync<T>(string serviceName, string path, HttpContext httpContext, object? body, CancellationToken ct = default);
+    Task<(T? Data, int StatusCode, string? Error)> ProxyGetAsync<T>(string serviceName, string path, HttpContext httpContext, CancellationToken ct = default);
+    Task<(T? Data, int StatusCode, string? Error)> ProxyPutAsync<T>(string serviceName, string path, HttpContext httpContext, object body, CancellationToken ct = default);
 }
 
 public class ProxyService : IProxyService
@@ -35,7 +36,7 @@ public class ProxyService : IProxyService
         };
     }
 
-    public async Task<(T? Data, int StatusCode, string? Error)> ProxyPostAsync<T>(string serviceName, string path, object body, CancellationToken ct = default)
+    public async Task<(T? Data, int StatusCode, string? Error)> ProxyPostAsync<T>(string serviceName, string path, HttpContext httpContext, object? body, CancellationToken ct = default)
     {
         try
         {
@@ -49,9 +50,9 @@ public class ProxyService : IProxyService
             var url = $"{baseUrl}{path}";
             
             _logger.LogInformation("Proxying POST request to {Url}", url);
-
-            var response = await client.PostAsJsonAsync(url, body, ct);
-            var content = await response.Content.ReadAsStringAsync();
+            
+            var response = await SendProxyRequestAsync(HttpMethod.Post, client, httpContext, url, body, ct);
+            var content = await response.Content.ReadAsStringAsync(ct);
 
             if (response.IsSuccessStatusCode)
             {
@@ -74,7 +75,8 @@ public class ProxyService : IProxyService
         }
     }
 
-    public async Task<(T? Data, int StatusCode, string? Error)> ProxyGetAsync<T>(string serviceName, string path, CancellationToken ct = default)
+
+    public async Task<(T? Data, int StatusCode, string? Error)> ProxyGetAsync<T>(string serviceName, string path, HttpContext httpContext, CancellationToken ct = default)
     {
         try
         {
@@ -89,8 +91,9 @@ public class ProxyService : IProxyService
 
             _logger.LogInformation("Proxying GET request to {Url}", url);
 
-            var response = await client.GetAsync(url, ct);
-            var content = await response.Content.ReadAsStringAsync();
+            // var response = await client.GetAsync(url, ct);
+            var response = await SendProxyRequestAsync(HttpMethod.Get, client, httpContext, url, null, ct);
+            var content = await response.Content.ReadAsStringAsync(ct);
 
             if (response.IsSuccessStatusCode)
             {
@@ -114,7 +117,7 @@ public class ProxyService : IProxyService
         }
     }
 
-    public async Task<(T? Data, int StatusCode, string? Error)> ProxyPutAsync<T>(string serviceName, string path, object body, CancellationToken ct = default)
+    public async Task<(T? Data, int StatusCode, string? Error)> ProxyPutAsync<T>(string serviceName, string path, HttpContext httpContext, object body, CancellationToken ct = default)
     {
         try
         {
@@ -129,8 +132,9 @@ public class ProxyService : IProxyService
 
             _logger.LogInformation("Proxying PUT request to {Url}", url);
 
-            var response = await client.PutAsJsonAsync(url, body, ct);
-            var content = await response.Content.ReadAsStringAsync();
+            // var response = await client.PutAsJsonAsync(url, body, ct);
+            var response = await SendProxyRequestAsync(HttpMethod.Put, client, httpContext, url, body, ct);
+            var content = await response.Content.ReadAsStringAsync(ct);
 
             if (response.IsSuccessStatusCode)
             {
@@ -151,5 +155,30 @@ public class ProxyService : IProxyService
             _logger.LogError(ex, "Error proxying request to {ServiceName}", serviceName);
             return (default, 500, ex.Message);
         }
+    }
+
+    private static async Task<HttpResponseMessage> SendProxyRequestAsync(
+        HttpMethod method,
+        HttpClient client,
+        HttpContext httpContext,
+        string url,
+        object? body,
+        CancellationToken ct)
+    {
+        var request = new HttpRequestMessage(method, url);
+
+        if (body != null) request.Content = JsonContent.Create(body);
+
+        // Authorization
+        if (httpContext.Request.Headers.TryGetValue("Authorization", out var auth))
+            request.Headers.Authorization = AuthenticationHeaderValue.Parse(auth.ToString());
+        
+        // Correlation / tracing
+        if (httpContext.Request.Headers.TryGetValue("X-Correlation-Id", out var correlationId))
+            request.Headers.TryAddWithoutValidation("X-Correlation-Id", correlationId.ToString());
+        else
+            request.Headers.TryAddWithoutValidation("X-Correlation-Id", httpContext.TraceIdentifier);
+
+        return await client.SendAsync(request, ct);
     }
 }

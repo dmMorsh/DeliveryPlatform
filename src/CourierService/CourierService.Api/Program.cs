@@ -11,15 +11,22 @@ using CourierService.Infrastructure.Persistence;
 using CourierService.Infrastructure.Repositories;
 using Shared.Services;
 using MediatR;
+using Serilog.Events;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Host.UseSerilog((ctx, cfg) =>
-    cfg.WriteTo.Console(outputTemplate: "[{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz}] [{Level:u3}] [{SourceContext}] {Message:lj}{NewLine}{Exception}")
-       .WriteTo.File("logs/courierservice-YYYY-MM-DD.log", 
-           rollingInterval: RollingInterval.Day, 
-           outputTemplate: "[{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz}] [{Level:u3}] [{SourceContext}] {Message:lj}{NewLine}{Exception}")
-       .MinimumLevel.Information());
+    cfg
+        .MinimumLevel.Information()
+        .Filter.ByExcluding(le =>
+            le.Level == LogEventLevel.Information 
+            && le.Properties.TryGetValue("commandText", out var cmd)
+            && cmd.ToString().StartsWith("\"-- OUTBOX_PROCESSOR_POLL"))
+        .WriteTo.Console(outputTemplate: "[{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz}] [{Level:u3}] [{SourceContext}] {Message:lj}{NewLine}{Exception}")
+        .WriteTo.File("logs/courierservice-YYYY-MM-DD.log", 
+            rollingInterval: RollingInterval.Day, 
+            outputTemplate: "[{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz}] [{Level:u3}] [{SourceContext}] {Message:lj}{NewLine}{Exception}")
+);
 
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();

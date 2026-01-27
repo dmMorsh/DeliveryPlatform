@@ -1,3 +1,4 @@
+using System.Text;
 using CartService.Application;
 using CartService.Application.Interfaces;
 using CartService.Application.Mapping;
@@ -7,7 +8,9 @@ using CartService.Infrastructure.Outbox;
 using CartService.Infrastructure.Persistence;
 using CartService.Infrastructure.Repositories;
 using MediatR;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using Shared.Proto;
 using Shared.Services;
 using Serilog;
@@ -54,7 +57,47 @@ builder.Services.AddSingleton<OrderEventConsumer>();
 if (!useInMemory)
     builder.Services.AddHostedService<OutboxProcessor>();
 
+// Auth
+var jwtKey = builder.Configuration["Jwt:Key"] ?? "SUPER_PUPER_SECRET_KEY_I_LOVE_MAKING_KEYS_UP";
+var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? "identity-service";
+var jwtAudience = builder.Configuration["Jwt:Audience"] ?? "platform-api";
+
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+
+            ValidIssuer = jwtIssuer,
+            ValidAudience = jwtAudience,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
+        };
+
+        options.Events = new JwtBearerEvents
+        {
+            OnMessageReceived = context =>
+            {
+                var accessToken = context.Request.Headers["authorization"];
+                if (!string.IsNullOrEmpty(accessToken))
+                {
+                    context.Token = accessToken.ToString().Replace("Bearer ", "");
+                }
+                return Task.CompletedTask;
+            }
+        };
+    });
+
+builder.Services.AddAuthorization();
+
 var app = builder.Build();
+
+//Auth
+app.UseAuthentication();
+app.UseAuthorization();
 
 app.MapControllers();
 app.MapGet("/health", () => "OK");

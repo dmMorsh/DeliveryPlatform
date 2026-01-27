@@ -41,17 +41,17 @@ public class ProductReadRepository : IProductReadRepository
 
         // 💰 Price
         if (request.MinPrice.HasValue)
-            query = query.Where(p => p.Price.Amount >= request.MinPrice);
+            query = query.Where(p => p.PriceCents.Amount >= request.MinPrice);
 
         if (request.MaxPrice.HasValue)
-            query = query.Where(p => p.Price.Amount <= request.MaxPrice);
+            query = query.Where(p => p.PriceCents.Amount <= request.MaxPrice);
 
         // 📊 Sorting
         query = request.SortBy switch
         {
             ProductSortBy.Price => request.SortDirection == SortDirection.Asc
-                ? query.OrderBy(p => p.Price.Amount)
-                : query.OrderByDescending(p => p.Price.Amount),
+                ? query.OrderBy(p => p.PriceCents.Amount)
+                : query.OrderByDescending(p => p.PriceCents.Amount),
 
             ProductSortBy.CreatedAt => request.SortDirection == SortDirection.Asc
                 ? query.OrderBy(p => p.CreatedAt)
@@ -72,8 +72,8 @@ public class ProductReadRepository : IProductReadRepository
                 p.Id,
                 p.Name,
                 p.Description,
-                p.Price.Amount,
-                p.Price.Currency))
+                p.PriceCents.Amount,
+                p.PriceCents.Currency))
             .ToListAsync(ct);
 
         return new PagedResult<ProductView>
@@ -91,7 +91,7 @@ public class ProductReadRepository : IProductReadRepository
             .AsNoTracking()
             .Where(p => p.Id == id)
             .Select(p => 
-                new ProductView(p.Id, p.Name, p.Description, p.Price.Amount, p.Price.Currency)
+                new ProductView(p.Id, p.Name, p.Description, p.PriceCents.Amount, p.PriceCents.Currency)
             )
             .FirstOrDefaultAsync(ct);
     }

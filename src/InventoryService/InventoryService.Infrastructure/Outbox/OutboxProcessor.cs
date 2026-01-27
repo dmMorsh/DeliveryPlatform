@@ -10,7 +10,7 @@ namespace InventoryService.Infrastructure.Outbox;
 public class OutboxProcessor : BackgroundService
 {
     private const int BatchSize = 50;
-    private static readonly TimeSpan PollDelay = TimeSpan.FromMilliseconds(500000);
+    private static readonly TimeSpan PollDelay = TimeSpan.FromMilliseconds(5000);
     private static readonly TimeSpan MaxRetryDelay = TimeSpan.FromMinutes(5);
 
     private readonly IServiceScopeFactory _scopeFactory;

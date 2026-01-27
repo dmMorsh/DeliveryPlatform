@@ -24,7 +24,7 @@ message CreateOrderRequest {
 message OrderItem {
   string productId = 1;
   string name = 2;
-  int32 price = 3;
+  int32 priceCents = 3;
   int32 quantity = 4;
 }
 

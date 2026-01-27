@@ -86,7 +86,7 @@ namespace CatalogService.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("CatalogService.Domain.Aggregates.Product", b =>
                 {
-                    b.OwnsOne("CatalogService.Domain.ValueObjects.Money", "Price", b1 =>
+                    b.OwnsOne("CatalogService.Domain.ValueObjects.Money", "PriceCents", b1 =>
                         {
                             b1.Property<Guid>("ProductId")
                                 .HasColumnType("uuid");
@@ -106,7 +106,7 @@ namespace CatalogService.Infrastructure.Persistence.Migrations
                                 .HasForeignKey("ProductId");
                         });
 
-                    b.OwnsOne("CatalogService.Domain.ValueObjects.Weight", "Weight", b1 =>
+                    b.OwnsOne("CatalogService.Domain.ValueObjects.Weight", "WeightGrams", b1 =>
                         {
                             b1.Property<Guid>("ProductId")
                                 .HasColumnType("uuid");
@@ -122,10 +122,10 @@ namespace CatalogService.Infrastructure.Persistence.Migrations
                                 .HasForeignKey("ProductId");
                         });
 
-                    b.Navigation("Price")
+                    b.Navigation("PriceCents")
                         .IsRequired();
 
-                    b.Navigation("Weight")
+                    b.Navigation("WeightGrams")
                         .IsRequired();
                 });
 #pragma warning restore 612, 618

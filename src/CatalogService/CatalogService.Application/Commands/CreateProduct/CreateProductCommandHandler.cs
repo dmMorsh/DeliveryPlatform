@@ -44,7 +44,7 @@ public class CreateProductCommandHandler : IRequestHandler<CreateProductCommand,
         await _uow.SaveChangesAsync(outboxMessages, ct);
         product.ClearDomainEvents();
 
-        var view = new ProductView(product.Id, product.Name, model.Description, product.Price.Amount, product.Price.Currency);
+        var view = new ProductView(product.Id, product.Name, model.Description, product.PriceCents.Amount, product.PriceCents.Currency);
         return ApiResponse<ProductView>.SuccessResponse(view, "Product created successfully");
     }
 }

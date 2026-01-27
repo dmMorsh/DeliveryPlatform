@@ -24,4 +24,4 @@ public record OrderView
     public IReadOnlyCollection<OrderViewItem> Items { get; init; } = Array.Empty<OrderViewItem>();
 }
 
-public record OrderViewItem(Guid ProductId,  string Name, int Price, int Quantity);
+public record OrderViewItem(Guid ProductId,  string Name, int PriceCents, int Quantity);

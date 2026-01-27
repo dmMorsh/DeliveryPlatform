@@ -29,9 +29,9 @@ public class UpdateProductCommandHandler : IRequestHandler<UpdateProductCommand,
 
         var model = request.UpdateProductModel;
         
-        if (model.PriceCents.HasValue && product.Price.Amount != model.PriceCents)
+        if (model.PriceCents.HasValue && product.PriceCents.Amount != model.PriceCents)
         {
-            var newPrice = new Money(model.PriceCents.Value, model.Currency ?? product.Price.Currency);
+            var newPrice = new Money(model.PriceCents.Value, model.Currency ?? product.PriceCents.Currency);
             product.ChangePrice(newPrice);
         }
 
@@ -66,7 +66,7 @@ public class UpdateProductCommandHandler : IRequestHandler<UpdateProductCommand,
         await _uow.SaveChangesAsync(outboxMessages, ct);
         product.ClearDomainEvents();
 
-        var view = new ProductView(product.Id, product.Name, product.Description, product.Price.Amount, product.Price.Currency);
+        var view = new ProductView(product.Id, product.Name, product.Description, product.PriceCents.Amount, product.PriceCents.Currency);
         return ApiResponse<ProductView>.SuccessResponse(view, "Product updated successfully");
     }
 }

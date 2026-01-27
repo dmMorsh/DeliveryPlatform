@@ -17,21 +17,24 @@ public class CouriersController : ControllerBase
         _logger = logger;
         _proxyService = proxyService;
     }
-    
+
     /// <summary>
     /// Зарегистрировать нового курьера
     /// </summary>
     /// <param name="request">Данные курьера</param>
+    /// <param name="ct"></param>
     /// <returns>Созданный курьер</returns>
     [HttpPost]
-    public async Task<IActionResult> CreateCourier([FromBody] CreateCourierRequest request)
+    public async Task<IActionResult> CreateCourier([FromBody] CreateCourierRequest request, CancellationToken ct)
     {
         _logger.LogInformation("Gateway: Creating courier {Phone}", request.Phone);
 
         var (data, statusCode, error) = await _proxyService.ProxyPostAsync<dynamic>(
             "courier-service",
             "/api/couriers",
-            request
+            HttpContext,
+            request,
+            ct
         );
 
         if (statusCode >= 200 && statusCode < 300)
@@ -47,15 +50,18 @@ public class CouriersController : ControllerBase
     /// Получить данные курьера
     /// </summary>
     /// <param name="courierId">ID курьера</param>
+    /// <param name="ct"></param>
     /// <returns>Данные курьера</returns>
     [HttpGet("{courierId}")]
-    public async Task<IActionResult> GetCourier(int courierId)
+    public async Task<IActionResult> GetCourier(int courierId, CancellationToken ct)
     {
         _logger.LogInformation("Gateway: Getting courier {CourierId}", courierId);
 
         var (data, statusCode, error) = await _proxyService.ProxyGetAsync<dynamic>(
             "courier-service",
-            $"/api/couriers/{courierId}"
+            $"/api/couriers/{courierId}",
+            HttpContext,
+            ct
         );
 
         if (statusCode >= 200 && statusCode < 300)
@@ -75,13 +81,15 @@ public class CouriersController : ControllerBase
     /// </summary>
     /// <returns>Список активных курьеров</returns>
     [HttpGet("active")]
-    public async Task<IActionResult> GetActiveCouriers()
+    public async Task<IActionResult> GetActiveCouriers(CancellationToken ct)
     {
         _logger.LogInformation("Gateway: Getting active couriers");
 
         var (data, statusCode, error) = await _proxyService.ProxyGetAsync<dynamic>(
             "courier-service",
-            "/api/couriers/active"
+            "/api/couriers/active",
+            HttpContext,
+            ct
         );
 
         if (statusCode >= 200 && statusCode < 300)
@@ -98,17 +106,22 @@ public class CouriersController : ControllerBase
     /// </summary>
     /// <param name="page">Номер страницы</param>
     /// <param name="pageSize">Размер страницы</param>
+    /// <param name="ct"></param>
     /// <returns>Список курьеров</returns>
     [HttpGet]
     public async Task<IActionResult> GetCouriers(
+        CancellationToken ct,
         [FromQuery] int page = 1,
-        [FromQuery] int pageSize = 20)
+        [FromQuery] int pageSize = 20
+        )
     {
         _logger.LogInformation("Gateway: Getting couriers - Page: {Page}, PageSize: {PageSize}", page, pageSize);
 
         var (data, statusCode, error) = await _proxyService.ProxyGetAsync<dynamic>(
             "courier-service",
-            $"/api/couriers?page={page}&pageSize={pageSize}"
+            $"/api/couriers?page={page}&pageSize={pageSize}",
+            HttpContext,
+            ct
         );
 
         if (statusCode >= 200 && statusCode < 300)
@@ -125,16 +138,19 @@ public class CouriersController : ControllerBase
     /// </summary>
     /// <param name="courierId">ID курьера</param>
     /// <param name="request">Данные для обновления</param>
+    /// <param name="ct"></param>
     /// <returns>Обновленный курьер</returns>
     [HttpPut("{courierId}")]
-    public async Task<IActionResult> UpdateCourier(int courierId, [FromBody] UpdateCourierRequest request)
+    public async Task<IActionResult> UpdateCourier(int courierId, [FromBody] UpdateCourierRequest request, CancellationToken ct)
     {
         _logger.LogInformation("Gateway: Updating courier {CourierId}", courierId);
 
         var (data, statusCode, error) = await _proxyService.ProxyPutAsync<dynamic>(
             "courier-service",
             $"/api/couriers/{courierId}",
-            request
+            HttpContext, 
+            request,
+            ct
         );
 
         if (statusCode >= 200 && statusCode < 300)

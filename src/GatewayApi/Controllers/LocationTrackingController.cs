@@ -22,12 +22,14 @@ public class LocationTrackingController : ControllerBase
     /// <summary>
     /// Обновить локацию курьера
     /// </summary>
+    /// <param name="ct"></param>
     /// <param name="courierId">ID курьера</param>
     /// <param name="latitude">Широта</param>
     /// <param name="longitude">Долгота</param>
     /// <param name="accuracy">Точность в метрах</param>
     [HttpPost("couriers/{courierId:guid}/location")]
     public async Task<IActionResult> UpdateCourierLocation(
+        CancellationToken ct,
         Guid courierId,
         [FromQuery] double latitude,
         [FromQuery] double longitude,
@@ -64,8 +66,9 @@ public class LocationTrackingController : ControllerBase
     /// Получить текущую локацию курьера
     /// </summary>
     /// <param name="courierId">ID курьера</param>
+    /// <param name="ct"></param>
     [HttpGet("couriers/{courierId:guid}/location")]
-    public async Task<IActionResult> GetCourierLocation(Guid courierId)
+    public async Task<IActionResult> GetCourierLocation(Guid courierId, CancellationToken ct)
     {
         try
         {
@@ -93,8 +96,9 @@ public class LocationTrackingController : ControllerBase
     /// Получить локацию нескольких курьеров
     /// </summary>
     /// <param name="courierIds">Список ID курьеров (comma-separated)</param>
+    /// <param name="ct"></param>
     [HttpGet("couriers/locations")]
-    public async Task<IActionResult> GetCouriersLocations([FromQuery] string courierIds)
+    public async Task<IActionResult> GetCouriersLocations([FromQuery] string courierIds, CancellationToken ct)
     {
         try
         {

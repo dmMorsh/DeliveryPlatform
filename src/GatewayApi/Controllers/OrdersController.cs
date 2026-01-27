@@ -22,17 +22,20 @@ public class OrdersController : ControllerBase
     /// Создать новый заказ
     /// </summary>
     /// <param name="request">Данные заказа</param>
+    /// <param name="ct"></param>
     /// <returns>Созданный заказ</returns>
     [Obsolete]
     [HttpPost]
-    public async Task<IActionResult> CreateOrder([FromBody] CreateOrderRequest request)
+    public async Task<IActionResult> CreateOrder([FromBody] CreateOrderRequest request, CancellationToken ct)
     {
         _logger.LogInformation("Gateway: Creating order for client {ClientId}", request.ClientId);
 
         var (data, statusCode, error) = await _proxyService.ProxyPostAsync<dynamic>(
             "order-service", 
             "/api/orders", 
-            request
+            HttpContext,
+            request,
+            ct
         );
 
         if (statusCode >= 200 && statusCode < 300)
@@ -48,15 +51,18 @@ public class OrdersController : ControllerBase
     /// Получить заказ по ID
     /// </summary>
     /// <param name="orderId">ID заказа</param>
+    /// <param name="ct"></param>
     /// <returns>Данные заказа</returns>
     [HttpGet("{orderId}")]
-    public async Task<IActionResult> GetOrder(int orderId)
+    public async Task<IActionResult> GetOrder(int orderId, CancellationToken ct)
     {
         _logger.LogInformation("Gateway: Getting order {OrderId}", orderId);
 
         var (data, statusCode, error) = await _proxyService.ProxyGetAsync<dynamic>(
             "order-service",
-            $"/api/orders/{orderId}"
+            $"/api/orders/{orderId}",
+            HttpContext,
+            ct
         );
 
         if (statusCode >= 200 && statusCode < 300)
@@ -74,6 +80,7 @@ public class OrdersController : ControllerBase
     /// <summary>
     /// Получить заказы с фильтрацией и пагинацией
     /// </summary>
+    /// <param name="ct"></param>
     /// <param name="clientId">Фильтр по ID клиента (опционально)</param>
     /// <param name="courierId">Фильтр по ID курьера (опционально)</param>
     /// <param name="status">Фильтр по статусу (опционально)</param>
@@ -82,6 +89,7 @@ public class OrdersController : ControllerBase
     /// <returns>Список заказов</returns>
     [HttpGet]
     public async Task<IActionResult> GetOrders(
+        CancellationToken ct,
         [FromQuery] int? clientId = null,
         [FromQuery] int? courierId = null,
         [FromQuery] int? status = null,
@@ -102,7 +110,9 @@ public class OrdersController : ControllerBase
 
         var (data, statusCode, error) = await _proxyService.ProxyGetAsync<dynamic>(
             "order-service",
-            path
+            path,
+            HttpContext,
+            ct
         );
 
         if (statusCode >= 200 && statusCode < 300)
@@ -119,16 +129,19 @@ public class OrdersController : ControllerBase
     /// </summary>
     /// <param name="orderId">ID заказа</param>
     /// <param name="request">Данные для обновления</param>
+    /// <param name="ct"></param>
     /// <returns>Обновленный заказ</returns>
     [HttpPut("{orderId}")]
-    public async Task<IActionResult> UpdateOrder(int orderId, [FromBody] UpdateOrderRequest request)
+    public async Task<IActionResult> UpdateOrder(int orderId, [FromBody] UpdateOrderRequest request, CancellationToken ct)
     {
         _logger.LogInformation("Gateway: Updating order {OrderId}", orderId);
 
         var (data, statusCode, error) = await _proxyService.ProxyPutAsync<dynamic>(
             "order-service",
             $"/api/orders/{orderId}",
-            request
+            HttpContext,
+            request, 
+            ct
         );
 
         if (statusCode >= 200 && statusCode < 300)

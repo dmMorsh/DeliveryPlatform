@@ -8,37 +8,37 @@ public class Product : AggregateRoot
 {
     public string Name { get; private set; }
     public string? Description { get; private set; }
-    public Money Price { get; private set; }
-    public Weight Weight { get; private set; }
+    public Money PriceCents { get; private set; }
+    public Weight WeightGrams { get; private set; }
     public bool IsActive { get; private set; }
     public DateTime CreatedAt { get; } = DateTime.UtcNow;
 
     private Product() {}
     
-    public Product(string name, string? description, Money price, Weight weight)
+    public Product(string name, string? description, Money priceCents, Weight weightGrams)
     {
         Id = Guid.NewGuid();
         Name = name;
         Description = description;
-        Price = price;
-        Weight = weight;
+        PriceCents = priceCents;
+        WeightGrams = weightGrams;
         IsActive = true;
     }
 
     public void ChangePrice(Money newPrice)
     {
-        if (newPrice.Equals(Price)) return;
+        if (newPrice.Equals(PriceCents)) return;
 
-        var oldPrice = Price;
-        Price = newPrice;
+        var oldPrice = PriceCents;
+        PriceCents = newPrice;
         AddDomainEvent(new ProductPriceChanged(Id, oldPrice, newPrice));
     }
 
     public void ChangeWeight(Weight newWeight)
     {
-        if (newWeight.Equals(Weight)) return;
+        if (newWeight.Equals(WeightGrams)) return;
         // var oldWeight = Weight;
-        Weight = newWeight;
+        WeightGrams = newWeight;
     }
 
     public void ChangeDescription(string newDescription)

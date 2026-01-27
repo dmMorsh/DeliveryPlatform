@@ -10,7 +10,7 @@ namespace CourierService.Infrastructure.Outbox;
 public class OutboxProcessor : BackgroundService
 {
     private const int BatchSize = 50;
-    private static readonly TimeSpan PollDelay = TimeSpan.FromMilliseconds(500000);
+    private static readonly TimeSpan PollDelay = TimeSpan.FromMilliseconds(5000);
     private static readonly TimeSpan MaxRetryDelay = TimeSpan.FromMinutes(5);
 
     private readonly IServiceScopeFactory _scopeFactory;
@@ -56,6 +56,7 @@ public class OutboxProcessor : BackgroundService
                 LIMIT {0}
                 FOR UPDATE SKIP LOCKED
             """, BatchSize)
+            .TagWith("OUTBOX_PROCESSOR_POLL")
             .ToListAsync(ct);
 
         if (messages.Count == 0) return;
@@ -64,7 +65,7 @@ public class OutboxProcessor : BackgroundService
         {
             try
             {
-                await _producer.PublishAsync(topic: msg.Type ?? "events", key: msg.AggregateId.ToString(), payload: msg.Payload, headers: new Dictionary<string,string>{{"event-type", msg.Type ?? ""}}, ct);
+                await _producer.PublishAsync(topic: msg.Topic ?? "events", key: msg.AggregateId.ToString(), payload: msg.Payload, headers: new Dictionary<string,string>{{"event-type", msg.Type ?? ""}}, ct);
                 msg.PublishedAt = DateTime.UtcNow;
             }
             catch (Exception ex)

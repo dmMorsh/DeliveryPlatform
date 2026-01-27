@@ -18,7 +18,28 @@ public class CartController : ControllerBase
         _proxyService = proxyService;
     }
     
-    [HttpPost]
+    [HttpGet]
+    public async Task<IActionResult> GetCart(CancellationToken ct)
+    {
+        _logger.LogInformation("Gateway: get cart");
+
+        var (data, statusCode, error) = await _proxyService.ProxyGetAsync<dynamic>(
+            "cart-service",
+            "/api/cart",
+            HttpContext,
+            ct
+        );
+
+        if (statusCode >= 200 && statusCode < 300)
+        {
+            return StatusCode(statusCode, data);
+        }
+
+        _logger.LogError("Error creating product: {Error}", error);
+        return StatusCode(statusCode, new ProxyErrorResponse { Message = error });
+    }
+    
+    [HttpPost("items")]
     public async Task<IActionResult> AddItem([FromBody] AddItemRequest request, CancellationToken ct)
     {
         _logger.LogInformation("Gateway: Adding item {item}", request.Name);
@@ -26,7 +47,30 @@ public class CartController : ControllerBase
         var (data, statusCode, error) = await _proxyService.ProxyPostAsync<dynamic>(
             "cart-service",
             "/api/cart/items",
+            HttpContext,
             request,
+            ct
+        );
+
+        if (statusCode >= 200 && statusCode < 300)
+        {
+            return StatusCode(statusCode, data);
+        }
+
+        _logger.LogError("Error creating product: {Error}", error);
+        return StatusCode(statusCode, new ProxyErrorResponse { Message = error });
+    }
+
+    [HttpPost("checkout")]
+    public async Task<IActionResult> Checkout(CancellationToken ct)
+    {
+        _logger.LogInformation("Gateway: checkout");
+
+        var (data, statusCode, error) = await _proxyService.ProxyPostAsync<dynamic>(
+            "cart-service",
+            "/api/cart/checkout",
+            HttpContext,
+            null,
             ct
         );
 
