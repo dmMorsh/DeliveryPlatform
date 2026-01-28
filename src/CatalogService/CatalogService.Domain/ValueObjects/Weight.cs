@@ -6,12 +6,12 @@ public class Weight : ValueObject
 {
     private Weight() { }
     
-    public Weight(decimal value)
+    public Weight(long value)
     {
         Value = value;
     }
 
-    public decimal Value { get; private set; }
+    public long Value { get; private set; }
 
     protected override IEnumerable<object?> GetEqualityComponents()
     {

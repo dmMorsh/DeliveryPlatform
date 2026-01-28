@@ -10,21 +10,18 @@ public static class MapsterConfig
     {
         TypeAdapterConfig.GlobalSettings.RequireExplicitMapping = true;
 
-        // TypeAdapterConfig<ProtoOrderItem, DomainOrderItem>
-        //     .NewConfig()
-        //     .ConstructUsing(src => 
-        //         new DomainOrderItem(
-        //             Guid.Parse(src.ProductId), 
-        //             src.Name, 
-        //             src.Price, 
-        //             src.Quantity));
-        // TypeAdapterConfig<DomainOrderItem, DomainOrderItem>.NewConfig()
-        //     .MapWith(src => src);
-
+        TypeAdapterConfig<OrderItem, CreateOrderItemModel>
+            .NewConfig()
+            .Map(dest => dest.ProductId, src => Guid.Parse(src.ProductId))
+            .Map(dest => dest.Quantity, src => src.Quantity)
+            .Map(dest => dest.Name, src => src.Name)
+            .Map(dest => dest.PriceCents, src => src.PriceCents);
+        
         // Map gRPC request -> application DTO
         TypeAdapterConfig<CreateOrderRequest, CreateOrderModel>
             .NewConfig()
             .Map(dest => dest.ClientId, src => Guid.Parse(src.CustomerId))
+            .Map(dest => dest.Items, src => src.Items)
             .Map(dest => dest.FromAddress, src => src.FromAddress)
             .Map(dest => dest.ToAddress, src => src.ToAddress)
             .Map(dest => dest.FromLatitude, src => src.FromLatitude)

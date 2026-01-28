@@ -23,7 +23,7 @@ public class OrderCreatedEvent : IntegrationEvent
     public double FromLongitude { get; set; }
     public double ToLatitude { get; set; }
     public double ToLongitude { get; set; }
-    public decimal CostCents { get; set; }
+    public long CostCents { get; set; }
     public DateTime CreatedAt { get; set; }
     public List<OrderEItemSnapshot> Items { get; set; } = new();
     public string? Description { get; set; }

@@ -26,7 +26,7 @@ public class OrderReadRepository : IOrderReadRepository
                 Status = (int)o.Status,
                 FromAddress = o.From.Street,
                 ToAddress = o.To.Street,
-                CostCents = o.CostCents.Amount,
+                CostCents = o.CostCents.AmountCents,
                 Items = o.Items.Select(i => new OrderViewItem(i.ProductId,i.Name,i.PriceCents, i.Quantity)).ToArray()
             })
             .FirstOrDefaultAsync(ct);
@@ -44,7 +44,7 @@ public class OrderReadRepository : IOrderReadRepository
                 Status = (int)o.Status,
                 FromAddress = o.From.Street,
                 ToAddress = o.To.Street,
-                CostCents = o.CostCents.Amount,
+                CostCents = o.CostCents.AmountCents,
                 Items = o.Items.Select(i => new OrderViewItem(i.ProductId,i.Name,i.PriceCents, i.Quantity)).ToArray()
             })
             .ToListAsync(ct);

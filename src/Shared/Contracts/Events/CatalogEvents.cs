@@ -5,7 +5,7 @@ public class ProductCreatedEvent : IntegrationEvent
     public Guid ProductId { get; set; }
     public string Name { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
-    public int PriceCents { get; set; }
+    public long PriceCents { get; set; }
     public int QuantityAvailable { get; set; }
 
     public override string EventType => "product.created";
@@ -21,8 +21,8 @@ public class ProductCreatedEvent : IntegrationEvent
 public class ProductPriceChangedEvent : IntegrationEvent
 {
     public Guid ProductId { get; set; }
-    public decimal OldPriceCents { get; set; }
-    public decimal NewPriceCents { get; set; }
+    public long OldPriceCents { get; set; }
+    public long NewPriceCents { get; set; }
 
     public override string EventType => "product.price_changed";
     public override int Version => 1;

@@ -7,6 +7,12 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <PackageReference Include="Grpc.Net.Client" Version="2.63.0" />
+        <PackageReference Include="Google.Protobuf" Version="3.25.3" />
+        <PackageReference Include="Grpc.Tools" Version="2.63.0" PrivateAssets="All" />
+    </ItemGroup>
+    
+    <ItemGroup>
       <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.0" />
       <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="9.0.0" />
       <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="9.0.0" />
@@ -19,7 +25,11 @@
       <ProjectReference Include="..\CartService.Application\CartService.Application.csproj" />
       <ProjectReference Include="..\CartService.Domain\CartService.Domain.csproj" />
     </ItemGroup>
-
+    
+    <ItemGroup>
+        <Protobuf Include="..\..\Shared\Proto\order.proto" GrpcServices="Client" />
+    </ItemGroup>
+    
     <ItemGroup>
       <Folder Include="Persistence\Migrations\" />
     </ItemGroup>

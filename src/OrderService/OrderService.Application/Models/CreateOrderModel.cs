@@ -36,6 +36,13 @@ public record CreateOrderModel
     [Range(1, long.MaxValue, ErrorMessage = "CostCents must be greater than 0")]
     public long CostCents { get; set; }
 
+    [StringLength(5, ErrorMessage = "Currency must not exceed 5 characters")]
+    public string? Currency { get; set; }
+    
     [StringLength(500, ErrorMessage = "CourierNote must not exceed 500 characters")]
     public string? CourierNote { get; set; }
+
+    public IReadOnlyCollection<CreateOrderItemModel>? Items { get; set; }
 }
+
+public record CreateOrderItemModel(Guid ProductId,  string Name, int PriceCents, int Quantity);

@@ -32,10 +32,7 @@ public class CreateOrderCommandHandler : IRequestHandler<CreateOrderCommand, Api
 
         if (createModel.CostCents <= 0)
             return ApiResponse<OrderView>.ErrorResponse("Cost must be greater than 0");
-
-        //пока пустые, потом доделаем
-        var items = new List<OrderItem>();
-
+        
         var order = Mapping.OrderFactory.CreateNew(
             clientId: createModel.ClientId,
             fromAddress: createModel.FromAddress,
@@ -47,8 +44,11 @@ public class CreateOrderCommandHandler : IRequestHandler<CreateOrderCommand, Api
             description: createModel.Description,
             weightGrams: createModel.WeightGrams,
             costCents: createModel.CostCents,
+            currency: createModel.Currency,
             courierNote: createModel.CourierNote,
-            items: items
+            items: createModel.Items?.Select(i=> new OrderItem(
+                i.ProductId, i.Name, i.PriceCents, i.Quantity))
+                .ToList()
         );
 
         await _repository.CreateOrderAsync(order, ct);
@@ -58,9 +58,7 @@ public class CreateOrderCommandHandler : IRequestHandler<CreateOrderCommand, Api
             .Where(ie => ie != null)
             .Select(ie => OutboxMessage.From(ie!))
             .ToList();
-
-        // OrderCreated snapshot now comes from DomainEvent -> IntegrationEvent mapping
-
+        
         await _uow.SaveChangesAsync(outboxMessages, ct);
         order.ClearDomainEvents();
 

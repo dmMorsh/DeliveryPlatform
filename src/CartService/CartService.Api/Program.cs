@@ -1,9 +1,11 @@
 using System.Text;
+using CartService.Api;
 using CartService.Application;
 using CartService.Application.Interfaces;
 using CartService.Application.Mapping;
 using CartService.Application.Services;
 using CartService.Infrastructure;
+using CartService.Infrastructure.Grpc;
 using CartService.Infrastructure.Outbox;
 using CartService.Infrastructure.Persistence;
 using CartService.Infrastructure.Repositories;
@@ -34,12 +36,18 @@ else
         options.UseNpgsql(connectionString));
 }
 
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddTransient<GrpcAuthHeaderHandler>();
+
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
 builder.Services.AddGrpcClient<OrderGrpc.OrderGrpcClient>(o =>
 {
-    o.Address = new Uri("http://localhost:5001");
-});
+    o.Address = new Uri("https://localhost:7204");
+}).AddHttpMessageHandler<GrpcAuthHeaderHandler>();
+
+builder.Services.AddScoped<IOrderService, OrderGrpcService>();
+
 // Kafka Event Producer
 builder.Services.AddSingleton<IEventProducer, KafkaEventProducer>();
 // Ensure Kafka topics exist on startup

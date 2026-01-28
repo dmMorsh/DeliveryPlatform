@@ -70,6 +70,7 @@ public class Order : AggregateRoot
         string? description,
         int weightGrams,
         long costCents,
+        string? currency,
         string? courierNote,
         List<OrderItem>? items = null)
     {
@@ -85,12 +86,12 @@ public class Order : AggregateRoot
             To =  new Address(toAddress,toLatitude,toLongitude),
             Description = description ?? string.Empty,
             WeightGrams = weightGrams,
-            CostCents = new Money(costCents, "USD"),
+            CostCents = new Money(costCents, string.IsNullOrWhiteSpace(currency) ? "USD" : currency),
             CourierNote = courierNote,
             Status = OrderStatus.Pending,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow,
-            _items = items ?? new List<OrderItem>()
+            _items = items
         };
 
         order.AddDomainEvent(new OrderCreatedDomainEvent {
@@ -100,7 +101,7 @@ public class Order : AggregateRoot
             ClientId = order.ClientId,
             FromAddress = order.From.Street,
             ToAddress = order.To.Street,
-            CostCents = order.CostCents.Amount,
+            CostCents = order.CostCents.AmountCents,
             Description = order.Description
         });
 

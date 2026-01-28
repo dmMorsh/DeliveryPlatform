@@ -11,7 +11,7 @@ public class OrderCreatedDomainEvent : DomainEvent
     public Guid ClientId { get; set; }
     public string FromAddress { get; set; } = string.Empty;
     public string ToAddress { get; set; } = string.Empty;
-    public decimal CostCents { get; set; }
+    public long CostCents { get; set; }
     public string? Description { get; set; }
     
     public List<OrderItemSnapshot> Items { get; set; } = new();

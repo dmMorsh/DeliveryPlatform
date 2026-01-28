@@ -5,8 +5,8 @@ namespace CatalogService.Infrastructure.Mapping;
 
 public class ProductIntegrationEventMapper : IProductIntegrationEventMapper
 {
-    public ProductPriceChangedEvent MapProductPriceChangedEvent(Guid productId, decimal oldPriceCents,
-        decimal newPriceCents)
+    public ProductPriceChangedEvent MapProductPriceChangedEvent(Guid productId, long oldPriceCents,
+        long newPriceCents)
     {
         return new ProductPriceChangedEvent
         {
@@ -17,7 +17,7 @@ public class ProductIntegrationEventMapper : IProductIntegrationEventMapper
         };
     }
 
-    public ProductCreatedEvent MapProductCreatedEvent(Guid productId, string name, string description, int priceCents, int quantityAvailable)
+    public ProductCreatedEvent MapProductCreatedEvent(Guid productId, string name, string description, long priceCents, int quantityAvailable)
     {
         return new ProductCreatedEvent
         {

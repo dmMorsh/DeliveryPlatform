@@ -55,13 +55,13 @@ public class CartController : ControllerBase
     }
     
     [HttpPost("checkout")]
-    public async Task<IActionResult> Checkout(CancellationToken ct)
+    public async Task<IActionResult> Checkout([FromBody] CheckoutCartModel model, CancellationToken ct)
     {
         var customerId = GetCustomerIdFromContext();
         if (customerId == Guid.Empty)
             return Unauthorized(new { error = "Customer ID not found in context" });
 
-        var cmd = new CheckoutCartCommand(customerId);
+        var cmd = new CheckoutCartCommand(customerId, model);
         var result = await _mediator.Send(cmd, ct);
 
         if (!result.Success)

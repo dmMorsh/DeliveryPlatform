@@ -16,9 +16,10 @@ public static class OrderFactory
         string? description,
         int weightGrams,
         long costCents,
+        string? currency,
         string? courierNote,
         List<OrderItem>? items = null)
     {
-        return Order.Create(clientId, fromAddress, toAddress, fromLatitude, fromLongitude, toLatitude, toLongitude, description, weightGrams, costCents, courierNote, items);
+        return Order.Create(clientId, fromAddress, toAddress, fromLatitude, fromLongitude, toLatitude, toLongitude, description, weightGrams, costCents, currency, courierNote, items);
     }
 }

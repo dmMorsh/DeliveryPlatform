@@ -6,18 +6,18 @@ public class Money : ValueObject
 {
     private Money() { }
     
-    public Money(decimal amount, string currency)
+    public Money(long amountCents, string currency)
     {
-        Amount = amount;
+        AmountCents = amountCents;
         Currency = currency;
     }
 
-    public decimal Amount { get; private set; }
+    public long AmountCents { get; private set; }
     public string Currency { get; private set; }
     
     protected override IEnumerable<object?> GetEqualityComponents()
     {
-        yield return Amount;
+        yield return AmountCents;
         yield return Currency;
     }
 }

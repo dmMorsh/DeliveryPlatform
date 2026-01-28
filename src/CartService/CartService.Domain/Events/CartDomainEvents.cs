@@ -18,4 +18,5 @@ public class CartCheckedOutDomainEvent : CartDomainEvent
 {
     public Guid CartId { get; init; }
     public Guid CustomerId { get; init; }
+    public Guid OrderId { get; init; }
 }

@@ -62,7 +62,7 @@ public class CartController : ControllerBase
     }
 
     [HttpPost("checkout")]
-    public async Task<IActionResult> Checkout(CancellationToken ct)
+    public async Task<IActionResult> Checkout([FromBody] CheckoutRequest request, CancellationToken ct)
     {
         _logger.LogInformation("Gateway: checkout");
 
@@ -70,7 +70,7 @@ public class CartController : ControllerBase
             "cart-service",
             "/api/cart/checkout",
             HttpContext,
-            null,
+            request,
             ct
         );
 

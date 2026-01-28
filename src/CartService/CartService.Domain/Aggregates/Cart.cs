@@ -30,10 +30,10 @@ public class Cart : AggregateRoot
 
     public void Clear() => _items.Clear();
 
-    public void Checkout()
+    public void Checkout(Guid orderId)
     {
         // business rules may be added here
-        AddDomainEvent(new CartCheckedOutDomainEvent { CartId = Id, CustomerId = CustomerId });
+        AddDomainEvent(new CartCheckedOutDomainEvent { CartId = Id, CustomerId = CustomerId, OrderId = orderId});
         _items.Clear();
         UpdatedAt = DateTime.UtcNow;
     }
