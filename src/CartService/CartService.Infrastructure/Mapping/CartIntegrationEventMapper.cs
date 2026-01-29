@@ -29,8 +29,19 @@ public class CartIntegrationEventMapper : ICartIntegrationEventMapper
     {
         return domainEvent switch
         {
-            CartItemAddedDomainEvent e => new CartItemAddedEvent { CartId = e.CartId, AggregateId = e.CartId, ProductId = e.ProductId, Quantity = e.Quantity, Timestamp = e.OccurredAt },
-            CartCheckedOutDomainEvent e => new CartCheckedOutEvent { CartId = e.CartId, AggregateId = e.CartId, CustomerId = e.CustomerId, Timestamp = e.OccurredAt },
+            CartItemAddedDomainEvent e => new CartItemAddedEvent
+            {
+                CartId = e.CartId,
+                ProductId = e.ProductId,
+                Quantity = e.Quantity,
+                Timestamp = e.OccurredAt
+            },
+            CartCheckedOutDomainEvent e => new CartCheckedOutEvent
+            {
+                CartId = e.CartId,
+                CustomerId = e.CustomerId,
+                Timestamp = e.OccurredAt
+            },
             _ => null
         };
     }

@@ -3,16 +3,9 @@ using CatalogService.Domain.ValueObjects;
 
 namespace CatalogService.Domain.Events;
 
-public class ProductPriceChanged : DomainEvent
+public record ProductPriceChanged : DomainEvent
 {
-    public ProductPriceChanged(Guid id, Money oldPrice, Money newPrice)
-    {
-        Id = id;
-        OldPrice = oldPrice;
-        NewPrice = newPrice;
-    }
-
-    public Guid Id { get; set; }
-    public Money OldPrice { get; set; }
-    public Money NewPrice { get; set; }
+    public Guid Id { get; init; }
+    public Money OldPrice { get; init; }
+    public Money NewPrice { get; init; }
 }

@@ -2,6 +2,7 @@ using MediatR;
 using CartService.Application.Interfaces;
 using CartService.Application.Mapping;
 using CartService.Domain.Events;
+using CartService.Domain.SeedWork;
 using Shared.Utilities;
 
 namespace CartService.Application.Commands.Checkout;
@@ -38,13 +39,10 @@ public class CheckoutCartCommandHandler : IRequestHandler<CheckoutCartCommand, A
         
         foreach (var domainEvent in cart.DomainEvents)
         {
-            if (domainEvent is CartDomainEvent cartEvent)
+            var integrationEvent = _eventMapper.MapFromDomainEvent(domainEvent);
+            if (integrationEvent != null)
             {
-                var integrationEvent = _eventMapper.MapFromDomainEvent(cartEvent);
-                if (integrationEvent != null)
-                {
-                    outboxMessages.Add(Models.OutboxMessage.From(integrationEvent));
-                }
+                outboxMessages.Add(Models.OutboxMessage.From(integrationEvent));
             }
         }
 

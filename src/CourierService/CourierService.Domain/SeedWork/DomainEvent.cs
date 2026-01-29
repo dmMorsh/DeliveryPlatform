@@ -1,6 +1,6 @@
 namespace CourierService.Domain.SeedWork;
 
-public abstract class DomainEvent
+public abstract record DomainEvent
 {
     public DateTime OccurredAt { get; } = DateTime.UtcNow;
 }

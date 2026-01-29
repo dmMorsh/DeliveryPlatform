@@ -67,7 +67,7 @@ public class CartController : ControllerBase
         if (!result.Success)
             return BadRequest(result);
 
-        return Ok(new { cartId = result.Data });
+        return Ok(new { orderId = result.Data });
     }
 
     private Guid GetCustomerIdFromContext()

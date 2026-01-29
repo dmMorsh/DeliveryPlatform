@@ -17,7 +17,6 @@ public class CourierEventMapper : ICourierEventMapper
     {
         return new CourierStatusChangedEvent
         {
-            AggregateId = courierId,
             CourierId = courierId,
             PreviousStatus = oldStatus,
             NewStatus = newStatus,
@@ -29,7 +28,6 @@ public class CourierEventMapper : ICourierEventMapper
     {
         return new CourierLocationUpdatedEvent
         {
-            AggregateId = courierId,
             CourierId = courierId,
             Latitude = latitude,
             Longitude = longitude,
@@ -43,7 +41,6 @@ public class CourierEventMapper : ICourierEventMapper
         {
             CourierStatusChangedDomainEvent e => new CourierStatusChangedEvent 
             { 
-                AggregateId = e.CourierId,
                 CourierId = e.CourierId, 
                 PreviousStatus = (int)e.PreviousStatus,
                 NewStatus = (int)e.NewStatus,
@@ -51,7 +48,6 @@ public class CourierEventMapper : ICourierEventMapper
             },
             CourierLocationUpdatedDomainEvent e => new CourierLocationUpdatedEvent 
             { 
-                AggregateId = e.CourierId,
                 CourierId = e.CourierId, 
                 Latitude = e.Latitude, 
                 Longitude = e.Longitude, 
@@ -60,13 +56,11 @@ public class CourierEventMapper : ICourierEventMapper
             
             CourierRegisteredDomainEvent e => new CourierRegisteredEvent
             {
-                AggregateId = e.CourierId,
                 CourierId = e.CourierId, 
                 Timestamp = e.OccurredAt
             },
             CourierRatingUpdatedDomainEvent e => new CourierRatingUpdatedEvent
             {
-                AggregateId = e.CourierId,
                 CourierId = e.CourierId, 
                 NewRating = e.Rating, 
                 TotalRatings = 0, 

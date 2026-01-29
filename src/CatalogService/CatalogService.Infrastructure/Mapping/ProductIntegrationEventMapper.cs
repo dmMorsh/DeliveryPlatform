@@ -11,7 +11,6 @@ public class ProductIntegrationEventMapper : IProductIntegrationEventMapper
         return new ProductPriceChangedEvent
         {
             ProductId = productId,
-            AggregateId = productId,
             OldPriceCents = oldPriceCents,
             NewPriceCents = newPriceCents
         };
@@ -22,7 +21,6 @@ public class ProductIntegrationEventMapper : IProductIntegrationEventMapper
         return new ProductCreatedEvent
         {
             ProductId = productId,
-            AggregateId = productId,
             Name = name,
             Description = description,
             PriceCents = priceCents,

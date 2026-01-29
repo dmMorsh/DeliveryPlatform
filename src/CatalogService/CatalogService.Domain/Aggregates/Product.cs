@@ -31,7 +31,7 @@ public class Product : AggregateRoot
 
         var oldPrice = PriceCents;
         PriceCents = newPrice;
-        AddDomainEvent(new ProductPriceChanged(Id, oldPrice, newPrice));
+        AddDomainEvent(new ProductPriceChanged{ Id = Id, OldPrice = oldPrice, NewPrice = newPrice});
     }
 
     public void ChangeWeight(Weight newWeight)

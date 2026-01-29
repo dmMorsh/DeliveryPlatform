@@ -1,15 +1,15 @@
 namespace Shared.Contracts.Events;
 
-public abstract class IntegrationEvent
+public abstract record IntegrationEvent
 {
     /// <summary>Timestamp события</summary>
-    public DateTime Timestamp { get; set; } = DateTime.UtcNow;
+    public DateTime Timestamp { get; init; } = DateTime.UtcNow;
     
     /// <summary>Тип события</summary>
     public abstract string EventType { get; }
     
     /// <summary>Уникальный идентификатор события</summary>
-    public string EventId { get; set; } = Guid.NewGuid().ToString();
+    public string EventId { get; } = Guid.NewGuid().ToString();
     
     
     /// <summary>Версия события для evolving schema</summary>
@@ -19,5 +19,5 @@ public abstract class IntegrationEvent
     public abstract string AggregateType { get; }
     
     /// <summary>ID корневого агрегата</summary>
-    public abstract Guid AggregateId { get; set; }
+    public abstract Guid AggregateId { get; }
 }

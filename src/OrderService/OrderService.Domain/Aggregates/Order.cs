@@ -102,7 +102,14 @@ public class Order : AggregateRoot
             FromAddress = order.From.Street,
             ToAddress = order.To.Street,
             CostCents = order.CostCents.AmountCents,
-            Description = order.Description
+            Description = order.Description,
+            Items = order.Items.Select(i=> new OrderItemSnapshot
+            {
+                ProductId =  i.ProductId, 
+                Name = i.Name,
+                PriceCents = i.PriceCents,
+                Quantity = i.Quantity,
+            }).ToList(),
         });
 
         return order;

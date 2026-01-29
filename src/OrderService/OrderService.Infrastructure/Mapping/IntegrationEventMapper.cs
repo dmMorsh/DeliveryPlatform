@@ -11,7 +11,6 @@ public class IntegrationEventMapper : IOrderIntegrationEventMapper
     {
         return new OrderAssignedEvent
         {
-            AggregateId = order.Id,
             OrderId = order.Id,
             CourierId = courierId,
             CourierName = courierName,
@@ -23,7 +22,6 @@ public class IntegrationEventMapper : IOrderIntegrationEventMapper
     {
         return new OrderStatusChangedEvent
         {
-            AggregateId = order.Id,
             OrderId = order.Id,
             OldStatus = oldStatus,
             NewStatus = newStatus,
@@ -35,7 +33,6 @@ public class IntegrationEventMapper : IOrderIntegrationEventMapper
     {
         return new OrderDeliveredEvent
         {
-            AggregateId = order.Id,
             OrderId = order.Id,
             CourierId = courierId,
             DeliveredAt = DateTime.UtcNow
@@ -48,7 +45,7 @@ public class IntegrationEventMapper : IOrderIntegrationEventMapper
         {
             OrderCreatedDomainEvent e => new OrderCreatedEvent 
             { 
-                AggregateId = e.AggregateId,
+                OrderId = e.OrderId,
                 OrderNumber = e.OrderNumber,
                 ClientId = e.ClientId,
                 FromAddress = e.FromAddress,
@@ -66,14 +63,12 @@ public class IntegrationEventMapper : IOrderIntegrationEventMapper
             },
             OrderAssignedDomainEvent e => new OrderAssignedEvent 
             { 
-                AggregateId = e.AggregateId,
                 OrderId = e.OrderId, 
                 CourierId = e.CourierId, 
                 Timestamp = e.OccurredAt 
             },
             OrderStatusChangedDomainEvent e => new OrderStatusChangedEvent 
             { 
-                AggregateId = e.AggregateId,
                 OrderId = e.OrderId, 
                 OldStatus = (int)e.PreviousStatus,
                 NewStatus = (int)e.NewStatus,

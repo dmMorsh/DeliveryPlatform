@@ -10,7 +10,6 @@ public class StockIntegrationEventMapper : IStockIntegrationEventMapper
         return new StockReservedEvent
         {
             ProductId = productId,
-            AggregateId = productId,
             OrderId = orderId,
             Quantity = quantity
         };
@@ -21,7 +20,6 @@ public class StockIntegrationEventMapper : IStockIntegrationEventMapper
         return new StockReleasedEvent
         {
             ProductId = productId,
-            AggregateId = productId,
             OrderId = orderId,
             Quantity = quantity
         };

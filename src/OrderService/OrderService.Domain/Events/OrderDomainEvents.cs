@@ -3,39 +3,39 @@ using OrderService.Domain.SeedWork;
 
 namespace OrderService.Domain.Events;
 
-public class OrderCreatedDomainEvent : DomainEvent
+public record OrderCreatedDomainEvent : DomainEvent
 {
     public Guid OrderId { get; init; }
-    public Guid AggregateId { get; set; }
-    public string OrderNumber { get; set; } = string.Empty;
-    public Guid ClientId { get; set; }
-    public string FromAddress { get; set; } = string.Empty;
-    public string ToAddress { get; set; } = string.Empty;
-    public long CostCents { get; set; }
-    public string? Description { get; set; }
-    
-    public List<OrderItemSnapshot> Items { get; set; } = new();
+    public Guid AggregateId { get; init; }
+    public string OrderNumber { get; init; } = string.Empty;
+    public Guid ClientId { get; init; }
+    public string FromAddress { get; init; } = string.Empty;
+    public string ToAddress { get; init; } = string.Empty;
+    public long CostCents { get; init; }
+    public string? Description { get; init; }
+
+    public required IReadOnlyList<OrderItemSnapshot> Items { get; init; }
 }
 
-public class OrderAssignedDomainEvent : DomainEvent
+public record OrderAssignedDomainEvent : DomainEvent
 {
     public Guid OrderId { get; init; }
     public Guid CourierId { get; init; }
-    public Guid AggregateId { get; set; }
+    public Guid AggregateId { get; init; }
 }
 
-public class OrderStatusChangedDomainEvent : DomainEvent
+public record OrderStatusChangedDomainEvent : DomainEvent
 {
     public Guid OrderId { get; init; }
     public OrderStatus PreviousStatus { get; init; }
     public OrderStatus NewStatus { get; init; }
-    public Guid AggregateId { get; set; }
+    public Guid AggregateId { get; init; }
 }
 
-public class OrderItemSnapshot
+public record OrderItemSnapshot
 {
-    public Guid ProductId { get; set; }
-    public string Name { get; set; } = string.Empty;
-    public long PriceCents { get; set; }
-    public int Quantity { get; set; }
+    public Guid ProductId { get; init; }
+    public string Name { get; init; } = string.Empty;
+    public long PriceCents { get; init; }
+    public int Quantity { get; init; }
 }

@@ -16,6 +16,7 @@ public record OrderView
     public int WeightGrams { get; set; }
     public int Status { get; set; }
     public long CostCents { get; set; }
+    public string? Currency { get; set; }
     public string? CourierNote { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime? AssignedAt { get; set; }
