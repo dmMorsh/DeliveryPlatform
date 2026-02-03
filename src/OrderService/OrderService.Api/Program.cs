@@ -15,12 +15,17 @@ using Shared.Services;
 using MediatR;
 using OrderService.Application;
 using OrderService.Application.Services;
+using OrderService.Application.Utils;
 using OrderService.Infrastructure.Outbox;
 using Serilog.Events;
 
 var builder = WebApplication.CreateBuilder(args);
+ShardingHelper.TotalShards = int.Parse(builder.Configuration["ShardCount"] ?? "1");
 
 builder.Services.AddGrpc();
+
+#region Serilog
+
 builder.Host.UseSerilog((ctx, cfg) =>
     cfg
         .MinimumLevel.Information()
@@ -33,6 +38,8 @@ builder.Host.UseSerilog((ctx, cfg) =>
            rollingInterval: RollingInterval.Day, 
            outputTemplate: "[{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz}] [{Level:u3}] [{SourceContext}] {Message:lj}{NewLine}{Exception}")
     );
+
+#endregion
 
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
@@ -61,7 +68,6 @@ builder.Services.AddSingleton<IOrderIntegrationEventMapper, IntegrationEventMapp
 // Event Consumer from other services
 builder.Services.AddSingleton<OrderEventConsumer>();
 
-// builder.Services.AddScoped<OrderApplicationService>();
 builder.Services.AddScoped<IOrderRepository, OrderRepository>();
 builder.Services.AddScoped<IOrderReadRepository, OrderReadRepository>();
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();

@@ -1,3 +1,3 @@
 ﻿namespace InventoryService.Application.Models;
 
-public record ReserveStockModel(Guid OrderId, int Quantity);
+public record ReserveStockModel(Guid ProductId, int Quantity);

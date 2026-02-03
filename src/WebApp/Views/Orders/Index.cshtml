@@ -1,0 +1,28 @@
+﻿@model List<OrderViewModel>
+
+<h2>My orders</h2>
+
+<table>
+    <tr>
+        <th>Number</th>
+        <th>Status</th>
+        <th>From</th>
+        <th>To</th>
+        <th>Cost</th>
+        <th></th>
+    </tr>
+
+    @foreach (var o in Model)
+    {
+        <tr>
+            <td>@o.OrderNumber</td>
+            <td>@o.Status</td>
+            <td>@o.FromAddress</td>
+            <td>@o.ToAddress</td>
+            <td>@(o.CostCents / 100.0m)</td>
+            <td>
+                <a href="/orders/@o.Id">Details</a>
+            </td>
+        </tr>
+    }
+</table>

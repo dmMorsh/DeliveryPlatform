@@ -84,9 +84,9 @@ public class OrderEventConsumer : KafkaEventConsumerBase
                 new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
             if (@event == null) return;
 
-            _logger.LogInformation("📦 CatalogService: Stock reserved. ProductId={ProductId}, Quantity={Quantity}. " +
+            _logger.LogInformation("📦 CatalogService: Stock reserved. OrderId={OrderId},. " +
                 "💾 TODO: Update available quantity cache",
-                @event.ProductId, @event.Quantity);
+                @event.OrderId);
             
             // TODO: Update product's available quantity cache
             // This would typically:

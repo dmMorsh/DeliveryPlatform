@@ -1,11 +1,13 @@
 using System.Text.Json;
 using Confluent.Kafka;
+using InventoryService.Application.Commands.ReleaseStock;
 using Shared.Services;
 using Shared.Contracts.Events;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Configuration;
 using MediatR;
 using InventoryService.Application.Commands.ReserveStock;
+using InventoryService.Application.Models;
 
 namespace InventoryService.Application.Services;
 
@@ -42,6 +44,9 @@ public class OrderEventConsumer : KafkaEventConsumerBase
                 case "order.created":
                     await HandleOrderCreated(json);
                     break;
+                case "order.canceled":
+                    await HandleOrderCanceled(json);
+                    break;
                 default:
                     _logger.LogWarning("Unknown event type: {EventType}", eventType);
                     break;
@@ -50,6 +55,48 @@ public class OrderEventConsumer : KafkaEventConsumerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error handling event {EventType}", eventType);
+        }
+    }
+
+    private async Task HandleOrderCanceled(string json)
+    {
+        try
+        {
+            var @event = JsonSerializer.Deserialize<OrderCanceledEvent>(json, 
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            if (@event == null) return;
+
+            _logger.LogInformation("📦 InventoryService: Order canceled. OrderId={OrderId}. ",
+                @event.AggregateId);
+            
+            // Отменяем резерв stock
+            try
+            {
+                var cmd = new ReleaseStockCommand(@event.OrderId, null, @event.ShardId);
+
+                var result = await _mediator.Send(cmd);
+                
+                if (result.Success)
+                {
+                    _logger.LogInformation(
+                        "✅ Stock released: OrderId={OrderId}", @event.AggregateId);
+                }
+                else
+                {
+                    _logger.LogWarning(
+                        "⚠️ Failed to release stock: OrderId={OrderId}. Error: {Error}", @event.AggregateId, result.Errors);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, 
+                    "❌ Error releasing stock for OrderId={OrderId}", @event.AggregateId);
+            }
+            
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error processing OrderCanceledEvent");
         }
     }
 
@@ -68,36 +115,32 @@ public class OrderEventConsumer : KafkaEventConsumerBase
             // Резервируем stock для каждого товара в заказе
             if (@event.Items != null)
             {
-                foreach (var item in @event.Items)
+                try
                 {
-                    try
-                    {
-                        var cmd = new ReserveStockCommand(item.ProductId, @event.OrderId ,item.Quantity);
+                    var cmd = new ReserveStockCommand(@event.OrderId ,@event.Items
+                        .Select(i => 
+                            new ReserveStockModel(
+                                i.ProductId, 
+                                i.Quantity)
+                        ).ToArray(), @event.ShardId);
 
-                        var result = await _mediator.Send(cmd);
-                        
-                        if (result.Success)
-                        {
-                            _logger.LogInformation(
-                                "✅ Stock reserved: ProductId={ProductId}, Quantity={Quantity}, OrderId={OrderId}",
-                                item.ProductId, item.Quantity, @event.AggregateId);
-                        }
-                        else
-                        {
-                            _logger.LogWarning(
-                                "⚠️ Failed to reserve stock: ProductId={ProductId}, OrderId={OrderId}. Error: {Error}",
-                                item.ProductId, @event.AggregateId, result.Errors);
-                            
-                            // TODO: Send event about failed reservation
-                            // This would trigger order cancellation in OrderService
-                        }
-                    }
-                    catch (Exception ex)
+                    var result = await _mediator.Send(cmd);
+                    
+                    if (result.Success)
                     {
-                        _logger.LogError(ex, 
-                            "❌ Error reserving stock for ProductId={ProductId}, OrderId={OrderId}",
-                            item.ProductId, @event.AggregateId);
+                        _logger.LogInformation(
+                            "✅ Stock reserved: OrderId={OrderId}", @event.AggregateId);
                     }
+                    else
+                    {
+                        _logger.LogWarning(
+                            "⚠️ Failed to reserve stock: OrderId={OrderId}. Error: {Error}", @event.AggregateId, result.Errors);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, 
+                        "❌ Error reserving stock for OrderId={OrderId}", @event.AggregateId);
                 }
             }
         }
@@ -106,11 +149,4 @@ public class OrderEventConsumer : KafkaEventConsumerBase
             _logger.LogError(ex, "Error processing OrderCreatedEvent");
         }
     }
-}
-
-// Extension class for OrderCreatedEvent items
-public class OrderItem
-{
-    public Guid ProductId { get; set; }
-    public int Quantity { get; set; }
 }

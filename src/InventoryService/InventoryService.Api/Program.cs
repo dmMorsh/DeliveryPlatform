@@ -1,12 +1,14 @@
+using Hangfire;
+using Hangfire.PostgreSql;
 using MediatR;
 using InventoryService.Application;
 using InventoryService.Application.Interfaces;
 using InventoryService.Application.Services;
-using InventoryService.Infrastructure;
+using InventoryService.Application.Utils;
+using InventoryService.Infrastructure.Hangfire;
 using InventoryService.Infrastructure.Mapping;
 using InventoryService.Infrastructure.Outbox;
 using InventoryService.Infrastructure.Persistence;
-using InventoryService.Infrastructure.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
 using Shared.Services;
@@ -24,26 +26,51 @@ if (useInMemory)
         options.UseInMemoryDatabase("orders_inmem"));
 }
 else
-{
-    var connectionString = builder.Configuration.GetConnectionString("PostgreSQL") 
+{   // DbContext
+    var connectionString = builder.Configuration.GetConnectionString("Default") 
                            ?? "Host=localhost;Port=5432;Database=delivery_db;Username=postgres;Password=postgres;";
     builder.Services.AddDbContext<InventoryDbContext>(options =>
         options.UseNpgsql(connectionString));
+    
+    // Hangfire
+    builder.Services.AddHangfire(config =>
+        // config.UsePostgreSqlStorage(connectionString, new PostgreSqlStorageOptions { PrepareSchemaIfNecessary = true }));
+        config.UsePostgreSqlStorage(options =>
+            options.UseNpgsqlConnection(builder.Configuration.GetConnectionString("Default")), 
+            new PostgreSqlStorageOptions { PrepareSchemaIfNecessary = true })
+        );
+    builder.Services.AddHangfireServer();
+    builder.Services.AddScoped<IHangfireCommandExecutor, HangfireCommandExecutor>();
+    
+    // Sharding
+    // builder.Services.AddSingleton<IInventoryDbContextFactory, InventoryDbContextFactory>();
+    builder.Services.AddSingleton<IShardResolver>(sp =>
+    {
+        var shardCount = builder.Configuration.GetValue<int>("ShardCount");
+        return new HashShardResolver(shardCount);
+    });
+    builder.Services.AddScoped<IUnitOfWorkFactory, UnitOfWorkFactory>();
+    
+    // Outbox processor
+    builder.Services.AddHostedService<OutboxProcessor>();
 }
 
 builder.Services.AddControllers();
-builder.Services.AddMediatR(typeof(ApplicationMarker).Assembly);
-builder.Services.AddScoped<IStockItemRepository, StockItemRepository>();
+builder.Services
+    .AddMediatR(typeof(ApplicationMarker).Assembly)
+    .AddTransient(typeof(IPipelineBehavior<,>), typeof(ConcurrencyRetryBehavior<,>))
+    .AddTransient(typeof(IPipelineBehavior<,>), typeof(HangfireRetryBehavior<,>));
+
+// builder.Services.AddScoped<IStockItemRepository, StockItemRepository>();
+// builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+
 // Kafka Event Producer
 builder.Services.AddSingleton<IEventProducer, KafkaEventProducer>();
 // Ensure Kafka topics exist on startup
 builder.Services.AddHostedService<KafkaTopicBootstrapper>();
 // Event Consumer from OrderService
 builder.Services.AddSingleton<OrderEventConsumer>();
-// Outbox processor
-if (!useInMemory)
-    builder.Services.AddHostedService<OutboxProcessor>();
-builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+
 builder.Services.AddSingleton<IStockIntegrationEventMapper, StockIntegrationEventMapper>();
 
 var app = builder.Build();
@@ -75,6 +102,8 @@ _ = Task.Run(async () =>
     Log.Information("Starting InventoryService Kafka consumer (listening to order.events)...");
     await consumer.StartConsumingAsync(cts.Token);
 }, cts.Token);
+
+app.UseHangfireDashboard("/hangfire");
 
 // Register shutdown handler
 app.Lifetime.ApplicationStopping.Register(() =>

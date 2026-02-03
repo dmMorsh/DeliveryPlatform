@@ -12,8 +12,8 @@ public class Money : ValueObject
         Currency = currency;
     }
 
-    public long AmountCents { get; }
-    public string Currency { get; }
+    public long AmountCents { get; private set; }
+    public string Currency { get; private set; }
     
     protected override IEnumerable<object?> GetEqualityComponents()
     {

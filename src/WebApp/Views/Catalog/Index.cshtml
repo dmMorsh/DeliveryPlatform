@@ -1,0 +1,26 @@
+﻿@model List<ProductViewModel>
+
+<a asp-action="AddItem">Add new</a>
+<h2>Catalog</h2>
+
+<table>
+    <thead>
+    <tr>
+        <th>Name</th>
+        <th>Price</th>
+        <th></th>
+    </tr>
+    </thead>
+    <tbody>
+    @foreach (var p in Model)
+    {
+        <tr>
+            <td>@p.Name</td>
+            <td>@p.Price $</td>
+            <td>
+                <a asp-action="Details" asp-route-id="@p.Id">Details</a>
+            </td>
+        </tr>
+    }
+    </tbody>
+</table>

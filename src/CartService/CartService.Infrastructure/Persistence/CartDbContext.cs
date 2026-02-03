@@ -22,6 +22,8 @@ public class CartDbContext : DbContext
             entity.HasKey(x => x.Id);
             entity.Ignore(e => e.DomainEvents);
             entity.OwnsMany(x => x.Items);
+            entity.Property(x => x.RowVersion)
+                .IsRowVersion();
         });
     }
 }

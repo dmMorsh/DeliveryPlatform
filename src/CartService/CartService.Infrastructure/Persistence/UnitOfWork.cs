@@ -1,8 +1,7 @@
 using CartService.Application.Interfaces;
 using CartService.Application.Models;
-using CartService.Infrastructure.Persistence;
 
-namespace CartService.Infrastructure;
+namespace CartService.Infrastructure.Persistence;
 
 public class UnitOfWork : IUnitOfWork
 {

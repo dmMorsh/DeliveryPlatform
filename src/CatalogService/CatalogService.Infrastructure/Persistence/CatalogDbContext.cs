@@ -23,6 +23,8 @@ public class CatalogDbContext : DbContext
             entity.Ignore(e => e.DomainEvents);
             entity.OwnsOne(e => e.PriceCents);
             entity.OwnsOne(e => e.WeightGrams);
+            entity.Property(x => x.RowVersion)
+                .IsRowVersion();
         });
     }
 }

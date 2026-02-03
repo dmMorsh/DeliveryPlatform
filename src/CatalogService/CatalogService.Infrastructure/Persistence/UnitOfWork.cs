@@ -1,8 +1,7 @@
 ﻿using CatalogService.Application.Interfaces;
 using CatalogService.Application.Models;
-using CatalogService.Infrastructure.Persistence;
 
-namespace CatalogService.Infrastructure;
+namespace CatalogService.Infrastructure.Persistence;
 
 public class UnitOfWork : IUnitOfWork
 {

@@ -54,7 +54,7 @@ public class OrdersController : ControllerBase
     /// <param name="ct"></param>
     /// <returns>Данные заказа</returns>
     [HttpGet("{orderId}")]
-    public async Task<IActionResult> GetOrder(int orderId, CancellationToken ct)
+    public async Task<IActionResult> GetOrder(Guid orderId, CancellationToken ct)
     {
         _logger.LogInformation("Gateway: Getting order {OrderId}", orderId);
 

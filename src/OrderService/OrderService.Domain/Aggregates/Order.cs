@@ -7,11 +7,15 @@ namespace OrderService.Domain.Aggregates;
 
 public enum OrderStatus
 {
-    Pending = 0,
-    Assigned = 1,
-    InTransit = 2,
-    Delivered = 3,
-    Cancelled = 4
+    Pending,
+    Reserved,
+    Confirmed,
+    Assigning,
+    Assigned,
+    InDelivery,
+    Delivered,
+    Cancelled,
+    Failed
 }
 
 public class Order : AggregateRoot
@@ -48,6 +52,10 @@ public class Order : AggregateRoot
     {
         var prev = Status;
         if (prev == newStatus) return;
+
+        if (newStatus == OrderStatus.Reserved && prev != OrderStatus.Pending)
+            throw new Exception($"previous status must be pending. previous status is {prev.ToString()}");
+        
         Status = newStatus;
         if (newStatus == OrderStatus.Delivered && !DeliveredAt.HasValue)
             DeliveredAt = DateTime.UtcNow;
@@ -96,14 +104,14 @@ public class Order : AggregateRoot
 
         order.AddDomainEvent(new OrderCreatedDomainEvent {
             OrderId = order.Id,
-            AggregateId = order.Id,
+            // AggregateId = order.Id,
             OrderNumber = order.OrderNumber,
             ClientId = order.ClientId,
             FromAddress = order.From.Street,
             ToAddress = order.To.Street,
             CostCents = order.CostCents.AmountCents,
             Description = order.Description,
-            Items = order.Items.Select(i=> new OrderItemSnapshot
+            Items = order.Items.Select(i=> new DomainOrderItemSnapshot
             {
                 ProductId =  i.ProductId, 
                 Name = i.Name,

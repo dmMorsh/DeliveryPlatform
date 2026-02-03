@@ -1,8 +1,7 @@
 using OrderService.Application.Interfaces;
 using OrderService.Application.Models;
-using OrderService.Infrastructure.Persistence;
 
-namespace OrderService.Infrastructure;
+namespace OrderService.Infrastructure.Persistence;
 
 public class UnitOfWork : IUnitOfWork
 {

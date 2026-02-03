@@ -79,6 +79,12 @@ namespace CatalogService.Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("bytea");
+
                     b.HasKey("Id");
 
                     b.ToTable("Products", "catalog");
@@ -90,6 +96,13 @@ namespace CatalogService.Infrastructure.Persistence.Migrations
                         {
                             b1.Property<Guid>("ProductId")
                                 .HasColumnType("uuid");
+
+                            b1.Property<long>("AmountCents")
+                                .HasColumnType("bigint");
+
+                            b1.Property<string>("Currency")
+                                .IsRequired()
+                                .HasColumnType("text");
 
                             b1.HasKey("ProductId");
 
@@ -103,6 +116,9 @@ namespace CatalogService.Infrastructure.Persistence.Migrations
                         {
                             b1.Property<Guid>("ProductId")
                                 .HasColumnType("uuid");
+
+                            b1.Property<long>("Value")
+                                .HasColumnType("bigint");
 
                             b1.HasKey("ProductId");
 

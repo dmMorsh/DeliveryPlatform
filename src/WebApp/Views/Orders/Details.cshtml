@@ -1,0 +1,30 @@
+﻿@model OrderViewModel
+
+<h2>Order @Model.OrderNumber</h2>
+
+<p>Status: @Model.Status</p>
+
+<h3>Route</h3>
+<p><b>From:</b> @Model.FromAddress</p>
+<p><b>To:</b> @Model.ToAddress</p>
+
+<h3>Items</h3>
+
+<table>
+    <tr>
+        <th>Name</th>
+        <th>Qty</th>
+        <th>Price</th>
+    </tr>
+
+    @foreach (var i in Model.Items)
+    {
+        <tr>
+            <td>@i.Name</td>
+            <td>@i.Quantity</td>
+            <td>@(i.PriceCents / 100.0m)</td>
+        </tr>
+    }
+</table>
+
+<h3>Total: @(Model.CostCents / 100.0m)</h3>

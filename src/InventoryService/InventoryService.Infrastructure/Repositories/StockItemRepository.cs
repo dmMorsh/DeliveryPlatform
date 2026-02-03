@@ -1,6 +1,7 @@
 using InventoryService.Application.Interfaces;
 using InventoryService.Domain.Aggregates;
 using InventoryService.Infrastructure.Persistence;
+using Microsoft.EntityFrameworkCore;
 
 namespace InventoryService.Infrastructure.Repositories;
 
@@ -13,14 +14,13 @@ public class StockItemRepository : IStockItemRepository
         _context = context;
     }
     
-    public Task<StockItem?> GetByProductIdAsync(Guid productId, CancellationToken ct = default)
+    public async Task<StockItem?> GetByProductIdAsync(Guid productId, CancellationToken ct = default)
     {
-        var item = _context.StockItems.FirstOrDefault(x => x.ProductId == productId);
-        return Task.FromResult(item);
+        return await _context.StockItems.FirstOrDefaultAsync(x => x.ProductId == productId);
     }
 
-    public void Add(StockItem item)
+    public async Task AddAsync(StockItem item, CancellationToken ct)
     {
-        _context.Add(item);
+        await _context.AddAsync(item);
     }
 }

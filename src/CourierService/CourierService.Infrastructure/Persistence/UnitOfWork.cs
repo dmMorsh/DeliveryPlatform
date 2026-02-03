@@ -1,8 +1,7 @@
 using CourierService.Application.Interfaces;
 using CourierService.Application.Models;
-using CourierService.Infrastructure.Persistence;
 
-namespace CourierService.Infrastructure;
+namespace CourierService.Infrastructure.Persistence;
 
 public class UnitOfWork : IUnitOfWork
 {

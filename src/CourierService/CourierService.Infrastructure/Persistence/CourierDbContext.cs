@@ -31,6 +31,8 @@ public class CourierDbContext : DbContext
             entity.HasIndex(e => e.DocumentNumber).IsUnique();
             entity.HasIndex(e => e.Status);
             entity.HasIndex(e => e.CreatedAt);
+            entity.Property(x => x.RowVersion)
+                .IsRowVersion();
         });
     }
 }

@@ -23,7 +23,7 @@ public class AnalyticsEventConsumer : KafkaEventConsumerBase
     public AnalyticsEventConsumer(
         IConfiguration config,
         ILogger<AnalyticsEventConsumer> logger)
-        : base(config, logger, "order.events", "courier.events")
+        : base(config, logger, "cart.events", "order.events", "courier.events")
     {
         _logger = logger;
     }

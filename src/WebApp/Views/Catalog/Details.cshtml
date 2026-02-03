@@ -1,0 +1,14 @@
+﻿@model ProductViewModel
+
+<h2>@Model.Name</h2>
+
+<p>@Model.Description</p>
+<p><strong>@Model.Price $</strong></p>
+<p><strong>@Model.WeightGrams gram</strong></p>
+
+<form method="post" asp-controller="Cart" asp-action="Add">
+    <input type="hidden" name="productId" value="@Model.Id"/>
+    <input type="hidden" name="name" value="@Model.Name"/>
+    <input type="hidden" name="priceCents" value="@Model.PriceCents"/>
+    <button type="submit">Add to cart</button>
+</form>

@@ -110,6 +110,12 @@ namespace CourierService.Infrastructure.Persistence.Migrations
                     b.Property<double>("Rating")
                         .HasColumnType("double precision");
 
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("bytea");
+
                     b.Property<int>("Status")
                         .HasColumnType("integer");
 

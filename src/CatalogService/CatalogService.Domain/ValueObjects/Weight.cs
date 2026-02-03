@@ -11,7 +11,7 @@ public class Weight : ValueObject
         Value = value;
     }
 
-    public long Value { get; }
+    public long Value { get; private set; }
 
     protected override IEnumerable<object?> GetEqualityComponents()
     {

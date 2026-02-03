@@ -1,0 +1,38 @@
+﻿@model CartViewModel
+
+<h2>Your Cart</h2>
+
+@if (Model == null || !Model.Items.Any())
+{
+    <p>Cart is empty</p>
+    return;
+}
+
+<table>
+    <tr>
+        <th>Name</th>
+        <th>Qty</th>
+        <th>Price</th>
+        <th></th>
+    </tr>
+
+    @foreach (var item in Model.Items)
+    {
+        <tr>
+            <td>@item.Name</td>
+            <td>@item.Quantity</td>
+            <td>@item.LineTotal</td>
+            <td>
+                <form method="post" asp-action="Remove">
+                    <input type="hidden" name="productId" value="@item.ProductId"/>
+                    <button>Remove</button>
+                </form>
+            </td>
+        </tr>
+    }
+
+</table>
+
+<h3>Total: @Model.Total</h3>
+
+<a asp-action="Checkout" asp-route-costCents="@Model.TotalCents">Checkout</a>

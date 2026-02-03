@@ -27,10 +27,11 @@ public class ProxyService : IProxyService
         // Получаем URLs сервисов из конфигурации
         _serviceUrls = new Dictionary<string, string>
         {
+            ["auth-service"] = config["Services:AuthServiceUrl"] ?? "http://localhost:5292",
             ["catalog-service"] = config["Services:CatalogServiceUrl"] ?? "http://localhost:5201",
             ["cart-service"] = config["Services:CartServiceUrl"] ?? "http://localhost:5202",
             ["inventory-service"] = config["Services:InventoryServiceUrl"] ?? "http://localhost:5203",
-            ["order-service"] = config["Services:OrderServiceUrl"] ?? "http://localhost:5204",
+            ["order-service"] = config["Services:OrderServiceUrl"] ?? "https://localhost:7204",
             ["courier-service"] = config["Services:CourierServiceUrl"] ?? "http://localhost:5205",
             ["location-tracking"] = config["Services:LocationTrackingUrl"] ?? "http://localhost:5127"
         };

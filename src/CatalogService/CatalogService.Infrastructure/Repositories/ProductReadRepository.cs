@@ -73,7 +73,8 @@ public class ProductReadRepository : IProductReadRepository
                 p.Name,
                 p.Description,
                 p.PriceCents.AmountCents,
-                p.PriceCents.Currency))
+                p.PriceCents.Currency,
+                p.WeightGrams.Value))
             .ToListAsync(ct);
 
         return new PagedResult<ProductView>
@@ -91,7 +92,7 @@ public class ProductReadRepository : IProductReadRepository
             .AsNoTracking()
             .Where(p => p.Id == id)
             .Select(p => 
-                new ProductView(p.Id, p.Name, p.Description, p.PriceCents.AmountCents, p.PriceCents.Currency)
+                new ProductView(p.Id, p.Name, p.Description, p.PriceCents.AmountCents, p.PriceCents.Currency, p.WeightGrams.Value)
             )
             .FirstOrDefaultAsync(ct);
     }

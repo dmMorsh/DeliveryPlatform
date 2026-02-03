@@ -4,7 +4,8 @@ using OrderService.Application.Interfaces;
 using Shared.Utilities;
 using Mapster;
 using OrderService.Application.Models;
-using OrderService.Domain.Entities;
+using OrderService.Application.Utils;
+using OrderService.Domain.Events;
 
 namespace OrderService.Application.Commands.CreateOrder;
 
@@ -33,31 +34,23 @@ public class CreateOrderCommandHandler : IRequestHandler<CreateOrderCommand, Api
         if (createModel.CostCents <= 0)
             return ApiResponse<OrderView>.ErrorResponse("Cost must be greater than 0");
         
-        var order = Mapping.OrderFactory.CreateNew(
-            clientId: createModel.ClientId,
-            fromAddress: createModel.FromAddress,
-            toAddress: createModel.ToAddress,
-            fromLatitude: createModel.FromLatitude,
-            fromLongitude: createModel.FromLongitude,
-            toLatitude: createModel.ToLatitude,
-            toLongitude: createModel.ToLongitude,
-            description: createModel.Description,
-            weightGrams: createModel.WeightGrams,
-            costCents: createModel.CostCents,
-            currency: createModel.Currency,
-            courierNote: createModel.CourierNote,
-            items: createModel.Items?.Select(i=> new OrderItem(
-                i.ProductId, i.Name, i.PriceCents, i.Quantity))
-                .ToList()
-        );
+        var order = Mapping.OrderFactory.CreateNew(createModel);
 
         await _repository.CreateOrderAsync(order, ct);
         
-        var outboxMessages = order.DomainEvents
-            .Select(de => _eventMapper.MapFromDomainEvent(de))
-            .Where(ie => ie != null)
-            .Select(ie => OutboxMessage.From(ie!))
-            .ToList();
+        var createdDomainEvent = order.DomainEvents.First() as OrderCreatedDomainEvent;
+        if (createdDomainEvent == null) throw new AggregateException("ERROR !!!");
+        
+        var shardGroups = createdDomainEvent.Items
+            .GroupBy(i => ShardingHelper.ShardForProduct(i.ProductId));
+        var outboxMessages = new List<OutboxMessage>();
+        
+        foreach (var shardGroup in shardGroups)
+        {
+            var shardId = shardGroup.Key;
+            var shardEvent = _eventMapper.MapFromOrderCreatedDomainEvent(createdDomainEvent, shardGroup.ToArray(), shardId);
+            if (shardEvent != null) outboxMessages.Add(OutboxMessage.From(shardEvent));
+        }
         
         await _uow.SaveChangesAsync(outboxMessages, ct);
         order.ClearDomainEvents();

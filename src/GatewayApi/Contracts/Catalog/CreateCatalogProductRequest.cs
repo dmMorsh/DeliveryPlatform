@@ -7,6 +7,7 @@ public record CreateCatalogProductRequest
     public string? Description { get; init; }
     public long PriceCents { get; init; }
     public string? Currency { get; init; }
+    public long WeightGrams { get; init; }
     public bool? IsActive { get; init; }
     public IReadOnlyList<string> Categories { get; init; } = [];
 }

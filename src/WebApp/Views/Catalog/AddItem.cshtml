@@ -1,0 +1,24 @@
+﻿@model ProductViewModel
+
+<form method="post" asp-controller="Catalog" asp-action="Add">
+   
+    <h3>Info</h3>
+    
+    <label>Name</label>
+    <input asp-for="Name"/>
+    <label>Description</label>
+    <input asp-for="Description"/>
+    
+    <h3>Details</h3>
+    
+    <label>Price Cents</label>
+    <input asp-for="PriceCents"/>
+    <label>Currency</label>
+    <input asp-for="Currency"/>
+    
+    <label>Weight Grams</label>
+    <input asp-for="WeightGrams"/>
+    
+    <br/>
+    <button type="submit">Add</button>
+</form>

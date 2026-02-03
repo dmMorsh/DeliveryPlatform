@@ -10,6 +10,7 @@ public record OrderCreatedEvent : IntegrationEvent
     public override string AggregateType => "Order";
     public override Guid AggregateId => OrderId;
     public required Guid OrderId { get; init; }
+    public required int ShardId { get; init; }
     public string? OrderNumber { get; init; }
     public Guid ClientId { get; init; }
     public string FromAddress { get; init; } = string.Empty;
@@ -20,14 +21,14 @@ public record OrderCreatedEvent : IntegrationEvent
     public double ToLongitude { get; init; }
     public long CostCents { get; init; }
     public DateTime CreatedAt { get; init; }
-    public List<OrderEItemSnapshot> Items { get; init; } = new();
+    public List<IntegrationOrderItemSnapshot> Items { get; init; } = new();
     public string? Description { get; init; }
 }
 
 /// <summary>
 /// Снимок позиции заказа для событий
 /// </summary>
-public record OrderEItemSnapshot
+public record IntegrationOrderItemSnapshot
 {
     public Guid ProductId { get; init; }
     public string Name { get; init; } = string.Empty;
@@ -78,4 +79,18 @@ public record OrderDeliveredEvent : IntegrationEvent
     public DateTime DeliveredAt { get; init; }
     public string? Signature { get; init; }
     public string? Notes { get; init; }
+}
+
+/// <summary>
+/// Event: Заказ отменен
+/// </summary>
+public record OrderCanceledEvent : IntegrationEvent
+{
+    public override string EventType => "order.canceled";
+    public override int Version => 1;
+    public override string AggregateType => "Order";
+    public override Guid AggregateId => OrderId;
+    public required Guid OrderId { get; init; }
+    public required int ShardId { get; init; }
+    public Guid CourierId { get; init; }
 }

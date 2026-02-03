@@ -98,6 +98,12 @@ namespace OrderService.Infrastructure.Persistence.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
 
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("bytea");
+
                     b.Property<int>("Status")
                         .HasColumnType("integer");
 
@@ -125,10 +131,17 @@ namespace OrderService.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("OrderService.Domain.Aggregates.Order", b =>
                 {
-                    b.OwnsOne("OrderService.Domain.ValueObjects.Address", "From", b1 =>
+                    b.OwnsOne("OrderService.Domain.ValueObjects.Money", "CostCents", b1 =>
                         {
                             b1.Property<Guid>("OrderId")
                                 .HasColumnType("uuid");
+
+                            b1.Property<long>("AmountCents")
+                                .HasColumnType("bigint");
+
+                            b1.Property<string>("Currency")
+                                .IsRequired()
+                                .HasColumnType("text");
 
                             b1.HasKey("OrderId");
 
@@ -138,10 +151,20 @@ namespace OrderService.Infrastructure.Persistence.Migrations
                                 .HasForeignKey("OrderId");
                         });
 
-                    b.OwnsOne("OrderService.Domain.ValueObjects.Address", "To", b1 =>
+                    b.OwnsOne("OrderService.Domain.ValueObjects.Address", "From", b1 =>
                         {
                             b1.Property<Guid>("OrderId")
                                 .HasColumnType("uuid");
+
+                            b1.Property<double>("Latitude")
+                                .HasColumnType("double precision");
+
+                            b1.Property<double>("Longitude")
+                                .HasColumnType("double precision");
+
+                            b1.Property<string>("Street")
+                                .IsRequired()
+                                .HasColumnType("text");
 
                             b1.HasKey("OrderId");
 
@@ -173,6 +196,9 @@ namespace OrderService.Infrastructure.Persistence.Migrations
                             b1.Property<int>("Quantity")
                                 .HasColumnType("integer");
 
+                            b1.Property<int>("Status")
+                                .HasColumnType("integer");
+
                             b1.HasKey("OrderId", "Id");
 
                             b1.ToTable("OrderItem", "order");
@@ -181,10 +207,20 @@ namespace OrderService.Infrastructure.Persistence.Migrations
                                 .HasForeignKey("OrderId");
                         });
 
-                    b.OwnsOne("OrderService.Domain.ValueObjects.Money", "CostCents", b1 =>
+                    b.OwnsOne("OrderService.Domain.ValueObjects.Address", "To", b1 =>
                         {
                             b1.Property<Guid>("OrderId")
                                 .HasColumnType("uuid");
+
+                            b1.Property<double>("Latitude")
+                                .HasColumnType("double precision");
+
+                            b1.Property<double>("Longitude")
+                                .HasColumnType("double precision");
+
+                            b1.Property<string>("Street")
+                                .IsRequired()
+                                .HasColumnType("text");
 
                             b1.HasKey("OrderId");
 

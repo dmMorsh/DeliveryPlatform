@@ -43,24 +43,8 @@ public class IntegrationEventMapper : IOrderIntegrationEventMapper
     {
         return domainEvent switch
         {
-            OrderCreatedDomainEvent e => new OrderCreatedEvent 
-            { 
-                OrderId = e.OrderId,
-                OrderNumber = e.OrderNumber,
-                ClientId = e.ClientId,
-                FromAddress = e.FromAddress,
-                ToAddress = e.ToAddress,
-                CostCents = e.CostCents,
-                Description = e.Description,
-                Timestamp = e.OccurredAt,
-                Items = e.Items.Select(i => new OrderEItemSnapshot
-                {
-                    ProductId = i.ProductId,
-                    Name = i.Name,
-                    PriceCents = i.PriceCents,
-                    Quantity = i.Quantity
-                }).ToList()
-            },
+            OrderCreatedDomainEvent e => MapFromOrderCreatedDomainEvent(e, null, 0)
+            ,
             OrderAssignedDomainEvent e => new OrderAssignedEvent 
             { 
                 OrderId = e.OrderId, 
@@ -75,6 +59,30 @@ public class IntegrationEventMapper : IOrderIntegrationEventMapper
                 Timestamp = e.OccurredAt 
             },
             _ => null
+        };
+    }
+
+    public IntegrationEvent? MapFromOrderCreatedDomainEvent(OrderCreatedDomainEvent e,
+        IEnumerable<DomainOrderItemSnapshot>? snapshots, int shardId)
+    {
+        return new OrderCreatedEvent
+        {
+            OrderId = e.OrderId,
+            ShardId = shardId,
+            OrderNumber = e.OrderNumber,
+            ClientId = e.ClientId,
+            FromAddress = e.FromAddress,
+            ToAddress = e.ToAddress,
+            CostCents = e.CostCents,
+            Description = e.Description,
+            Timestamp = e.OccurredAt,
+            Items = (snapshots ?? e.Items).Select(i => new IntegrationOrderItemSnapshot
+            {
+                ProductId = i.ProductId,
+                Name = i.Name,
+                PriceCents = i.PriceCents,
+                Quantity = i.Quantity
+            }).ToList()
         };
     }
 }

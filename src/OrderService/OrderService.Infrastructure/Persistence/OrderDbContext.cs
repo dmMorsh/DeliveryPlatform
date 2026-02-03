@@ -40,6 +40,8 @@ public class OrderDbContext : DbContext
             entity.HasIndex(e => e.CourierId);
             entity.HasIndex(e => e.Status);
             entity.HasIndex(e => e.CreatedAt);
+            entity.Property(x => x.RowVersion)
+                .IsRowVersion();
         });
     }
 }

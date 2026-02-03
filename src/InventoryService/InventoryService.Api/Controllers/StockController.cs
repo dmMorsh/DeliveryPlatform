@@ -16,10 +16,10 @@ public class StockController : ControllerBase
         _mediator = mediator;
     }
 
-    [HttpPost("{productId}/reserve")]
-    public async Task<IActionResult> Reserve(Guid productId, [FromBody] ReserveStockModel model, CancellationToken ct)
+    [HttpPost("{orderId}/reserve")]
+    public async Task<IActionResult> Reserve(Guid orderId, [FromBody] ReserveStockModel[] model, CancellationToken ct)
     {
-        var cmd = new ReserveStockCommand(productId, model.OrderId, model.Quantity);
+        var cmd = new ReserveStockCommand(orderId, model, 0);
         var result = await _mediator.Send(cmd, ct);
         
         if (!result.Success)

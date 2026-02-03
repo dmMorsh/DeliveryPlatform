@@ -26,7 +26,7 @@ public class CreateProductCommandHandler : IRequestHandler<CreateProductCommand,
             return ApiResponse<ProductView>.ErrorResponse("Product name is required");
 
         var money = new Money(model.PriceCents, model.Currency ?? "USD");
-        var weight = new Weight(0); // Default weight
+        var weight = new Weight(model.WeightGrams);
         var product = new Product(model.Name, model.Description ?? "", money, weight);
 
         await _repo.AddAsync(product, ct);
@@ -44,7 +44,7 @@ public class CreateProductCommandHandler : IRequestHandler<CreateProductCommand,
         await _uow.SaveChangesAsync(outboxMessages, ct);
         product.ClearDomainEvents();
 
-        var view = new ProductView(product.Id, product.Name, model.Description, product.PriceCents.AmountCents, product.PriceCents.Currency);
+        var view = new ProductView(product.Id, product.Name, model.Description, product.PriceCents.AmountCents, product.PriceCents.Currency, product.WeightGrams.Value);
         return ApiResponse<ProductView>.SuccessResponse(view, "Product created successfully");
     }
 }

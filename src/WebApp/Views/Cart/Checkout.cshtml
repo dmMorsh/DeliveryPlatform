@@ -1,0 +1,40 @@
+﻿@model CheckoutViewModel
+
+<h2>Checkout</h2>
+
+<form method="post">
+
+    <h3>Pickup</h3>
+
+    <label>Address</label>
+    <input asp-for="FromAddress"/>
+
+    <label>Latitude</label>
+    <input asp-for="FromLatitude"/>
+
+    <label>Longitude</label>
+    <input asp-for="FromLongitude"/>
+
+    <h3>Delivery</h3>
+
+    <label>Address</label>
+    <input asp-for="ToAddress"/>
+
+    <label>Latitude</label>
+    <input asp-for="ToLatitude"/>
+
+    <label>Longitude</label>
+    <input asp-for="ToLongitude"/>
+
+    <label>Description</label>
+    <textarea asp-for="Description"></textarea>
+
+    <label>Courier note</label>
+    <textarea asp-for="CourierNote"></textarea>
+    
+    <label>Cost Cents</label>
+    <textarea asp-for="CostCents"></textarea>
+
+    <button type="submit">Create order</button>
+
+</form>

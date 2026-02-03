@@ -8,6 +8,7 @@ public class StockItem : AggregateRoot
     public Guid ProductId { get; private set; }
 
     public int TotalQuantity { get; private set; }
+    
     public int ReservedQuantity { get; private set; }
 
     public int AvailableQuantity => TotalQuantity - ReservedQuantity;
@@ -33,14 +34,25 @@ public class StockItem : AggregateRoot
         TotalQuantity += quantity;
     }
 
-    public void Reserve(int quantity, Guid orderId)
+    public string? CanReserve(int quantity)
     {
         if (quantity <= 0)
-            throw new DomainException("Quantity must be positive");
-
+            return "Quantity must be positive";
         if (AvailableQuantity < quantity)
-            throw new DomainException("Not enough stock");
+            return $"Not enough stock, {AvailableQuantity} available, {quantity} required";
+        
+        return null;
+    }
 
+    public void Reserve(int quantity, Guid orderId, bool checkAvailability = true)
+    {
+        if (checkAvailability) //in case we forget check before
+        {
+            var error = CanReserve(quantity);
+            if (error != null)
+                throw new DomainException(error);
+        }
+        
         ReservedQuantity += quantity;
 
         AddDomainEvent(new StockReservedDomainEvent{
@@ -49,13 +61,24 @@ public class StockItem : AggregateRoot
             Quantity = quantity});
     }
 
-    public void Release(int quantity, Guid orderId)
+    public string? CanRelease(int quantity)
     {
         if (quantity <= 0)
-            throw new DomainException("Quantity must be positive");
+            return "Quantity must be positive";
 
         if (ReservedQuantity < quantity)
-            throw new DomainException("Cannot release more than reserved");
+            return $"Cannot release more than reserved, {ReservedQuantity} available, {quantity} required";
+        return null;
+    }
+
+    public void Release(int quantity, Guid orderId, bool checkAvailability = true)
+    {
+        if (checkAvailability) //in case we forget check before
+        {
+            var error = CanRelease(quantity);
+            if (error != null)
+                throw new DomainException(error);
+        }        
 
         ReservedQuantity -= quantity;
 

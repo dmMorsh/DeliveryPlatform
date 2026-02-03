@@ -7,10 +7,6 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <Folder Include="Repositories\" />
-    </ItemGroup>
-
-    <ItemGroup>
         <ProjectReference Include="..\InventoryService.Domain\InventoryService.Domain.csproj" />
         <ProjectReference Include="..\InventoryService.Application\InventoryService.Application.csproj" />
     </ItemGroup>

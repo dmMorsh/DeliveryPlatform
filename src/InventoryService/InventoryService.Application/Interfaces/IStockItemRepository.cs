@@ -5,5 +5,5 @@ namespace InventoryService.Application.Interfaces;
 public interface IStockItemRepository
 {
     Task<StockItem?> GetByProductIdAsync(Guid productId, CancellationToken ct);
-    void Add(StockItem item);
+    Task AddAsync(StockItem item, CancellationToken ct);
 }

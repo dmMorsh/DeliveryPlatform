@@ -1,4 +1,5 @@
 using OrderService.Domain.Aggregates;
+using OrderService.Domain.Events;
 using Shared.Contracts.Events;
 
 namespace OrderService.Application.Interfaces;
@@ -9,4 +10,6 @@ public interface IOrderIntegrationEventMapper
     OrderStatusChangedEvent MapOrderStatusChangedEvent(Order order, int oldStatus, int newStatus);
     OrderDeliveredEvent MapOrderDeliveredEvent(Order order, Guid courierId);
     IntegrationEvent? MapFromDomainEvent(Domain.SeedWork.DomainEvent domainEvent);
+    IntegrationEvent? MapFromOrderCreatedDomainEvent(OrderCreatedDomainEvent domainEvent,
+        IEnumerable<DomainOrderItemSnapshot>? snapshots, int shardId);
 }

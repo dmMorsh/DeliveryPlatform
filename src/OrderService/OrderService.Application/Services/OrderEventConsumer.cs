@@ -1,9 +1,13 @@
 using System.Text.Json;
 using Confluent.Kafka;
+using MediatR;
 using Shared.Services;
 using Shared.Contracts.Events;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Configuration;
+using OrderService.Application.Commands.UpdateOrder;
+using OrderService.Application.Models;
+using OrderService.Domain.Aggregates;
 
 namespace OrderService.Application.Services;
 
@@ -14,13 +18,15 @@ namespace OrderService.Application.Services;
 public class OrderEventConsumer : KafkaEventConsumerBase
 {
     private new readonly ILogger<OrderEventConsumer> _logger;
+    private readonly IMediator _mediator;
 
     public OrderEventConsumer(
         IConfiguration config,
-        ILogger<OrderEventConsumer> logger)
-        : base(config, logger, "cart.events", "courier.events")
+        ILogger<OrderEventConsumer> logger, IMediator mediator)
+        : base(config, logger, "courier.events", "inventory.events")
     {
         _logger = logger;
+        _mediator = mediator;
     }
 
     /// <summary>
@@ -40,6 +46,12 @@ public class OrderEventConsumer : KafkaEventConsumerBase
                 case "courier.status.changed":
                     await HandleCourierStatusChanged(json);
                     break;
+                case "stock.reserved":
+                    await HandleStockReserved(json);
+                    break;
+                case "stock.reserve_failed":
+                    await HandleStockReserveFailed(json);
+                    break;
                 default:
                     _logger.LogWarning("Unknown event type: {EventType}", eventType);
                     break;
@@ -48,6 +60,75 @@ public class OrderEventConsumer : KafkaEventConsumerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error handling event {EventType}", eventType);
+        }
+    }
+
+    private async Task HandleStockReserveFailed(string json)
+    {
+        try
+        {
+            var @event = JsonSerializer.Deserialize<StockReserveFailedEvent>(json, 
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            if (@event == null) return;
+
+            _logger.LogInformation("📦 OrderService: Reserve failed. OrderId={OrderId}, Items={Items}.", 
+                @event.OrderId, @event.Items);
+            
+            var cmd = new UpdateOrderCommand(@event.OrderId , new UpdateOrderModel
+            {
+                Status = OrderStatus.Failed,
+                FailedItems = @event.Items.Select(i=> 
+                    new FailedOrderItemModel(i.ProductId,i.Reason)).ToList()
+            });
+            
+            var result = await _mediator.Send(cmd);
+                    
+            if (result.Success)
+            {
+                _logger.LogInformation(
+                    "✅ Status changed to Failed : OrderId={OrderId}", result?.Data?.Id);
+            }
+            else
+            {
+                _logger.LogWarning(
+                    "⚠️ Failed to change status: OrderId={OrderId}. Error: {Error}", @event.OrderId, result.Errors);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error processing StockReserveFailedEvent");
+        }
+    }
+
+    private async Task HandleStockReserved(string json)
+    {
+        try
+        {
+            var @event = JsonSerializer.Deserialize<StockReservedEvent>(json, 
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            if (@event == null) return;
+
+            _logger.LogInformation("📦 OrderService: Stock reserved. OrderId={OrderId}, Items={Items}.", 
+                @event.OrderId, @event.Items);
+            
+            var cmd = new UpdateOrderCommand(@event.OrderId , new UpdateOrderModel{Status = OrderStatus.Reserved});
+            
+            var result = await _mediator.Send(cmd);
+                    
+            if (result.Success)
+            {
+                _logger.LogInformation(
+                    "✅ Status changed to Reserved : OrderId={OrderId}", result?.Data?.Id);
+            }
+            else
+            {
+                _logger.LogWarning(
+                    "⚠️ Failed to change status: OrderId={OrderId}. Error: {Error}", @event.OrderId, result.Errors);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error processing StockReservedEvent");
         }
     }
 

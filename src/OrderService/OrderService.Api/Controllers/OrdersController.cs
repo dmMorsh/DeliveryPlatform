@@ -1,4 +1,5 @@
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using OrderService.Application.Commands.CreateOrder;
 using OrderService.Application.Commands.UpdateOrder;
@@ -8,6 +9,7 @@ using OrderService.Application.Queries.GetOrder;
 
 namespace OrderService.Api.Controllers;
 
+[Authorize]
 [ApiController]
 [Route("api/[controller]")]
 public class OrdersController : ControllerBase
@@ -68,10 +70,15 @@ public class OrdersController : ControllerBase
     /// <summary>
     /// Получить заказы клиента
     /// </summary>
-    [HttpGet("client/{clientId}")]
-    public async Task<IActionResult> GetClientOrders(Guid clientId, CancellationToken ct)
+    // [HttpGet("client/{clientId}")]
+    [HttpGet]
+    public async Task<IActionResult> GetClientOrders(CancellationToken ct)
     {
-        var query = new GetClientOrdersQuery(clientId);
+        var customerId = GetCustomerIdFromContext();
+        if (customerId == Guid.Empty)
+            return Unauthorized(new { error = "Customer ID not found in context" });
+        
+        var query = new GetClientOrdersQuery(customerId);
         
         var result = await _mediator.Send(query, ct);
         if (!result.Success)
@@ -87,5 +94,20 @@ public class OrdersController : ControllerBase
     public IActionResult Health()
     {
         return Ok(new { status = "healthy", service = "OrderService" });
+    }
+    
+    private Guid GetCustomerIdFromContext()
+    {
+        // Try to get from JWT claims first
+        var userIdClaim = User?.FindFirst("sub") ?? User?.FindFirst("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier");
+        if (userIdClaim != null && Guid.TryParse(userIdClaim.Value, out var customerId))
+            return customerId;
+
+        // Fallback to User.Identity.Name if available (though should use claims)
+        if (!string.IsNullOrEmpty(User?.Identity?.Name) && Guid.TryParse(User.Identity.Name, out var nameGuid))
+            return nameGuid;
+
+        // Return empty GUID if not found - will be handled by caller
+        return Guid.Empty;
     }
 }

@@ -66,7 +66,7 @@ public class UpdateProductCommandHandler : IRequestHandler<UpdateProductCommand,
         await _uow.SaveChangesAsync(outboxMessages, ct);
         product.ClearDomainEvents();
 
-        var view = new ProductView(product.Id, product.Name, product.Description, product.PriceCents.AmountCents, product.PriceCents.Currency);
+        var view = new ProductView(product.Id, product.Name, product.Description, product.PriceCents.AmountCents, product.PriceCents.Currency, product.WeightGrams.Value);
         return ApiResponse<ProductView>.SuccessResponse(view, "Product updated successfully");
     }
 }
