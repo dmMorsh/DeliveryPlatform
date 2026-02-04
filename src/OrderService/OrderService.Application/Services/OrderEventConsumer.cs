@@ -5,9 +5,9 @@ using Shared.Services;
 using Shared.Contracts.Events;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Configuration;
-using OrderService.Application.Commands.UpdateOrder;
+using OrderService.Application.Commands.UpdateReservedStock;
 using OrderService.Application.Models;
-using OrderService.Domain.Aggregates;
+using OrderService.Domain.Entities;
 
 namespace OrderService.Application.Services;
 
@@ -74,19 +74,20 @@ public class OrderEventConsumer : KafkaEventConsumerBase
             _logger.LogInformation("📦 OrderService: Reserve failed. OrderId={OrderId}, Items={Items}.", 
                 @event.OrderId, @event.Items);
             
-            var cmd = new UpdateOrderCommand(@event.OrderId , new UpdateOrderModel
-            {
-                Status = OrderStatus.Failed,
-                FailedItems = @event.Items.Select(i=> 
-                    new FailedOrderItemModel(i.ProductId,i.Reason)).ToList()
-            });
+            var cmd = new UpdateReservedStockCommand(@event.OrderId,
+                new UpdateOrderItemsModel(OrderItemStatus.ReservationFailed, @event.Items.Select(i =>
+                    new UpdateOrderItemModel(
+                        i.ProductId,
+                        i.Quantity,
+                        i.Reason
+                    )).ToArray()));
             
             var result = await _mediator.Send(cmd);
                     
             if (result.Success)
             {
                 _logger.LogInformation(
-                    "✅ Status changed to Failed : OrderId={OrderId}", result?.Data?.Id);
+                    "✅ Status changed to Failed : OrderId={OrderId}", @event.OrderId);
             }
             else
             {
@@ -110,15 +111,21 @@ public class OrderEventConsumer : KafkaEventConsumerBase
 
             _logger.LogInformation("📦 OrderService: Stock reserved. OrderId={OrderId}, Items={Items}.", 
                 @event.OrderId, @event.Items);
-            
-            var cmd = new UpdateOrderCommand(@event.OrderId , new UpdateOrderModel{Status = OrderStatus.Reserved});
+
+            var cmd = new UpdateReservedStockCommand(@event.OrderId,
+                new UpdateOrderItemsModel(OrderItemStatus.Reserved, @event.Items.Select(i =>
+                    new UpdateOrderItemModel(
+                        i.ProductId,
+                        i.Quantity,
+                        null
+                    )).ToArray()));
             
             var result = await _mediator.Send(cmd);
                     
             if (result.Success)
             {
                 _logger.LogInformation(
-                    "✅ Status changed to Reserved : OrderId={OrderId}", result?.Data?.Id);
+                    "✅ Status changed to Reserved : OrderId={OrderId}", @event.OrderId);
             }
             else
             {

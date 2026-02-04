@@ -3,7 +3,6 @@ using InventoryService.Application.Models;
 using InventoryService.Domain.Aggregates;
 using InventoryService.Domain.Entities;
 using InventoryService.Domain.Events;
-using Mapster;
 using MediatR;
 using Shared.Contracts.Events;
 using Shared.Utilities;
@@ -11,36 +10,54 @@ using Shared.Utilities;
 namespace InventoryService.Application.Commands.ReserveStock;
 
 public class ReserveStockCommandHandler
-    : IRequestHandler<ReserveStockCommand, ApiResponse<List<StockView>>>
+    : IRequestHandler<ReserveStockCommand, ApiResponse<Unit>>
 {
     private readonly IUnitOfWorkFactory _factory;
     private readonly IStockIntegrationEventMapper _eventMapper;
+    private readonly IShardResolver _resolver;
 
     public ReserveStockCommandHandler(
         IUnitOfWorkFactory factory,
-        IStockIntegrationEventMapper eventMapper)
+        IStockIntegrationEventMapper eventMapper, IShardResolver resolver)
     {
         _factory = factory;
         _eventMapper = eventMapper;
+        _resolver = resolver;
     }
 
-    public async Task<ApiResponse<List<StockView>>> Handle(
+    public async Task<ApiResponse<Unit>> Handle(
         ReserveStockCommand request,
         CancellationToken ct)
     {
         if (request.ReserveStockModels.Length == 0)
-            return ApiResponse<List<StockView>>.ErrorResponse("No item in request");
+            return ApiResponse<Unit>.ErrorResponse("No item in request");
 
-        await using var uow = _factory.Create(request.ReserveStockModels.First().ProductId);
+        var shardGroups = request.ReserveStockModels
+            .GroupBy(i => _resolver.ResolveShard(i.ProductId));
+        foreach (var shardGroup in shardGroups)
+        {
+            var shardId = shardGroup.Key;
+            var success = await ProcessMessage(shardId, request.OrderId, shardGroup.ToArray(), ct);
+            if (!success)
+                return ApiResponse<Unit>.ErrorResponse("Reservation failed");
+        }
         
-        if (await uow.Reservations.ReservationExistAsync(request.OrderId, ct))
-            return ApiResponse<List<StockView>>.ErrorResponse("Reservation already exist");
+        return ApiResponse<Unit>.SuccessResponse(Unit.Value,"item reserved");
+    }
+
+    private async Task<bool> ProcessMessage(int shardId, Guid orderId, ReserveStockModel[] reserveStockModels,
+        CancellationToken ct)
+    {
+        await using var uow = _factory.Create(shardId);
+
+        if (await uow.Reservations.ReservationExistAsync(orderId, ct))
+            return true;
 
         var outboxMessages = new List<OutboxMessage>();
         var failedItems = new List<FailedStockItemSnapshot>();
         var toReserve = new List<(StockItem stock, int qty)>();
         
-        foreach (var reserveStockModel in request.ReserveStockModels)
+        foreach (var reserveStockModel in reserveStockModels)
         {
             var stock = await uow.Stock
                 .GetByProductIdAsync(reserveStockModel.ProductId, ct);
@@ -73,25 +90,25 @@ public class ReserveStockCommandHandler
 
         if (failedItems.Count != 0)
         {
-            var reserveFailedEvent = _eventMapper.MapStockReserveFailedEvent(request.OrderId, failedItems);
+            var reserveFailedEvent = _eventMapper.MapStockReserveFailedEvent(orderId, failedItems);
             outboxMessages.Add(OutboxMessage.From(reserveFailedEvent));
             await uow.SaveChangesAsync(outboxMessages, ct);
-            return ApiResponse<List<StockView>>.ErrorResponse("Reservation failed");
+            return false;
         }
 
         foreach (var (stock, quantity) in toReserve)
         {
-            stock.Reserve(quantity, request.OrderId, checkAvailability: false);
+            stock.Reserve(quantity, orderId, checkAvailability: false);
             await uow.Reservations.AddReservationAsync(new StockReservation
             {
-                OrderId = request.OrderId,
+                OrderId = orderId,
                 ProductId = stock.ProductId,
                 Quantity = quantity
             }, ct);
         }
         
         var integrationEvent = _eventMapper.MapStockReservedEvent(
-            request.OrderId,
+            orderId,
             toReserve.Select(x=>x.stock).SelectMany(si => si.DomainEvents)
                 .OfType<StockReservedDomainEvent>()
                 .Select(di => new StockItemSnapshot
@@ -107,6 +124,6 @@ public class ReserveStockCommandHandler
         foreach (var item in toReserve.Select(x=>x.stock)) 
             item.ClearDomainEvents();
         
-        return ApiResponse<List<StockView>>.SuccessResponse(toReserve.Select(x=>x.stock).Adapt<List<StockView>>(), "item reserved");
+        return true;
     }
 }

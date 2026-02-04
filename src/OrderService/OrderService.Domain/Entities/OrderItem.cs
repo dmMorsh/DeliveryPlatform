@@ -28,6 +28,7 @@ public enum OrderItemStatus
     Pending,
     Reserved,
     ReservationFailed,
+    Releasing,
     Released,
     Shipped,
     Lost

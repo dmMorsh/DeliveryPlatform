@@ -10,7 +10,11 @@ public class HashShardResolver : IShardResolver
     {
         _shardCount = shardCount;
     }
-
-    public int ResolveShard(Guid productId)
-        => Math.Abs(productId.GetHashCode()) % _shardCount;
+    
+    public int ResolveShard(Guid id)
+    {
+        var bytes = id.ToByteArray();
+        var hash = BitConverter.ToInt32(bytes, 0);
+        return Math.Abs(hash % _shardCount);
+    }
 }

@@ -11,13 +11,13 @@ namespace CartService.Application.Services;
 /// Обработчик событий из OrderService для CartService
 /// Слушает: order.created, order.delivered
 /// </summary>
-public class OrderEventConsumer : KafkaEventConsumerBase
+public class CartEventConsumer : KafkaEventConsumerBase
 {
-    private new readonly ILogger<OrderEventConsumer> _logger;
+    private new readonly ILogger<CartEventConsumer> _logger;
 
-    public OrderEventConsumer(
+    public CartEventConsumer(
         IConfiguration config,
-        ILogger<OrderEventConsumer> logger)
+        ILogger<CartEventConsumer> logger)
         : base(config, logger, "order.events")
     {
         _logger = logger;

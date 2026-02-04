@@ -24,10 +24,10 @@ public class ReservationRepository : IReservationRepository
         return await _context.StockReservation.AnyAsync(sr=> sr.OrderId == orderId, ct);
     }
 
-    public async Task<IEnumerable<StockReservation>> GetActiveReservationsAsync(Guid orderId, CancellationToken ct)
+    public async Task<List<StockReservation>> GetActiveReservationsAsync(Guid orderId, CancellationToken ct)
     {
         return await _context.StockReservation
             .Where(sr => sr.OrderId == orderId && sr.ReleasedAt == null)
-            .ToArrayAsync(cancellationToken: ct);
+            .ToListAsync(cancellationToken: ct);
     }
 }

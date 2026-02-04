@@ -3,6 +3,7 @@ using Hangfire.PostgreSql;
 using MediatR;
 using InventoryService.Application;
 using InventoryService.Application.Interfaces;
+using InventoryService.Application.MediatR;
 using InventoryService.Application.Services;
 using InventoryService.Application.Utils;
 using InventoryService.Infrastructure.Hangfire;
@@ -43,7 +44,6 @@ else
     builder.Services.AddScoped<IHangfireCommandExecutor, HangfireCommandExecutor>();
     
     // Sharding
-    // builder.Services.AddSingleton<IInventoryDbContextFactory, InventoryDbContextFactory>();
     builder.Services.AddSingleton<IShardResolver>(sp =>
     {
         var shardCount = builder.Configuration.GetValue<int>("ShardCount");
@@ -61,15 +61,12 @@ builder.Services
     .AddTransient(typeof(IPipelineBehavior<,>), typeof(ConcurrencyRetryBehavior<,>))
     .AddTransient(typeof(IPipelineBehavior<,>), typeof(HangfireRetryBehavior<,>));
 
-// builder.Services.AddScoped<IStockItemRepository, StockItemRepository>();
-// builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
-
 // Kafka Event Producer
 builder.Services.AddSingleton<IEventProducer, KafkaEventProducer>();
 // Ensure Kafka topics exist on startup
 builder.Services.AddHostedService<KafkaTopicBootstrapper>();
 // Event Consumer from OrderService
-builder.Services.AddSingleton<OrderEventConsumer>();
+builder.Services.AddSingleton<InventoryEventConsumer>();
 
 builder.Services.AddSingleton<IStockIntegrationEventMapper, StockIntegrationEventMapper>();
 
@@ -94,7 +91,7 @@ else
 }
 
 // Start Kafka consumer in background
-var consumer = app.Services.GetRequiredService<OrderEventConsumer>();
+var consumer = app.Services.GetRequiredService<InventoryEventConsumer>();
 var cts = new CancellationTokenSource();
 
 _ = Task.Run(async () =>

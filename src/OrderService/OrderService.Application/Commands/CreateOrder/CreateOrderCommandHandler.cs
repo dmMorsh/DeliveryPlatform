@@ -4,8 +4,6 @@ using OrderService.Application.Interfaces;
 using Shared.Utilities;
 using Mapster;
 using OrderService.Application.Models;
-using OrderService.Application.Utils;
-using OrderService.Domain.Events;
 
 namespace OrderService.Application.Commands.CreateOrder;
 
@@ -38,19 +36,11 @@ public class CreateOrderCommandHandler : IRequestHandler<CreateOrderCommand, Api
 
         await _repository.CreateOrderAsync(order, ct);
         
-        var createdDomainEvent = order.DomainEvents.First() as OrderCreatedDomainEvent;
-        if (createdDomainEvent == null) throw new AggregateException("ERROR !!!");
-        
-        var shardGroups = createdDomainEvent.Items
-            .GroupBy(i => ShardingHelper.ShardForProduct(i.ProductId));
-        var outboxMessages = new List<OutboxMessage>();
-        
-        foreach (var shardGroup in shardGroups)
-        {
-            var shardId = shardGroup.Key;
-            var shardEvent = _eventMapper.MapFromOrderCreatedDomainEvent(createdDomainEvent, shardGroup.ToArray(), shardId);
-            if (shardEvent != null) outboxMessages.Add(OutboxMessage.From(shardEvent));
-        }
+        var outboxMessages = order.DomainEvents
+            .Select(de => _eventMapper.MapFromDomainEvent(de))
+            .Where(ie => ie != null)
+            .Select(ie => OutboxMessage.From(ie!))
+            .ToList();
         
         await _uow.SaveChangesAsync(outboxMessages, ct);
         order.ClearDomainEvents();

@@ -15,14 +15,14 @@ namespace InventoryService.Application.Services;
 /// Обработчик событий из OrderService для InventoryService
 /// Слушает: order.created (для резервирования stock)
 /// </summary>
-public class OrderEventConsumer : KafkaEventConsumerBase
+public class InventoryEventConsumer : KafkaEventConsumerBase
 {
-    private new readonly ILogger<OrderEventConsumer> _logger;
+    private new readonly ILogger<InventoryEventConsumer> _logger;
     private readonly IMediator _mediator;
 
-    public OrderEventConsumer(
+    public InventoryEventConsumer(
         IConfiguration config,
-        ILogger<OrderEventConsumer> logger,
+        ILogger<InventoryEventConsumer> logger,
         IMediator mediator)
         : base(config, logger, "order.events")
     {
@@ -72,7 +72,7 @@ public class OrderEventConsumer : KafkaEventConsumerBase
             // Отменяем резерв stock
             try
             {
-                var cmd = new ReleaseStockCommand(@event.OrderId, null, @event.ShardId);
+                var cmd = new ReleaseStockCommand(@event.OrderId, null);
 
                 var result = await _mediator.Send(cmd);
                 
@@ -122,7 +122,7 @@ public class OrderEventConsumer : KafkaEventConsumerBase
                             new ReserveStockModel(
                                 i.ProductId, 
                                 i.Quantity)
-                        ).ToArray(), @event.ShardId);
+                        ).ToArray());
 
                     var result = await _mediator.Send(cmd);
                     

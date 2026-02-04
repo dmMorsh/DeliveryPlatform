@@ -15,7 +15,7 @@ public class InventoryDbContext : DbContext
     public DbSet<StockItem> StockItems => Set<StockItem>();
     public DbSet<StockReservation> StockReservation => Set<StockReservation>();
     public DbSet<OutboxMessage> OutboxMessages => Set<OutboxMessage>();
-    public DbSet<ProcessedCommand> ProcessedCommands => Set<ProcessedCommand>();
+    public DbSet<ProcessedCommand> ProcessedCommands => Set<ProcessedCommand>();// TODO переместить в HF бд
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

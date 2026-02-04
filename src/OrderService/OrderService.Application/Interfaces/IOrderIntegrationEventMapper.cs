@@ -11,5 +11,5 @@ public interface IOrderIntegrationEventMapper
     OrderDeliveredEvent MapOrderDeliveredEvent(Order order, Guid courierId);
     IntegrationEvent? MapFromDomainEvent(Domain.SeedWork.DomainEvent domainEvent);
     IntegrationEvent? MapFromOrderCreatedDomainEvent(OrderCreatedDomainEvent domainEvent,
-        IEnumerable<DomainOrderItemSnapshot>? snapshots, int shardId);
+        IEnumerable<DomainOrderItemSnapshot>? snapshots);
 }

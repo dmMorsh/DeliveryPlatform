@@ -43,7 +43,7 @@ public class IntegrationEventMapper : IOrderIntegrationEventMapper
     {
         return domainEvent switch
         {
-            OrderCreatedDomainEvent e => MapFromOrderCreatedDomainEvent(e, null, 0)
+            OrderCreatedDomainEvent e => MapFromOrderCreatedDomainEvent(e, null)
             ,
             OrderAssignedDomainEvent e => new OrderAssignedEvent 
             { 
@@ -63,12 +63,11 @@ public class IntegrationEventMapper : IOrderIntegrationEventMapper
     }
 
     public IntegrationEvent? MapFromOrderCreatedDomainEvent(OrderCreatedDomainEvent e,
-        IEnumerable<DomainOrderItemSnapshot>? snapshots, int shardId)
+        IEnumerable<DomainOrderItemSnapshot>? snapshots)
     {
         return new OrderCreatedEvent
         {
             OrderId = e.OrderId,
-            ShardId = shardId,
             OrderNumber = e.OrderNumber,
             ClientId = e.ClientId,
             FromAddress = e.FromAddress,

@@ -12,11 +12,11 @@ public class OrderApiClient
         _http = http;
     }
 
-    public async Task<IEnumerable<OrderViewModel>?> GetMyOrdersAsync(CancellationToken ct)
+    public async Task<List<OrderViewModel>?> GetMyOrdersAsync(CancellationToken ct)
     {
         try
         {
-            var res = await _http.GetFromJsonAsync<ApiResponse<IEnumerable<OrderViewModel>>?>(
+            var res = await _http.GetFromJsonAsync<ApiResponse<List<OrderViewModel>>?>(
                 "/api/orders",
                 ct);
             return res.Data;

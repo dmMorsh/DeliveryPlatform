@@ -5,7 +5,6 @@ using CourierService.Application;
 using CourierService.Application.Interfaces;
 using CourierService.Application.Mapping;
 using CourierService.Application.Services;
-using CourierService.Infrastructure;
 using CourierService.Infrastructure.Outbox;
 using CourierService.Infrastructure.Persistence;
 using CourierService.Infrastructure.Repositories;
@@ -66,7 +65,7 @@ builder.Services.AddSingleton<ICourierEventMapper, CourierEventMapper>();
 builder.Services.AddScoped<ILocationTrackingClient>(sp => 
     new LocationTrackingClientImpl(sp.GetRequiredService<IConfiguration>(), sp.GetRequiredService<ILogger<LocationTrackingClientImpl>>()));
 // Event Consumer from OrderService
-builder.Services.AddSingleton<OrderEventConsumer>();
+builder.Services.AddSingleton<CourierEventConsumer>();
 // Unit of Work
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
@@ -115,7 +114,7 @@ else
 }
 
 // Start Kafka consumer in background
-var consumer = app.Services.GetRequiredService<OrderEventConsumer>();
+var consumer = app.Services.GetRequiredService<CourierEventConsumer>();
 var cts = new CancellationTokenSource();
 
 _ = Task.Run(async () =>

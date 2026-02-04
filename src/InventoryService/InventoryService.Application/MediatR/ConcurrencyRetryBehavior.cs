@@ -2,7 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
-namespace InventoryService.Application;
+namespace InventoryService.Application.MediatR;
 
 public class ConcurrencyRetryBehavior<TReq, TRes>
     : IPipelineBehavior<TReq, TRes> where TReq : IRequest<TRes>

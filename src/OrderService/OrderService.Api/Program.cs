@@ -7,7 +7,6 @@ using Serilog;
 using OrderService.Infrastructure.Persistence;
 using OrderService.Infrastructure.Repositories;
 using OrderService.Application.Interfaces;
-using OrderService.Infrastructure;
 using OrderService.Infrastructure.Mapping;
 using OrderService.Api.Mappings;
 using OrderService.Api.Grpc;
@@ -20,7 +19,6 @@ using OrderService.Infrastructure.Outbox;
 using Serilog.Events;
 
 var builder = WebApplication.CreateBuilder(args);
-ShardingHelper.TotalShards = int.Parse(builder.Configuration["ShardCount"] ?? "1");
 
 builder.Services.AddGrpc();
 
@@ -59,6 +57,13 @@ else
         ?? "Host=localhost;Port=5432;Database=delivery_db;Username=postgres;Password=postgres;";
     builder.Services.AddDbContext<OrderDbContext>(options =>
         options.UseNpgsql(connectionString));
+    
+    // Sharding
+    builder.Services.AddSingleton<IShardResolver>(sp =>
+    {
+        var shardCount = builder.Configuration.GetValue<int>("ShardCount", 1);
+        return new HashShardResolver(shardCount);
+    });
 }
 
 builder.Services.AddSingleton<IEventProducer, KafkaEventProducer>();

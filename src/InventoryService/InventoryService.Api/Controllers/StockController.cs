@@ -19,7 +19,7 @@ public class StockController : ControllerBase
     [HttpPost("{orderId}/reserve")]
     public async Task<IActionResult> Reserve(Guid orderId, [FromBody] ReserveStockModel[] model, CancellationToken ct)
     {
-        var cmd = new ReserveStockCommand(orderId, model, 0);
+        var cmd = new ReserveStockCommand(orderId, model);
         var result = await _mediator.Send(cmd, ct);
         
         if (!result.Success)

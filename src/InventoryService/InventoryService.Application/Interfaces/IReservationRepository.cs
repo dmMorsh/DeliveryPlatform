@@ -8,5 +8,5 @@ public interface IReservationRepository
 
     Task<bool> ReservationExistAsync(Guid orderId, CancellationToken ct);
     
-    Task<IEnumerable<StockReservation>> GetActiveReservationsAsync(Guid orderId, CancellationToken ct);
+    Task<List<StockReservation>> GetActiveReservationsAsync(Guid orderId, CancellationToken ct);
 }

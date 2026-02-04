@@ -10,7 +10,6 @@ public record OrderCreatedEvent : IntegrationEvent
     public override string AggregateType => "Order";
     public override Guid AggregateId => OrderId;
     public required Guid OrderId { get; init; }
-    public required int ShardId { get; init; }
     public string? OrderNumber { get; init; }
     public Guid ClientId { get; init; }
     public string FromAddress { get; init; } = string.Empty;
@@ -91,6 +90,5 @@ public record OrderCanceledEvent : IntegrationEvent
     public override string AggregateType => "Order";
     public override Guid AggregateId => OrderId;
     public required Guid OrderId { get; init; }
-    public required int ShardId { get; init; }
     public Guid CourierId { get; init; }
 }

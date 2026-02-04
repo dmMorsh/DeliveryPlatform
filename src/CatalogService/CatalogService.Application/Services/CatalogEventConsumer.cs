@@ -11,13 +11,13 @@ namespace CatalogService.Application.Services;
 /// Обработчик событий для CatalogService
 /// Слушает: order.created (для обновления популярности), stock.reserved
 /// </summary>
-public class OrderEventConsumer : KafkaEventConsumerBase
+public class CatalogEventConsumer : KafkaEventConsumerBase
 {
-    private new readonly ILogger<OrderEventConsumer> _logger;
+    private new readonly ILogger<CatalogEventConsumer> _logger;
 
-    public OrderEventConsumer(
+    public CatalogEventConsumer(
         IConfiguration config,
-        ILogger<OrderEventConsumer> logger)
+        ILogger<CatalogEventConsumer> logger)
         : base(config, logger, "order.events", "inventory.events")
     {
         _logger = logger;

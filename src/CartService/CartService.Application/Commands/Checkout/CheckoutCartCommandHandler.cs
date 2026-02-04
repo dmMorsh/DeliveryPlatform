@@ -1,8 +1,6 @@
 using MediatR;
 using CartService.Application.Interfaces;
 using CartService.Application.Mapping;
-using CartService.Domain.Events;
-using CartService.Domain.SeedWork;
 using Shared.Utilities;
 
 namespace CartService.Application.Commands.Checkout;

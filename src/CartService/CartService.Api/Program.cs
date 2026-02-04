@@ -4,7 +4,6 @@ using CartService.Application;
 using CartService.Application.Interfaces;
 using CartService.Application.Mapping;
 using CartService.Application.Services;
-using CartService.Infrastructure;
 using CartService.Infrastructure.Grpc;
 using CartService.Infrastructure.Outbox;
 using CartService.Infrastructure.Persistence;
@@ -60,7 +59,7 @@ builder.Services.AddScoped<ICartReadRepository, CartReadRepository>();
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddSingleton<ICartIntegrationEventMapper, CartEventMapper>();
 // Event Consumer from OrderService
-builder.Services.AddSingleton<OrderEventConsumer>();
+builder.Services.AddSingleton<CartEventConsumer>();
 // Outbox processor
 if (!useInMemory)
     builder.Services.AddHostedService<OutboxProcessor>();
@@ -129,7 +128,7 @@ else
 }
 
 // Start Kafka consumer in background
-var consumer = app.Services.GetRequiredService<OrderEventConsumer>();
+var consumer = app.Services.GetRequiredService<CartEventConsumer>();
 var cts = new CancellationTokenSource();
 
 _ = Task.Run(async () =>

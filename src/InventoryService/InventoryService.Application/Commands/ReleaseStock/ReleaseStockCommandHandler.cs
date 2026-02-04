@@ -13,12 +13,14 @@ public class ReleaseStockCommandHandler
 {
     private readonly IUnitOfWorkFactory _factory;
     private readonly IStockIntegrationEventMapper _eventMapper;
+    private readonly IShardResolver _resolver;
 
     public ReleaseStockCommandHandler(
         IUnitOfWorkFactory factory,
-        IStockIntegrationEventMapper eventMapper)
+        IStockIntegrationEventMapper eventMapper, IShardResolver resolver)
     {
         _eventMapper = eventMapper;
+        _resolver = resolver;
         _factory = factory;
     }
 
@@ -26,22 +28,35 @@ public class ReleaseStockCommandHandler
         ReleaseStockCommand request,
         CancellationToken ct)
     {
-        // if (request.ReleaseStockModels?.Length == 0)
-        //     return ApiResponse<Unit>.ErrorResponse("No item in request");
+        if (request.ReleaseStockModels.Length == 0)
+            return ApiResponse<Unit>.ErrorResponse("No item in request");
 
-        await using var uow = request.ReleaseStockModels != null && request.ReleaseStockModels.Any()
-            ? _factory.Create(request.ReleaseStockModels.First().ProductId) 
-            : _factory.Create(request.ShardId);
+        var shardGroups = request.ReleaseStockModels
+            .GroupBy(i => _resolver.ResolveShard(i.ProductId));
+        foreach (var shardGroup in shardGroups)
+        {
+            var shardId = shardGroup.Key;
+            var success = await ProcessMessage(shardId, request.OrderId, shardGroup.ToArray(), ct);
+            if (!success)
+                return ApiResponse<Unit>.ErrorResponse("Release failed");
+        }
         
-        var reservations = await uow.Reservations.GetActiveReservationsAsync(request.OrderId, ct);
+        return ApiResponse<Unit>.SuccessResponse(Unit.Value, "Stock released");
+    }
+
+    private async Task<bool> ProcessMessage(int shardId, Guid orderId, ReleaseStockModel[] releaseStockModels, CancellationToken ct)
+    {
+        await using var uow = _factory.Create(shardId); 
+        
+        var reservations = await uow.Reservations.GetActiveReservationsAsync(orderId, ct);
         if (!reservations.Any())
-            return ApiResponse<Unit>.ErrorResponse("No item reserved");
+            return true;
             
         var outboxMessages = new List<OutboxMessage>();
         var failedItems = new List<FailedStockItemSnapshot>();
         var toRelease = new List<(StockItem stock, int qty)>();
         
-        foreach (var releaseStockModel in reservations)
+        foreach (var releaseStockModel in releaseStockModels)
         {
             var stock = await uow.Stock
                 .GetByProductIdAsync(releaseStockModel.ProductId, ct);
@@ -74,15 +89,15 @@ public class ReleaseStockCommandHandler
         
         if (failedItems.Count != 0)
         {
-            var releaseFailedEvent = _eventMapper.MapStockReleaseFailedEvent(request.OrderId, failedItems);
+            var releaseFailedEvent = _eventMapper.MapStockReleaseFailedEvent(orderId, failedItems);
             outboxMessages.Add(OutboxMessage.From(releaseFailedEvent));
             await uow.SaveChangesAsync(outboxMessages, ct);
-            return ApiResponse<Unit>.ErrorResponse("Release failed");
+            return false;
         }
         
         foreach (var (stock, quantity) in toRelease)
         {
-            stock.Release(quantity, request.OrderId, checkAvailability: false);
+            stock.Release(quantity, orderId, checkAvailability: false);
         }
         foreach (var stockReservation in reservations)
         {
@@ -90,7 +105,7 @@ public class ReleaseStockCommandHandler
         }
             
         var integrationEvent = _eventMapper.MapStockReleasedEvent(
-            request.OrderId,
+            orderId,
             toRelease.Select(x=>x.stock).SelectMany(si => si.DomainEvents)
                 .OfType<StockReleasedDomainEvent>()
                 .Select(di => new StockItemSnapshot
@@ -105,7 +120,7 @@ public class ReleaseStockCommandHandler
         
         foreach (var item in toRelease.Select(x=>x.stock)) 
             item.ClearDomainEvents();
-        
-        return ApiResponse<Unit>.SuccessResponse(Unit.Value, "Stock released");
+
+        return true;
     }
 }

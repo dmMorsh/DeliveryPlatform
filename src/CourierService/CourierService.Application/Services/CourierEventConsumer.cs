@@ -11,13 +11,13 @@ namespace CourierService.Application.Services;
 /// Обработчик событий из OrderService для CourierService
 /// Слушает: order.assigned (для получения информации о заказе)
 /// </summary>
-public class OrderEventConsumer : KafkaEventConsumerBase
+public class CourierEventConsumer : KafkaEventConsumerBase
 {
-    private new readonly ILogger<OrderEventConsumer> _logger;
+    private new readonly ILogger<CourierEventConsumer> _logger;
 
-    public OrderEventConsumer(
+    public CourierEventConsumer(
         IConfiguration config,
-        ILogger<OrderEventConsumer> logger)
+        ILogger<CourierEventConsumer> logger)
         : base(config, logger, "order.events")
     {
         _logger = logger;

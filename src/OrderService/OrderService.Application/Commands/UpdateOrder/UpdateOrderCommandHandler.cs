@@ -3,7 +3,6 @@ using MediatR;
 using Microsoft.Extensions.Logging;
 using OrderService.Application.Interfaces;
 using OrderService.Application.Models;
-using OrderService.Domain.Aggregates;
 using Shared.Utilities;
 
 namespace OrderService.Application.Commands.UpdateOrder;
@@ -40,7 +39,7 @@ public class UpdateOrderCommandHandler
         var oldStatus = order.Status;
 
         if (dto.Status.HasValue)
-            order.ChangeStatus((OrderStatus)dto.Status.Value);
+            order.ChangeStatus(dto.Status.Value);
 
         if (dto.CourierId.HasValue)
             order.AssignCourier(dto.CourierId.Value);

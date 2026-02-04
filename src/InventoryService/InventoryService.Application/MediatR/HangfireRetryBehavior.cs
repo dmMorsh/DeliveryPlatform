@@ -3,7 +3,7 @@ using InventoryService.Application.Interfaces;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
-namespace InventoryService.Application;
+namespace InventoryService.Application.MediatR;
 
 public class HangfireRetryBehavior<TReq, TRes>
     : IPipelineBehavior<TReq, TRes> where TReq : IRequest<TRes>

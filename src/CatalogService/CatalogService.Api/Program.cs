@@ -1,7 +1,6 @@
 using CatalogService.Application;
 using CatalogService.Application.Interfaces;
 using CatalogService.Application.Services;
-using CatalogService.Infrastructure;
 using CatalogService.Infrastructure.Mapping;
 using CatalogService.Infrastructure.Outbox;
 using CatalogService.Infrastructure.Persistence;
@@ -43,7 +42,7 @@ builder.Services.AddSingleton<IEventProducer, KafkaEventProducer>();
 // Ensure Kafka topics exist on startup
 builder.Services.AddHostedService<KafkaTopicBootstrapper>();
 // Event Consumer from OrderService and InventoryService
-builder.Services.AddSingleton<OrderEventConsumer>();
+builder.Services.AddSingleton<CatalogEventConsumer>();
 // Outbox processor
 if (!useInMemory)
     builder.Services.AddHostedService<OutboxProcessor>();
@@ -69,7 +68,7 @@ else
 }
 
 // Start Kafka consumer in background
-var consumer = app.Services.GetRequiredService<OrderEventConsumer>();
+var consumer = app.Services.GetRequiredService<CatalogEventConsumer>();
 var cts = new CancellationTokenSource();
 
 _ = Task.Run(async () =>

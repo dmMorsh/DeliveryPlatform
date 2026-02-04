@@ -8,6 +8,4 @@ public record UpdateOrderModel
     public string? CourierName { get; set; }
     public OrderStatus? Status { get; set; }
     public string? CourierNote { get; set; }
-    public IReadOnlyCollection<FailedOrderItemModel>? FailedItems { get; set; }
 }
-public record FailedOrderItemModel(Guid ProductId,  string Description);
