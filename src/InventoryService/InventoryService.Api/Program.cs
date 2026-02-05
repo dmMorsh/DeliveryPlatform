@@ -1,6 +1,5 @@
 using Hangfire;
 using Hangfire.PostgreSql;
-using MediatR;
 using InventoryService.Application;
 using InventoryService.Application.Interfaces;
 using InventoryService.Application.MediatR;
@@ -10,13 +9,33 @@ using InventoryService.Infrastructure.Hangfire;
 using InventoryService.Infrastructure.Mapping;
 using InventoryService.Infrastructure.Outbox;
 using InventoryService.Infrastructure.Persistence;
+using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
+using Serilog.Events;
 using Shared.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
+
+#region Serilog
+
+builder.Host.UseSerilog((ctx, cfg) =>
+    cfg
+        .MinimumLevel.Information()
+        .Filter.ByExcluding(le =>
+            le.Level == LogEventLevel.Information 
+            && le.Properties.TryGetValue("commandText", out var cmd)
+            && cmd.ToString().StartsWith("\"-- OUTBOX_PROCESSOR_POLL"))
+        .WriteTo.Console(outputTemplate: "[{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz}] [{Level:u3}] [{SourceContext}] {Message:lj}{NewLine}{Exception}")
+        .WriteTo.File("logs/orderservice-YYYY-MM-DD.log", 
+            rollingInterval: RollingInterval.Day, 
+            outputTemplate: "[{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz}] [{Level:u3}] [{SourceContext}] {Message:lj}{NewLine}{Exception}")
+);
+
+#endregion
+
 // Allow using an in-memory DB for local quick tests by setting USE_INMEMORY_DB=true
 var useInMemory = Environment.GetEnvironmentVariable("USE_INMEMORY_DB") == "true"
                   || string.Equals(builder.Configuration["UseInMemoryDb"], "true", StringComparison.OrdinalIgnoreCase);
@@ -25,13 +44,17 @@ if (useInMemory)
 {
     builder.Services.AddDbContext<InventoryDbContext>(options =>
         options.UseInMemoryDatabase("orders_inmem"));
+    builder.Services.AddScoped<IUnitOfWorkFactory, MemUnitOfWorkFactory>();
 }
 else
 {   // DbContext
+    // Для OutboxProcessor-а и Hangfire
     var connectionString = builder.Configuration.GetConnectionString("Default") 
                            ?? "Host=localhost;Port=5432;Database=delivery_db;Username=postgres;Password=postgres;";
     builder.Services.AddDbContext<InventoryDbContext>(options =>
         options.UseNpgsql(connectionString));
+    // Outbox processor
+    builder.Services.AddHostedService<OutboxProcessor>();
     
     // Hangfire
     builder.Services.AddHangfire(config =>
@@ -50,15 +73,11 @@ else
         return new HashShardResolver(shardCount);
     });
     builder.Services.AddScoped<IUnitOfWorkFactory, UnitOfWorkFactory>();
-    
-    // Outbox processor
-    builder.Services.AddHostedService<OutboxProcessor>();
 }
 
 builder.Services.AddControllers();
 builder.Services
     .AddMediatR(typeof(ApplicationMarker).Assembly)
-    .AddTransient(typeof(IPipelineBehavior<,>), typeof(ConcurrencyRetryBehavior<,>))
     .AddTransient(typeof(IPipelineBehavior<,>), typeof(HangfireRetryBehavior<,>));
 
 // Kafka Event Producer

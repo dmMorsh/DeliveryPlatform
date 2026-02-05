@@ -35,7 +35,7 @@ public abstract class KafkaEventConsumerBase : IEventConsumer
             BootstrapServers = brokers,
             GroupId = groupId,
             AutoOffsetReset = AutoOffsetReset.Earliest,
-            EnableAutoCommit = true,
+            EnableAutoCommit = false,
             EnablePartitionEof = false,
             MaxPollIntervalMs = 300000, // 5 minutes
             SessionTimeoutMs = 30000,    // 30 seconds

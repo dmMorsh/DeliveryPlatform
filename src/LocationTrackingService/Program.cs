@@ -1,5 +1,5 @@
-using Serilog;
 using LocationTrackingService.Services;
+using Serilog;
 using StackExchange.Redis;
 
 var builder = WebApplication.CreateBuilder(args);

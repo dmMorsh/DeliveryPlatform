@@ -6,11 +6,6 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 builder.Services.AddControllersWithViews();
 
-builder.Services.AddHttpClient("gateway", c =>
-{
-    c.BaseAddress = new Uri("http://localhost:5136");
-});
-
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(o =>
     {
@@ -20,11 +15,11 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
 
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddTransient<AuthTokenHandler>();
+
 builder.Services.AddHttpClient<CatalogApiClient>(client =>
     {
         client.BaseAddress = new Uri("http://localhost:5136"); // Gateway
-    })
-    .AddHttpMessageHandler<AuthTokenHandler>();
+    }).AddHttpMessageHandler<AuthTokenHandler>();
 
 builder.Services.AddHttpClient<AuthApiClient>(client =>
 {
@@ -34,14 +29,17 @@ builder.Services.AddHttpClient<AuthApiClient>(client =>
 builder.Services.AddHttpClient<CartApiClient>(c =>
     {
         c.BaseAddress = new Uri("http://localhost:5136");
-    })
-    .AddHttpMessageHandler<AuthTokenHandler>();
+    }).AddHttpMessageHandler<AuthTokenHandler>();
 
 builder.Services.AddHttpClient<OrderApiClient>(client =>
     {
         client.BaseAddress = new Uri("http://localhost:5136"); // Gateway
-    })
-    .AddHttpMessageHandler<AuthTokenHandler>();
+    }).AddHttpMessageHandler<AuthTokenHandler>();
+
+builder.Services.AddHttpClient<InventoryApiClient>(client =>
+    {
+        client.BaseAddress = new Uri("http://localhost:5136"); // Gateway
+    }).AddHttpMessageHandler<AuthTokenHandler>();
 
 var app = builder.Build();
 
@@ -63,13 +61,6 @@ app.UseAuthorization();
 
 app.MapStaticAssets();
 
-// app.MapControllerRoute(
-//     name: "default",
-//     pattern: "{controller=Home}/{action=Index}/{id?}")
-//     .WithStaticAssets();
-// app.MapControllerRoute(
-//     name: "default",
-//     pattern: "{controller=Auth}/{action=Login}/{id?}");
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Catalog}/{action=Index}/{id?}");

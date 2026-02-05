@@ -1,11 +1,11 @@
 using CourierService.Application.Interfaces;
-using MediatR;
-using Mapster;
-using Shared.Utilities;
-using CourierService.Domain.Aggregates;
 using CourierService.Application.Mapping;
 using CourierService.Application.Models;
+using CourierService.Domain.Aggregates;
+using Mapster;
+using MediatR;
 using Microsoft.Extensions.Logging;
+using Shared.Utilities;
 
 namespace CourierService.Application.Commands.RegisterCourier;
 
@@ -48,11 +48,9 @@ public class RegisterCourierCommandHandler : IRequestHandler<RegisterCourierComm
 
             // Map domain events to integration events and stage to outbox
             var outboxMessages = created.DomainEvents
-                .Select(de =>
-                {
-                    var ie = _eventMapper.MapFromDomainEvent(de);
-                    return OutboxMessage.From(ie!);
-                })
+                .Select(_eventMapper.MapFromDomainEvent)
+                .Where(ie => ie != null)
+                .Select(OutboxMessage.From!)
                 .ToList();
             
             // Commit aggregate atomically

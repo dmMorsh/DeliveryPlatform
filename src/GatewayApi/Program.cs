@@ -1,5 +1,5 @@
-using Serilog;
 using GatewayApi.Services;
+using Serilog;
 using Shared.Services;
 
 var builder = WebApplication.CreateBuilder(args);

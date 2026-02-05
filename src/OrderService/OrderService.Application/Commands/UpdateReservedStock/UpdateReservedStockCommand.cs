@@ -4,4 +4,4 @@ using Shared.Utilities;
 
 namespace OrderService.Application.Commands.UpdateReservedStock;
 
-public record UpdateReservedStockCommand(Guid OrderId, UpdateOrderItemsModel OrderItemsModel ) : IRequest<ApiResponse<Unit>>;
+public record UpdateReservedStockCommand(Guid OrderId, UpdateOrderItemsModel OrderItemsModel ) : IRequest<ApiResponse>;

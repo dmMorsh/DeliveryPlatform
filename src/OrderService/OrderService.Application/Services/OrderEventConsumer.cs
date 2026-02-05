@@ -1,13 +1,14 @@
 using System.Text.Json;
 using Confluent.Kafka;
 using MediatR;
-using Shared.Services;
-using Shared.Contracts.Events;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using OrderService.Application.Commands.MarkStockReservationFailed;
 using OrderService.Application.Commands.UpdateReservedStock;
 using OrderService.Application.Models;
-using OrderService.Domain.Entities;
+using Shared.Contracts.Events;
+using Shared.Services;
 
 namespace OrderService.Application.Services;
 
@@ -18,15 +19,15 @@ namespace OrderService.Application.Services;
 public class OrderEventConsumer : KafkaEventConsumerBase
 {
     private new readonly ILogger<OrderEventConsumer> _logger;
-    private readonly IMediator _mediator;
+    private readonly IServiceScopeFactory _scopeFactory;
 
     public OrderEventConsumer(
         IConfiguration config,
-        ILogger<OrderEventConsumer> logger, IMediator mediator)
+        ILogger<OrderEventConsumer> logger, IServiceScopeFactory scopeFactory)
         : base(config, logger, "courier.events", "inventory.events")
     {
         _logger = logger;
-        _mediator = mediator;
+        _scopeFactory = scopeFactory;
     }
 
     /// <summary>
@@ -41,7 +42,7 @@ public class OrderEventConsumer : KafkaEventConsumerBase
             switch (eventType)
             {
                 case "cart.checked_out":
-                    await HandleCartCheckedOut(json);
+                    await _HandleCartCheckedOut(json);
                     break;
                 case "courier.status.changed":
                     await HandleCourierStatusChanged(json);
@@ -74,15 +75,17 @@ public class OrderEventConsumer : KafkaEventConsumerBase
             _logger.LogInformation("📦 OrderService: Reserve failed. OrderId={OrderId}, Items={Items}.", 
                 @event.OrderId, @event.Items);
             
-            var cmd = new UpdateReservedStockCommand(@event.OrderId,
-                new UpdateOrderItemsModel(OrderItemStatus.ReservationFailed, @event.Items.Select(i =>
+            var cmd = new MarkStockReservationFailedCommand(@event.OrderId,
+                new UpdateOrderItemsModel(ItemModeStatus.ReservationFailed, @event.Items.Select(i =>
                     new UpdateOrderItemModel(
                         i.ProductId,
                         i.Quantity,
                         i.Reason
                     )).ToArray()));
             
-            var result = await _mediator.Send(cmd);
+            using var scope = _scopeFactory.CreateScope();
+            var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
+            var result = await mediator.Send(cmd);
                     
             if (result.Success)
             {
@@ -113,14 +116,16 @@ public class OrderEventConsumer : KafkaEventConsumerBase
                 @event.OrderId, @event.Items);
 
             var cmd = new UpdateReservedStockCommand(@event.OrderId,
-                new UpdateOrderItemsModel(OrderItemStatus.Reserved, @event.Items.Select(i =>
+                new UpdateOrderItemsModel(ItemModeStatus.Reserved, @event.Items.Select(i =>
                     new UpdateOrderItemModel(
                         i.ProductId,
                         i.Quantity,
                         null
                     )).ToArray()));
             
-            var result = await _mediator.Send(cmd);
+            using var scope = _scopeFactory.CreateScope();
+            var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
+            var result = await mediator.Send(cmd);
                     
             if (result.Success)
             {
@@ -139,13 +144,13 @@ public class OrderEventConsumer : KafkaEventConsumerBase
         }
     }
 
-    private async Task HandleCartCheckedOut(string json)
+    private Task _HandleCartCheckedOut(string json)
     {
         try
         {
             var @event = JsonSerializer.Deserialize<CartCheckedOutEvent>(json, 
                 new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-            if (@event == null) return;
+            if (@event == null) return Task.CompletedTask;
 
             _logger.LogInformation("📦 OrderService: Cart checked out. CartId={CartId}, CustomerId={CustomerId}. " +
                 "🔔 TODO: Create order from cart items", 
@@ -162,6 +167,8 @@ public class OrderEventConsumer : KafkaEventConsumerBase
         {
             _logger.LogError(ex, "Error processing CartCheckedOutEvent");
         }
+
+        return Task.CompletedTask;
     }
 
     private async Task HandleCourierStatusChanged(string json)

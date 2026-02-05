@@ -1,7 +1,7 @@
-using Moq;
+using LocationTrackingService.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
-using LocationTrackingService.Services;
+using Moq;
 
 namespace Tests.IntegrationTests;
 

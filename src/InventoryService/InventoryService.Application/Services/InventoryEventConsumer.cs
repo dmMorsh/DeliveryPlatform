@@ -1,13 +1,14 @@
 using System.Text.Json;
 using Confluent.Kafka;
 using InventoryService.Application.Commands.ReleaseStock;
-using Shared.Services;
-using Shared.Contracts.Events;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Configuration;
-using MediatR;
 using InventoryService.Application.Commands.ReserveStock;
 using InventoryService.Application.Models;
+using MediatR;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Shared.Contracts.Events;
+using Shared.Services;
 
 namespace InventoryService.Application.Services;
 
@@ -18,16 +19,16 @@ namespace InventoryService.Application.Services;
 public class InventoryEventConsumer : KafkaEventConsumerBase
 {
     private new readonly ILogger<InventoryEventConsumer> _logger;
-    private readonly IMediator _mediator;
+    private readonly IServiceScopeFactory _scopeFactory;
 
     public InventoryEventConsumer(
         IConfiguration config,
         ILogger<InventoryEventConsumer> logger,
-        IMediator mediator)
+        IServiceScopeFactory scopeFactory)
         : base(config, logger, "order.events")
     {
         _logger = logger;
-        _mediator = mediator;
+        _scopeFactory = scopeFactory;
     }
 
     /// <summary>
@@ -62,7 +63,7 @@ public class InventoryEventConsumer : KafkaEventConsumerBase
     {
         try
         {
-            var @event = JsonSerializer.Deserialize<OrderCanceledEvent>(json, 
+            var @event = JsonSerializer.Deserialize<StockReservationReleaseRequestedEvent>(json, 
                 new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
             if (@event == null) return;
 
@@ -72,9 +73,16 @@ public class InventoryEventConsumer : KafkaEventConsumerBase
             // Отменяем резерв stock
             try
             {
-                var cmd = new ReleaseStockCommand(@event.OrderId, null);
+                var cmd = new ReleaseStockCommand(@event.OrderId, @event.Items
+                    .Select(i => 
+                        new SimpleStockItemModel(
+                            i.ProductId, 
+                            i.Quantity)
+                    ).ToArray());
 
-                var result = await _mediator.Send(cmd);
+                using var scope = _scopeFactory.CreateScope();
+                var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
+                var result = await mediator.Send(cmd);
                 
                 if (result.Success)
                 {
@@ -112,19 +120,21 @@ public class InventoryEventConsumer : KafkaEventConsumerBase
                 "🔄 Reserving stock for {ItemCount} items",
                 @event.AggregateId, @event.Items?.Count ?? 0);
             
-            // Резервируем stock для каждого товара в заказе
+            // Резервируем stock
             if (@event.Items != null)
             {
                 try
                 {
                     var cmd = new ReserveStockCommand(@event.OrderId ,@event.Items
                         .Select(i => 
-                            new ReserveStockModel(
+                            new SimpleStockItemModel(
                                 i.ProductId, 
                                 i.Quantity)
                         ).ToArray());
 
-                    var result = await _mediator.Send(cmd);
+                    using var scope = _scopeFactory.CreateScope();
+                    var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
+                    var result = await mediator.Send(cmd);
                     
                     if (result.Success)
                     {

@@ -1,7 +1,7 @@
 using System.Text.Json;
 using Confluent.Kafka;
-using Shared.Services;
 using Shared.Contracts.Events;
+using Shared.Services;
 
 namespace NotificationService.Services;
 

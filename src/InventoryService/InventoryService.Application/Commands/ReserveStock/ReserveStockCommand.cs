@@ -5,8 +5,8 @@ using Shared.Utilities;
 
 namespace InventoryService.Application.Commands.ReserveStock;
 
-public record ReserveStockCommand(Guid OrderId, ReserveStockModel[] ReserveStockModels) 
-    : IRequest<ApiResponse<Unit>>, IHangfireRetryable
+public record ReserveStockCommand(Guid OrderId, SimpleStockItemModel[] ReserveStockModels) 
+    : IRequest<ApiResponse>, IHangfireRetryable
 {
     public Guid CorrelationId => OrderId;
 }

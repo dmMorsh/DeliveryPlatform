@@ -25,7 +25,6 @@ public class InventoryDbContext : DbContext
         {
             entity.HasKey(x => x.Id);
             entity.Ignore(e => e.DomainEvents);
-            entity.HasIndex(e => e.ProductId).IsUnique();
             entity.Property(x => x.RowVersion)
                 .IsRowVersion();
         });

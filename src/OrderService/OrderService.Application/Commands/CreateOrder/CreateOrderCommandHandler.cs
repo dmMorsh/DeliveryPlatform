@@ -1,23 +1,24 @@
+using Mapster;
 using MediatR;
 using Microsoft.Extensions.Logging;
 using OrderService.Application.Interfaces;
-using Shared.Utilities;
-using Mapster;
 using OrderService.Application.Models;
+using Shared.Utilities;
 
 namespace OrderService.Application.Commands.CreateOrder;
 
 public class CreateOrderCommandHandler : IRequestHandler<CreateOrderCommand, ApiResponse<OrderView>>
 {
-    private readonly IOrderRepository _repository;
-    private readonly IUnitOfWork _uow;
+    private readonly IUnitOfWorkFactory _factory;
     private readonly IOrderIntegrationEventMapper _eventMapper;
     private readonly ILogger<CreateOrderCommandHandler> _logger;
 
-    public CreateOrderCommandHandler(IOrderRepository repository, IUnitOfWork uow, IOrderIntegrationEventMapper eventMapper, ILogger<CreateOrderCommandHandler> logger)
+    public CreateOrderCommandHandler(
+        IUnitOfWorkFactory factory,
+        IOrderIntegrationEventMapper eventMapper, 
+        ILogger<CreateOrderCommandHandler> logger)
     {
-        _repository = repository;
-        _uow = uow;
+        _factory = factory;
         _eventMapper = eventMapper;
         _logger = logger;
     }
@@ -34,7 +35,9 @@ public class CreateOrderCommandHandler : IRequestHandler<CreateOrderCommand, Api
         
         var order = Mapping.OrderFactory.CreateNew(createModel);
 
-        await _repository.CreateOrderAsync(order, ct);
+        await using var uow = _factory.Create(order.Id);
+        
+        await uow.Orders.CreateOrderAsync(order, ct);
         
         var outboxMessages = order.DomainEvents
             .Select(de => _eventMapper.MapFromDomainEvent(de))
@@ -42,7 +45,7 @@ public class CreateOrderCommandHandler : IRequestHandler<CreateOrderCommand, Api
             .Select(ie => OutboxMessage.From(ie!))
             .ToList();
         
-        await _uow.SaveChangesAsync(outboxMessages, ct);
+        await uow.SaveChangesAsync(outboxMessages, ct);
         order.ClearDomainEvents();
 
         _logger.LogInformation("Order created: {OrderNumber} (ID: {OrderId})", order.OrderNumber, order.Id);

@@ -35,7 +35,7 @@ public class CartController : ControllerBase
             return StatusCode(statusCode, data);
         }
 
-        _logger.LogError("Error creating product: {Error}", error);
+        _logger.LogError("Error getting cart: {Error}", error);
         return StatusCode(statusCode, new ProxyErrorResponse { Message = error });
     }
     
@@ -57,7 +57,7 @@ public class CartController : ControllerBase
             return StatusCode(statusCode, data);
         }
 
-        _logger.LogError("Error creating product: {Error}", error);
+        _logger.LogError("Error adding item: {Error}", error);
         return StatusCode(statusCode, new ProxyErrorResponse { Message = error });
     }
 
@@ -79,7 +79,7 @@ public class CartController : ControllerBase
             return StatusCode(statusCode, data);
         }
 
-        _logger.LogError("Error creating product: {Error}", error);
+        _logger.LogError("Checkout error: {Error}", error);
         return StatusCode(statusCode, new ProxyErrorResponse { Message = error });
     }
 }

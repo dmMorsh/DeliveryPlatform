@@ -1,5 +1,5 @@
-using Serilog;
 using AnalyticsService.Services;
+using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
 

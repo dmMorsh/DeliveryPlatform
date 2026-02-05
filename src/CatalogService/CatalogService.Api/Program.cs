@@ -7,8 +7,8 @@ using CatalogService.Infrastructure.Persistence;
 using CatalogService.Infrastructure.Repositories;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
-using Shared.Services;
 using Serilog;
+using Shared.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 

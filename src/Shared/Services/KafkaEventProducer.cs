@@ -1,9 +1,9 @@
 using System.Text;
 using System.Text.Json;
 using Confluent.Kafka;
-using Shared.Contracts.Events;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using Shared.Contracts.Events;
 
 namespace Shared.Services;
 

@@ -1,11 +1,11 @@
 using CatalogService.Api.Contracts;
-using MediatR;
-using Microsoft.AspNetCore.Mvc;
 using CatalogService.Application.Commands.CreateProduct;
 using CatalogService.Application.Commands.UpdateProduct;
 using CatalogService.Application.Models;
 using CatalogService.Application.Queries.GetProductById;
 using CatalogService.Application.Queries.SearchProducts;
+using MediatR;
+using Microsoft.AspNetCore.Mvc;
 
 namespace CatalogService.Api.Controllers;
 

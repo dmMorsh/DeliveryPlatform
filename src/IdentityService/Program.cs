@@ -1,6 +1,6 @@
-using IdentityService.Infrastructure.Security;
 using IdentityService.Domain.Users;
 using IdentityService.Infrastructure.Persistence;
+using IdentityService.Infrastructure.Security;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Serilog;

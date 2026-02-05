@@ -1,9 +1,9 @@
 using System.Text.Json;
 using Confluent.Kafka;
-using Shared.Services;
-using Shared.Contracts.Events;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
+using Shared.Contracts.Events;
+using Shared.Services;
 
 namespace CourierService.Application.Services;
 

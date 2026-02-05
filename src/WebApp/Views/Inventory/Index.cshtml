@@ -1,0 +1,36 @@
+﻿@model List<StockItemViewModel>
+
+<a asp-action="Add">Add new</a>
+<h2>Catalog</h2>
+
+@if (!Model.Any())
+{
+    <p>Stock is empty</p>
+    return;
+}
+
+<table>
+    <thead>
+    <tr>
+        <th>ID</th>
+        <th>Available</th>
+        <th>Total</th>
+        <th>Reserved</th>
+        <th></th>
+    </tr>
+    </thead>
+    <tbody>
+    @foreach (var p in Model)
+    {
+        <tr>
+            <td>@p.ProductId = </td>
+            <td> = @p.AvailableQuantity</td>
+            <td>@p.TotalQuantity</td>
+            <td>@p.ReservedQuantity</td>
+            <td>
+                <a asp-action="Details" asp-route-id="@p.ProductId" asp-route-quantity="@p.TotalQuantity">Edit</a>
+            </td>
+        </tr>
+    }
+    </tbody>
+</table>

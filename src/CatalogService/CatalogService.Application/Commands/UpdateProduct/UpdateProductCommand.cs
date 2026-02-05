@@ -1,5 +1,5 @@
-using MediatR;
 using CatalogService.Application.Models;
+using MediatR;
 using Shared.Utilities;
 
 namespace CatalogService.Application.Commands.UpdateProduct;

@@ -18,11 +18,15 @@ public class UnitOfWork : IUnitOfWork
         Reservations = new ReservationRepository(_db);
     }
     
-    public async Task SaveChangesAsync(List<OutboxMessage> outboxMessages, CancellationToken ct = default)
+    public async Task SaveChangesAsync(List<OutboxMessage> outboxMessages, CancellationToken ct)
     {
         if (outboxMessages.Count > 0)
             _db.OutboxMessages.AddRange(outboxMessages);
 
+        await _db.SaveChangesAsync(ct);
+    }    
+    public async Task SaveChangesWithoutMessagesAsync(CancellationToken ct)
+    {
         await _db.SaveChangesAsync(ct);
     }
 

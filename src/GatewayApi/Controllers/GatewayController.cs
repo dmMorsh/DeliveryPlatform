@@ -1,5 +1,5 @@
-using Microsoft.AspNetCore.Mvc;
 using GatewayApi.Services;
+using Microsoft.AspNetCore.Mvc;
 
 namespace GatewayApi.Controllers;
 
@@ -11,12 +11,10 @@ namespace GatewayApi.Controllers;
 [Route("api")]
 public class GatewayController : ControllerBase
 {
-    private readonly ILogger<GatewayController> _logger;
     private readonly IProxyService _proxyService;
 
-    public GatewayController(ILogger<GatewayController> logger, IProxyService proxyService)
+    public GatewayController(IProxyService proxyService)
     {
-        _logger = logger;
         _proxyService = proxyService;
     }
 

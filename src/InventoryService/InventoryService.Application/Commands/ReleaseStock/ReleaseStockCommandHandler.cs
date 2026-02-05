@@ -9,7 +9,7 @@ using Shared.Utilities;
 namespace InventoryService.Application.Commands.ReleaseStock;
 
 public class ReleaseStockCommandHandler
-    : IRequestHandler<ReleaseStockCommand, ApiResponse<Unit>>
+    : IRequestHandler<ReleaseStockCommand, ApiResponse>
 {
     private readonly IUnitOfWorkFactory _factory;
     private readonly IStockIntegrationEventMapper _eventMapper;
@@ -24,12 +24,12 @@ public class ReleaseStockCommandHandler
         _factory = factory;
     }
 
-    public async Task<ApiResponse<Unit>> Handle(
+    public async Task<ApiResponse> Handle(
         ReleaseStockCommand request,
         CancellationToken ct)
     {
         if (request.ReleaseStockModels.Length == 0)
-            return ApiResponse<Unit>.ErrorResponse("No item in request");
+            return ApiResponse.ErrorResponse("No item in request");
 
         var shardGroups = request.ReleaseStockModels
             .GroupBy(i => _resolver.ResolveShard(i.ProductId));
@@ -38,13 +38,13 @@ public class ReleaseStockCommandHandler
             var shardId = shardGroup.Key;
             var success = await ProcessMessage(shardId, request.OrderId, shardGroup.ToArray(), ct);
             if (!success)
-                return ApiResponse<Unit>.ErrorResponse("Release failed");
+                return ApiResponse.ErrorResponse("Release failed");
         }
         
-        return ApiResponse<Unit>.SuccessResponse(Unit.Value, "Stock released");
+        return ApiResponse.SuccessResponse("Stock released");
     }
 
-    private async Task<bool> ProcessMessage(int shardId, Guid orderId, ReleaseStockModel[] releaseStockModels, CancellationToken ct)
+    private async Task<bool> ProcessMessage(int shardId, Guid orderId, SimpleStockItemModel[] releaseStockModels, CancellationToken ct)
     {
         await using var uow = _factory.Create(shardId); 
         

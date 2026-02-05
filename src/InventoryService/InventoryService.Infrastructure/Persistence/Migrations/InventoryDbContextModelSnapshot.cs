@@ -69,9 +69,6 @@ namespace InventoryService.Infrastructure.Persistence.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<Guid>("ProductId")
-                        .HasColumnType("uuid");
-
                     b.Property<int>("ReservedQuantity")
                         .HasColumnType("integer");
 
@@ -85,9 +82,6 @@ namespace InventoryService.Infrastructure.Persistence.Migrations
                         .HasColumnType("integer");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("ProductId")
-                        .IsUnique();
 
                     b.ToTable("StockItems", "inventory");
                 });

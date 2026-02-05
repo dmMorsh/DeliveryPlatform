@@ -45,6 +45,8 @@ public class IntegrationEventMapper : IOrderIntegrationEventMapper
         {
             OrderCreatedDomainEvent e => MapFromOrderCreatedDomainEvent(e, null)
             ,
+            OrderItemsReleaseDomainEvent e => MapFromOrderItemsReleaseDomainEvent(e)
+            ,
             OrderAssignedDomainEvent e => new OrderAssignedEvent 
             { 
                 OrderId = e.OrderId, 
@@ -58,12 +60,13 @@ public class IntegrationEventMapper : IOrderIntegrationEventMapper
                 NewStatus = (int)e.NewStatus,
                 Timestamp = e.OccurredAt 
             },
+            OrderCriticalErrorDomainEvent e => MapFromOrderCriticalErrorDomainEvent(e)
+            ,
             _ => null
         };
     }
 
-    public IntegrationEvent? MapFromOrderCreatedDomainEvent(OrderCreatedDomainEvent e,
-        IEnumerable<DomainOrderItemSnapshot>? snapshots)
+    public IntegrationEvent MapFromOrderCreatedDomainEvent(OrderCreatedDomainEvent e, IEnumerable<DomainOrderItemSnapshot>? snapshots)
     {
         return new OrderCreatedEvent
         {
@@ -82,6 +85,29 @@ public class IntegrationEventMapper : IOrderIntegrationEventMapper
                 PriceCents = i.PriceCents,
                 Quantity = i.Quantity
             }).ToList()
+        };
+    }
+    
+    public IntegrationEvent MapFromOrderItemsReleaseDomainEvent(OrderItemsReleaseDomainEvent e)
+    {
+        return new StockReservationReleaseRequestedEvent
+        {
+            OrderId = e.OrderId,
+            Items = e.Items.Select(i => new IntegrationOrderItemSnapshot
+            {
+                ProductId = i.ProductId,
+                Quantity = i.Quantity
+            }).ToList()
+        };
+    }
+    
+    public IntegrationEvent MapFromOrderCriticalErrorDomainEvent(OrderCriticalErrorDomainEvent e)
+    {
+        return new OrderCriticalErrorEvent
+        {
+            OrderId = e.OrderId,
+            ClientId = e.ClientId,
+            Description = e.Description,
         };
     }
 }

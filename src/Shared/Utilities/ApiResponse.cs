@@ -18,6 +18,9 @@ public class ApiResponse<T>
 
     public static ApiResponse<T> ErrorResponse(params string[] errors)
         => new() { Success = false, Errors = errors.ToList() };
+    
+    public static ApiResponse<T> ErrorResponse(T data, string? message = null)
+        => new() { Success = false, Data = data, Message = message };
 }
 
 /// <summary>

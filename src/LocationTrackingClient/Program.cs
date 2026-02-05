@@ -1,7 +1,7 @@
+using Grpc.Core;
 using Grpc.Net.Client;
 using LocationTracking;
 using Shared.Proto;
-using Grpc.Core;
 
 Console.WriteLine("LocationTrackingClient starting...");
 

@@ -1,7 +1,7 @@
 using Grpc.Core;
-using Microsoft.AspNetCore.Authorization;
-using MediatR;
 using Mapster;
+using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using OrderService.Application.Commands.CreateOrder;
 using OrderService.Application.Models;
 using Shared.Proto;

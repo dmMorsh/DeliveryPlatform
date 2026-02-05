@@ -104,7 +104,6 @@ public class Order : AggregateRoot
 
         order.AddDomainEvent(new OrderCreatedDomainEvent {
             OrderId = order.Id,
-            // AggregateId = order.Id,
             OrderNumber = order.OrderNumber,
             ClientId = order.ClientId,
             FromAddress = order.From.Street,
@@ -121,5 +120,72 @@ public class Order : AggregateRoot
         });
 
         return order;
+    }
+
+    public void MarkItemsReserved(IReadOnlyCollection<OrderItem> items)
+    {
+        foreach (var item in items)
+        {
+            if (item.Status != OrderItemStatus.Pending)
+                continue;
+
+            item.MarkReserved();
+        }
+
+        if (Items.All(i => i.Status == OrderItemStatus.Reserved))
+            ChangeStatus(OrderStatus.Reserved);
+    }
+
+    public void MarkItemsReleasing(IReadOnlyCollection<OrderItem> items)
+    {
+        foreach (var item in items)
+        {
+            if (item.Status is OrderItemStatus.Releasing)
+                continue;
+
+            item.MarkReleasing();
+        }
+    }
+
+    public void MarkItemsFailed(OrderItem[] items)
+    {
+        foreach (var item in items)
+        {
+            if (item.Status is OrderItemStatus.ReservationFailed)
+                continue;
+
+            item.MarkReservationFailed();
+        }
+
+        if (Items.All(i => i.Status == OrderItemStatus.ReservationFailed))
+            ChangeStatus(OrderStatus.Failed);
+        else
+        {
+            AddDomainEvent(new OrderItemsReleaseDomainEvent
+            {
+                OrderId = Id,
+                Items = Items.Where(i => i.Status is OrderItemStatus.Pending or OrderItemStatus.Reserved)
+                    .Select(i => new DomainOrderItemSnapshot
+                    {
+                        ProductId = i.ProductId,
+                        Quantity = i.Quantity,
+                    }).ToArray()
+            });
+            Items.Where(i => i.Status is OrderItemStatus.Pending or OrderItemStatus.Reserved)
+                .ToList()
+                .ForEach(i => i.MarkReleasing());
+        }
+}
+
+    public void MarkAsInconsistent(string error)
+    {
+        Description += Environment.NewLine + error;
+        ChangeStatus(OrderStatus.Failed);
+        AddDomainEvent(new OrderCriticalErrorDomainEvent
+        {
+            OrderId = Id, 
+            ClientId = ClientId, 
+            Description = Description
+        });
     }
 }

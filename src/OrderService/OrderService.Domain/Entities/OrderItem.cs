@@ -21,6 +21,21 @@ public class OrderItem : Entity
         Quantity = quantity;
         Status = OrderItemStatus.Pending;
     }
+
+    internal void MarkReserved()
+    {
+        Status = OrderItemStatus.Reserved;
+    }
+
+    public void MarkReleasing()
+    {
+        Status = OrderItemStatus.Releasing;
+    }
+
+    public void MarkReservationFailed()
+    {
+        Status = OrderItemStatus.ReservationFailed;
+    }
 }
 
 public enum OrderItemStatus

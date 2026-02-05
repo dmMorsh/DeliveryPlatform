@@ -16,6 +16,12 @@ public record OrderCreatedDomainEvent : DomainEvent
     public required IReadOnlyList<DomainOrderItemSnapshot> Items { get; init; }
 }
 
+public record OrderItemsReleaseDomainEvent : DomainEvent
+{
+    public Guid OrderId { get; init; }
+    public required IReadOnlyList<DomainOrderItemSnapshot> Items { get; init; }
+}
+
 public record OrderAssignedDomainEvent : DomainEvent
 {
     public Guid OrderId { get; init; }
@@ -35,4 +41,11 @@ public record DomainOrderItemSnapshot
     public string Name { get; init; } = string.Empty;
     public long PriceCents { get; init; }
     public int Quantity { get; init; }
+}
+
+public record OrderCriticalErrorDomainEvent : DomainEvent
+{
+    public Guid OrderId { get; init; }
+    public Guid ClientId { get; init; }
+    public string? Description { get; init; }
 }

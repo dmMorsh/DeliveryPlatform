@@ -1,10 +1,14 @@
-﻿using OrderService.Domain.Entities;
-
-namespace OrderService.Application.Models;
+﻿namespace OrderService.Application.Models;
 
 public record UpdateOrderItemsModel(
-    OrderItemStatus Status,
+    ItemModeStatus Status,
     IReadOnlyCollection<UpdateOrderItemModel> Items,
     string? Description = null);
-    
+
 public record UpdateOrderItemModel(Guid ProductId, int Quantity, string? Description);
+
+public enum ItemModeStatus
+{
+    Reserved,
+    ReservationFailed,
+}

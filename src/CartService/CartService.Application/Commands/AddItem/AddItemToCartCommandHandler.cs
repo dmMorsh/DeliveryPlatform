@@ -1,8 +1,9 @@
-using MediatR;
 using CartService.Application.Interfaces;
 using CartService.Application.Mapping;
+using CartService.Application.Models;
 using CartService.Domain.Aggregates;
 using CartService.Domain.Entities;
+using MediatR;
 using Shared.Utilities;
 
 namespace CartService.Application.Commands.AddItem;
@@ -31,16 +32,11 @@ public class AddItemToCartCommandHandler : IRequestHandler<AddItemToCartCommand,
 
         await _repo.CreateOrUpdateAsync(cart, ct);
         
-        var outboxMessages = new List<Models.OutboxMessage>();
-        
-        foreach (var domainEvent in cart.DomainEvents)
-        {
-            var integrationEvent = _eventMapper.MapFromDomainEvent(domainEvent);
-            if (integrationEvent != null)
-            {
-                outboxMessages.Add(Models.OutboxMessage.From(integrationEvent));
-            }
-        }
+       var outboxMessages = cart.DomainEvents
+            .Select(_eventMapper.MapFromDomainEvent)
+            .Where(ie => ie != null)
+            .Select(OutboxMessage.From!)
+            .ToList();
 
         await _uow.SaveChangesAsync(outboxMessages, ct);
         cart.ClearDomainEvents();

@@ -2,9 +2,9 @@ using CartService.Application.Commands.AddItem;
 using CartService.Application.Commands.Checkout;
 using CartService.Application.Models;
 using CartService.Application.Queries.GetCart;
-using Microsoft.AspNetCore.Mvc;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 
 namespace CartService.Api.Controllers;
 

@@ -5,7 +5,7 @@ namespace InventoryService.Domain.Aggregates;
 
 public class StockItem : AggregateRoot
 {
-    public Guid ProductId { get; private set; }
+    // Guid Id == Guid ProductId (!)
 
     public int TotalQuantity { get; private set; }
     
@@ -20,8 +20,7 @@ public class StockItem : AggregateRoot
         if (initialQuantity < 0)
             throw new DomainException("Initial quantity cannot be negative");
 
-        Id = Guid.NewGuid();
-        ProductId = productId;
+        Id = productId;
         TotalQuantity = initialQuantity;
         ReservedQuantity = 0;
     }
@@ -56,7 +55,7 @@ public class StockItem : AggregateRoot
         ReservedQuantity += quantity;
 
         AddDomainEvent(new StockReservedDomainEvent{
-            ProductId = ProductId,
+            ProductId = Id,
             OrderId = orderId,
             Quantity = quantity});
     }
@@ -83,7 +82,7 @@ public class StockItem : AggregateRoot
         ReservedQuantity -= quantity;
 
         AddDomainEvent(new StockReleasedDomainEvent{
-            ProductId = ProductId,
+            ProductId = Id,
             OrderId = orderId,
             Quantity = quantity});
     }
@@ -92,5 +91,13 @@ public class StockItem : AggregateRoot
     {
         ReservedQuantity -= quantity;
         TotalQuantity -= quantity;
+    }
+
+    public void SetTotalQuantity(int quantity)
+    {
+        if (quantity < ReservedQuantity)
+            throw new DomainException("Quantity must be more than or equal to ReservedQuantity");
+        
+        TotalQuantity = quantity;
     }
 }

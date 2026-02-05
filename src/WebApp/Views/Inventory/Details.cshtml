@@ -1,0 +1,9 @@
+﻿@model SimpleStockItemViewModel
+
+<h2>@Model.ProductId</h2>
+
+<form method="post" asp-controller="Inventory" asp-action="Adjust">
+    <input type="hidden" name="ProductId" value="@Model.ProductId"/>
+    <input type="number" name="Quantity" value="@Model.Quantity"/>
+    <button type="submit">Change</button>
+</form>

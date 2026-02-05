@@ -12,9 +12,9 @@ using MediatR;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Serilog;
 using Shared.Proto;
 using Shared.Services;
-using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
 

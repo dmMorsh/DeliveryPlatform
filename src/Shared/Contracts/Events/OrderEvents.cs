@@ -11,7 +11,7 @@ public record OrderCreatedEvent : IntegrationEvent
     public override Guid AggregateId => OrderId;
     public required Guid OrderId { get; init; }
     public string? OrderNumber { get; init; }
-    public Guid ClientId { get; init; }
+    public required Guid ClientId { get; init; }
     public string FromAddress { get; init; } = string.Empty;
     public string ToAddress { get; init; } = string.Empty;
     public double FromLatitude { get; init; }
@@ -20,7 +20,7 @@ public record OrderCreatedEvent : IntegrationEvent
     public double ToLongitude { get; init; }
     public long CostCents { get; init; }
     public DateTime CreatedAt { get; init; }
-    public List<IntegrationOrderItemSnapshot> Items { get; init; } = new();
+    public required IReadOnlyCollection<IntegrationOrderItemSnapshot> Items { get; init; }
     public string? Description { get; init; }
 }
 
@@ -29,10 +29,10 @@ public record OrderCreatedEvent : IntegrationEvent
 /// </summary>
 public record IntegrationOrderItemSnapshot
 {
-    public Guid ProductId { get; init; }
+    public required Guid ProductId { get; init; }
     public string Name { get; init; } = string.Empty;
     public long PriceCents { get; init; }
-    public int Quantity { get; init; }
+    public required int Quantity { get; init; }
 }
 
 /// <summary>
@@ -45,7 +45,7 @@ public record OrderAssignedEvent : IntegrationEvent
     public override string AggregateType => "Order";
     public override Guid AggregateId => OrderId;
     public required Guid OrderId { get; init; }
-    public Guid CourierId { get; init; }
+    public required Guid CourierId { get; init; }
     public string CourierName { get; init; } = string.Empty;
     public string? CourierPhone { get; init; }
 }
@@ -91,4 +91,31 @@ public record OrderCanceledEvent : IntegrationEvent
     public override Guid AggregateId => OrderId;
     public required Guid OrderId { get; init; }
     public Guid CourierId { get; init; }
+}
+
+/// <summary>
+/// Event: Запрос освобождения зарезервированных позиций
+/// </summary>
+public record StockReservationReleaseRequestedEvent : IntegrationEvent
+{
+    public override string EventType => "inventory.stock.release_requested";
+    public override int Version => 1;
+    public override string AggregateType => "Order";
+    public override Guid AggregateId => OrderId;
+    public required Guid OrderId { get; init; }
+    public required IReadOnlyCollection<IntegrationOrderItemSnapshot> Items { get; init; }
+}
+
+/// <summary>
+/// Event: Запрос освобождения зарезервированных позиций
+/// </summary>
+public record OrderCriticalErrorEvent : IntegrationEvent
+{
+    public override string EventType => "order.critical_error";
+    public override int Version => 1;
+    public override string AggregateType => "Order"; //TODO "Errors" ?
+    public override Guid AggregateId => OrderId;
+    public required Guid OrderId { get; init; }
+    public Guid ClientId { get; init; }
+    public string? Description { get; init; }
 }

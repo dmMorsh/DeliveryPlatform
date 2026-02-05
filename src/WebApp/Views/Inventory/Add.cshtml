@@ -1,0 +1,17 @@
+﻿@model SimpleStockItemViewModel
+
+<form method="post" asp-controller="Inventory" asp-action="Add">
+   
+    <h3>Info</h3>
+    
+    <label>ID</label>
+    <input asp-for="ProductId"/>
+    
+    <h3>Details</h3>
+    
+    <label>Total quantity</label>
+    <input asp-for="Quantity"/>
+    
+    <br/>
+    <button type="submit">Add</button>
+</form>

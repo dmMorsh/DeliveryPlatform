@@ -10,7 +10,7 @@ using Shared.Utilities;
 namespace InventoryService.Application.Commands.ReserveStock;
 
 public class ReserveStockCommandHandler
-    : IRequestHandler<ReserveStockCommand, ApiResponse<Unit>>
+    : IRequestHandler<ReserveStockCommand, ApiResponse>
 {
     private readonly IUnitOfWorkFactory _factory;
     private readonly IStockIntegrationEventMapper _eventMapper;
@@ -18,19 +18,20 @@ public class ReserveStockCommandHandler
 
     public ReserveStockCommandHandler(
         IUnitOfWorkFactory factory,
-        IStockIntegrationEventMapper eventMapper, IShardResolver resolver)
+        IStockIntegrationEventMapper eventMapper, 
+        IShardResolver resolver)
     {
         _factory = factory;
         _eventMapper = eventMapper;
         _resolver = resolver;
     }
 
-    public async Task<ApiResponse<Unit>> Handle(
+    public async Task<ApiResponse> Handle(
         ReserveStockCommand request,
         CancellationToken ct)
     {
         if (request.ReserveStockModels.Length == 0)
-            return ApiResponse<Unit>.ErrorResponse("No item in request");
+            return ApiResponse.ErrorResponse("No item in request");
 
         var shardGroups = request.ReserveStockModels
             .GroupBy(i => _resolver.ResolveShard(i.ProductId));
@@ -39,13 +40,13 @@ public class ReserveStockCommandHandler
             var shardId = shardGroup.Key;
             var success = await ProcessMessage(shardId, request.OrderId, shardGroup.ToArray(), ct);
             if (!success)
-                return ApiResponse<Unit>.ErrorResponse("Reservation failed");
+                return ApiResponse.ErrorResponse("Reservation failed");
         }
         
-        return ApiResponse<Unit>.SuccessResponse(Unit.Value,"item reserved");
+        return ApiResponse.SuccessResponse("item reserved");
     }
 
-    private async Task<bool> ProcessMessage(int shardId, Guid orderId, ReserveStockModel[] reserveStockModels,
+    private async Task<bool> ProcessMessage(int shardId, Guid orderId, SimpleStockItemModel[] reserveStockModels,
         CancellationToken ct)
     {
         await using var uow = _factory.Create(shardId);
@@ -102,7 +103,7 @@ public class ReserveStockCommandHandler
             await uow.Reservations.AddReservationAsync(new StockReservation
             {
                 OrderId = orderId,
-                ProductId = stock.ProductId,
+                ProductId = stock.Id,
                 Quantity = quantity
             }, ct);
         }

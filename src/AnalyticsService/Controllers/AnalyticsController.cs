@@ -1,5 +1,5 @@
-using Microsoft.AspNetCore.Mvc;
 using AnalyticsService.Services;
+using Microsoft.AspNetCore.Mvc;
 
 namespace AnalyticsService.Controllers;
 

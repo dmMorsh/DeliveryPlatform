@@ -1,8 +1,8 @@
-using MediatR;
 using CatalogService.Application.Interfaces;
 using CatalogService.Application.Models;
 using CatalogService.Domain.Aggregates;
 using CatalogService.Domain.ValueObjects;
+using MediatR;
 using Shared.Utilities;
 
 namespace CatalogService.Application.Commands.CreateProduct;

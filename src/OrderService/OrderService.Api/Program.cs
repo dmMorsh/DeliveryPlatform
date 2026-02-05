@@ -1,22 +1,22 @@
 using System.Text;
 using Confluent.Kafka;
+using MediatR;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
-using Serilog;
-using OrderService.Infrastructure.Persistence;
-using OrderService.Infrastructure.Repositories;
-using OrderService.Application.Interfaces;
-using OrderService.Infrastructure.Mapping;
-using OrderService.Api.Mappings;
 using OrderService.Api.Grpc;
-using Shared.Services;
-using MediatR;
+using OrderService.Api.Mappings;
 using OrderService.Application;
+using OrderService.Application.Interfaces;
 using OrderService.Application.Services;
 using OrderService.Application.Utils;
+using OrderService.Infrastructure.Mapping;
 using OrderService.Infrastructure.Outbox;
+using OrderService.Infrastructure.Persistence;
+using OrderService.Infrastructure.Repositories;
+using Serilog;
 using Serilog.Events;
+using Shared.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -64,6 +64,7 @@ else
         var shardCount = builder.Configuration.GetValue<int>("ShardCount", 1);
         return new HashShardResolver(shardCount);
     });
+    builder.Services.AddScoped<IUnitOfWorkFactory, UnitOfWorkFactory>();
 }
 
 builder.Services.AddSingleton<IEventProducer, KafkaEventProducer>();

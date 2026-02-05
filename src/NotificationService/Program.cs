@@ -1,5 +1,5 @@
-using Serilog;
 using NotificationService.Services;
+using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
 

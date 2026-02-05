@@ -1,6 +1,6 @@
 using CourierService.Application.Models;
-using Shared.Utilities;
 using MediatR;
+using Shared.Utilities;
 
 namespace CourierService.Application.Commands.RegisterCourier;
 

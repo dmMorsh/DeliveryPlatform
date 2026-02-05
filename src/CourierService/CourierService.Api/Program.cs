@@ -1,6 +1,4 @@
 using Confluent.Kafka;
-using Microsoft.EntityFrameworkCore;
-using Serilog;
 using CourierService.Application;
 using CourierService.Application.Interfaces;
 using CourierService.Application.Mapping;
@@ -8,9 +6,11 @@ using CourierService.Application.Services;
 using CourierService.Infrastructure.Outbox;
 using CourierService.Infrastructure.Persistence;
 using CourierService.Infrastructure.Repositories;
-using Shared.Services;
 using MediatR;
+using Microsoft.EntityFrameworkCore;
+using Serilog;
 using Serilog.Events;
+using Shared.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
