@@ -14,7 +14,7 @@ public class InventoryApiClient
     
     public async Task<List<StockItemViewModel>?> GetStocksAsync(CancellationToken ct)
     {
-        var res = await _http.GetFromJsonAsync<ApiResponse<List<StockItemViewModel>>>($"api/inventory", ct);
+        var res = await _http.GetFromJsonAsync<ApiResponse<List<StockItemViewModel>?>>("api/inventory", ct);
         return res?.Data;
     }
 
