@@ -157,25 +157,25 @@ public class Order : AggregateRoot
             item.MarkReservationFailed();
         }
 
-        if (Items.All(i => i.Status == OrderItemStatus.ReservationFailed))
-            ChangeStatus(OrderStatus.Failed);
-        else
+        ChangeStatus(OrderStatus.Failed);
+
+        if (Items.Any(i => i.Status is OrderItemStatus.Reserved))
         {
             AddDomainEvent(new OrderItemsReleaseDomainEvent
             {
                 OrderId = Id,
-                Items = Items.Where(i => i.Status is OrderItemStatus.Pending or OrderItemStatus.Reserved)
+                Items = Items.Where(i => i.Status is OrderItemStatus.Reserved)
                     .Select(i => new DomainOrderItemSnapshot
                     {
                         ProductId = i.ProductId,
                         Quantity = i.Quantity,
                     }).ToArray()
             });
-            Items.Where(i => i.Status is OrderItemStatus.Pending or OrderItemStatus.Reserved)
+            Items.Where(i => i.Status is OrderItemStatus.Reserved)
                 .ToList()
                 .ForEach(i => i.MarkReleasing());
         }
-}
+    }
 
     public void MarkAsInconsistent(string error)
     {

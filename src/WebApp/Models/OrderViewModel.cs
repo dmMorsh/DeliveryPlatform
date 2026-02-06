@@ -5,7 +5,7 @@ public class OrderViewModel
     public Guid Id { get; set; }
     public string OrderNumber { get; set; } = "";
 
-    public int Status { get; set; }
+    public string Status { get; set; }
 
     public string FromAddress { get; set; } = "";
     public string ToAddress { get; set; } = "";

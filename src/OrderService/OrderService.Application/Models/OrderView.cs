@@ -14,7 +14,7 @@ public record OrderView
     public double ToLongitude { get; set; }
     public string Description { get; set; } = string.Empty;
     public int WeightGrams { get; set; }
-    public int Status { get; set; }
+    public string Status { get; set; }
     public long CostCents { get; set; }
     public string? Currency { get; set; }
     public string? CourierNote { get; set; }

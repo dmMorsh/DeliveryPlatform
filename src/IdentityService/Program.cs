@@ -10,7 +10,7 @@ var builder = WebApplication.CreateBuilder(args);
 // Logging
 builder.Host.UseSerilog((ctx, cfg) =>
     cfg.WriteTo.Console(outputTemplate: "[{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz}] [{Level:u3}] [{SourceContext}] {Message:lj}{NewLine}{Exception}")
-       .WriteTo.File("logs/identityservice-YYYY-MM-DD.log", 
+       .WriteTo.File("../../logs/IdentityService-.log", 
            rollingInterval: RollingInterval.Day, 
            outputTemplate: "[{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz}] [{Level:u3}] [{SourceContext}] {Message:lj}{NewLine}{Exception}")
        .MinimumLevel.Information());

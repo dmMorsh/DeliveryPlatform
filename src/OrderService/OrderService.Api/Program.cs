@@ -32,7 +32,7 @@ builder.Host.UseSerilog((ctx, cfg) =>
             && le.Properties.TryGetValue("commandText", out var cmd)
             && cmd.ToString().StartsWith("\"-- OUTBOX_PROCESSOR_POLL"))
         .WriteTo.Console(outputTemplate: "[{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz}] [{Level:u3}] [{SourceContext}] {Message:lj}{NewLine}{Exception}")
-        .WriteTo.File("logs/orderservice-YYYY-MM-DD.log", 
+        .WriteTo.File("../../logs/OrderService-.log", 
            rollingInterval: RollingInterval.Day, 
            outputTemplate: "[{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz}] [{Level:u3}] [{SourceContext}] {Message:lj}{NewLine}{Exception}")
     );

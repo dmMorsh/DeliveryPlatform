@@ -86,16 +86,12 @@ public class UpdateReservedStockCommandHandler : IRequestHandler<UpdateReservedS
             .Where(oi => productIds.Contains(oi.ProductId))
             .ToArray();
         
-        if (items.Length == 0)
+        if (await HasErrors(uow, order, items, request, ct))
         {
-            _logger.LogWarning(
-                "No matching items for release in order {OrderId}",
-                order.Id);
-
-            return ApiResponse.SuccessResponse();
+            return ApiResponse.ErrorResponse("Stock reservation invariant violation error");
         }
         
-        if (items.All(i => i.Status is OrderItemStatus.Releasing or OrderItemStatus.Released))
+        if (!items.Any(i => i.Status is OrderItemStatus.Pending or OrderItemStatus.Reserved))
         {
             _logger.LogWarning("Items already processed");
             return ApiResponse.SuccessResponse();
@@ -134,7 +130,31 @@ public class UpdateReservedStockCommandHandler : IRequestHandler<UpdateReservedS
             
         return ApiResponse.SuccessResponse();
     }
-    
+
+    private async Task<bool> HasErrors(IUnitOfWork uow,
+        Order order, OrderItem[] items,
+        UpdateReservedStockCommand request, CancellationToken ct)
+    {
+        if (items.Length == request.OrderItemsModel.Items.Count)
+        {
+            var error = $"No matching items in order {order.Id}";
+            order.MarkAsInconsistent(error);
+            _logger.LogCritical(error);
+            
+            var failMessages = order.DomainEvents
+                .Select(_eventMapper.MapFromDomainEvent)
+                .Where(ie => ie != null)
+                .Select(OutboxMessage.From!)
+                .ToList();
+        
+            await uow.SaveChangesAsync(failMessages, ct);
+            order.ClearDomainEvents();
+            return true;
+        }
+
+        return false;
+    }
+
     private async Task<bool> HasErrors(IUnitOfWork uow, Order order, 
         (OrderItem OrderItem, UpdateOrderItemModel RequestItem)[] items,
         UpdateReservedStockCommand request, CancellationToken ct)

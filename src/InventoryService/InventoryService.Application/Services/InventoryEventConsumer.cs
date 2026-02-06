@@ -45,8 +45,8 @@ public class InventoryEventConsumer : KafkaEventConsumerBase
                 case "order.created":
                     await HandleOrderCreated(json);
                     break;
-                case "order.canceled":
-                    await HandleOrderCanceled(json);
+                case "inventory.stock.release_requested\n":
+                    await HandleStockReservationReleaseRequested(json);
                     break;
                 default:
                     _logger.LogWarning("Unknown event type: {EventType}", eventType);
@@ -59,7 +59,7 @@ public class InventoryEventConsumer : KafkaEventConsumerBase
         }
     }
 
-    private async Task HandleOrderCanceled(string json)
+    private async Task HandleStockReservationReleaseRequested(string json)
     {
         try
         {

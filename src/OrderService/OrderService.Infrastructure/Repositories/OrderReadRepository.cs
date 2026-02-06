@@ -23,7 +23,7 @@ public class OrderReadRepository : IOrderReadRepository
             {
                 Id = o.Id,
                 OrderNumber = o.OrderNumber,
-                Status = (int)o.Status,
+                Status = o.Status.ToString(),
                 FromAddress = o.From.Street,
                 ToAddress = o.To.Street,
                 CostCents = o.CostCents.AmountCents,
@@ -41,7 +41,7 @@ public class OrderReadRepository : IOrderReadRepository
             {
                 Id = o.Id,
                 OrderNumber = o.OrderNumber,
-                Status = (int)o.Status,
+                Status = o.Status.ToString(),
                 FromAddress = o.From.Street,
                 ToAddress = o.To.Street,
                 CostCents = o.CostCents.AmountCents,

@@ -33,8 +33,4 @@
     <Protobuf Include="..\..\Shared\Proto\order.proto" GrpcServices="Server" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="logs\" />
-  </ItemGroup>
-
 </Project>

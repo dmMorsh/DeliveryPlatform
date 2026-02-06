@@ -57,7 +57,7 @@ public static class MapsterConfig
             .Map(dest => dest.ToLongitude, src => src.To.Longitude)
             .Map(dest => dest.Description, src => src.Description)
             .Map(dest => dest.WeightGrams, src => src.WeightGrams)
-            .Map(dest => dest.Status, src => src.Status)
+            .Map(dest => dest.Status, src => src.Status.ToString())
             .Map(dest => dest.CostCents, src => src.CostCents.AmountCents)
             .Map(dest => dest.Currency, src => src.CostCents.Currency)
             .Map(dest => dest.CourierNote, src => src.CourierNote)
