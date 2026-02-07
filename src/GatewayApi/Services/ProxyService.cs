@@ -29,7 +29,7 @@ public class ProxyService : IProxyService
         {
             ["auth-service"] = config["Services:AuthServiceUrl"] ?? "http://localhost:5292",
             ["catalog-service"] = config["Services:CatalogServiceUrl"] ?? "http://localhost:5201",
-            ["cart-service"] = config["Services:CartServiceUrl"] ?? "http://localhost:5202",
+            ["cart-service"] = config["Services:CartServiceUrl"] ?? "https://localhost:7202",
             ["inventory-service"] = config["Services:InventoryServiceUrl"] ?? "http://localhost:5203",
             ["order-service"] = config["Services:OrderServiceUrl"] ?? "https://localhost:7204",
             ["courier-service"] = config["Services:CourierServiceUrl"] ?? "http://localhost:5205",
@@ -92,7 +92,6 @@ public class ProxyService : IProxyService
 
             _logger.LogInformation("Proxying GET request to {Url}", url);
 
-            // var response = await client.GetAsync(url, ct);
             var response = await SendProxyRequestAsync(HttpMethod.Get, client, httpContext, url, null, ct);
             var content = await response.Content.ReadAsStringAsync(ct);
 
@@ -133,7 +132,6 @@ public class ProxyService : IProxyService
 
             _logger.LogInformation("Proxying PUT request to {Url}", url);
 
-            // var response = await client.PutAsJsonAsync(url, body, ct);
             var response = await SendProxyRequestAsync(HttpMethod.Put, client, httpContext, url, body, ct);
             var content = await response.Content.ReadAsStringAsync(ct);
 

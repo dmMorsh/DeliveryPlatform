@@ -7,9 +7,9 @@ public class PaymentRepository : IPaymentRepository, IUnitOfWork
 {
     private static readonly List<Payment> _store = new();
 
-    public Task AddAsync(Payment entity, CancellationToken ct = default)
+    public Task AddAsync(Payment payment, CancellationToken ct = default)
     {
-        _store.Add(entity);
+        _store.Add(payment);
         return Task.CompletedTask;
     }
 

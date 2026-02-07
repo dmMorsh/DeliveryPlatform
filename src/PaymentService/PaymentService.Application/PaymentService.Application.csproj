@@ -9,15 +9,17 @@
     <ItemGroup>
             <Folder Include="Commands\" />
             <Folder Include="Interfaces\" />
-            <Folder Include="Models\" />
             <Folder Include="Queries\" />
     </ItemGroup>
         <ItemGroup>
+                <ProjectReference Include="..\..\Shared\Shared.csproj" />
                 <ProjectReference Include="..\PaymentService.Domain\PaymentService.Domain.csproj" />
         </ItemGroup>
     
     <ItemGroup>
         <PackageReference Include="MediatR" Version="11.1.0" />
+        <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.0" />
+        <PackageReference Include="Npgsql" Version="9.0.1" />
     </ItemGroup>
 
     <ItemGroup>

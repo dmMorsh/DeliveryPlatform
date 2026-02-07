@@ -1,3 +1,3 @@
 namespace PaymentService.Application.Models;
 
-public record CreatePaymentModel(string Name);
+public record CreatePaymentModel(Guid OrderId, long Amount, string Currency);
