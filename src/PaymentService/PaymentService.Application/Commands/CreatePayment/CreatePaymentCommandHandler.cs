@@ -4,10 +4,11 @@ using Npgsql;
 using PaymentService.Application.Interfaces;
 using PaymentService.Application.Models;
 using PaymentService.Domain.Aggregates;
+using Shared.Utilities;
 
 namespace PaymentService.Application.Commands.CreatePayment;
 
-public class CreatePaymentCommandHandler : IRequestHandler<CreatePaymentCommand, PaymentView>
+public class CreatePaymentCommandHandler : IRequestHandler<CreatePaymentCommand, ApiResponse>
 {
     private readonly IPaymentRepository _repo;
     private readonly IUnitOfWork _uow;
@@ -18,7 +19,7 @@ public class CreatePaymentCommandHandler : IRequestHandler<CreatePaymentCommand,
         _uow = uow;
     }
 
-    public async Task<PaymentView> Handle(CreatePaymentCommand request, CancellationToken ct)
+    public async Task<ApiResponse> Handle(CreatePaymentCommand request, CancellationToken ct)
     {
         var payment = Payment.Create(request.Model.OrderId, request.Model.Amount, request.Model.Currency);
         try
@@ -33,7 +34,9 @@ public class CreatePaymentCommandHandler : IRequestHandler<CreatePaymentCommand,
             payment = await _repo.GetByIdAsync(request.Model.OrderId, ct);
                 //.SingleAsync(p => p.OrderId == orderId && p.Status == PaymentStatus.Pending, ct);
         }
-        return new PaymentView(payment.Id, payment.AmountCents, payment.CreatedAt);
+
+        return ApiResponse.SuccessResponse();
+        // new PaymentView(payment.Id, payment.AmountCents, payment.CreatedAt);
     }
 
     private static bool IsUniqueViolation(DbUpdateException ex)

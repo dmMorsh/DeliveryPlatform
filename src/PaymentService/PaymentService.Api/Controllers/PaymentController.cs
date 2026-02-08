@@ -21,7 +21,7 @@ public class PaymentController : ControllerBase
     {
         var cmd = new CreatePaymentCommand(model);
         var result = await _mediator.Send(cmd);
-        return CreatedAtAction(nameof(GetById), new { id = result.Id }, result);
+        return CreatedAtAction(nameof(GetById), new { id = result.Message }, result);
     }
 
     [HttpGet("{id}")]

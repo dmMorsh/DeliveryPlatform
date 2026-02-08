@@ -19,6 +19,11 @@ public class PaymentRepository : IPaymentRepository, IUnitOfWork
         return Task.FromResult(item);
     }
 
+    public Task<Payment?> GetByOrderId(Guid orderId, CancellationToken ct = default)
+    {
+        throw new NotImplementedException();
+    }
+
     public Task SaveChangesAsync(CancellationToken ct = default)
     {
         // In-memory store - nothing to persist

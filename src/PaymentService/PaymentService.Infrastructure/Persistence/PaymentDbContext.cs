@@ -23,7 +23,7 @@ public class PaymentDbContext : DbContext
             entity.Ignore(e => e.DomainEvents);
             entity.HasIndex(p => p.OrderId)
                 .IsUnique()
-                .HasFilter($"\"{nameof(Payment.Status)}\" = {(int)PaymentStatus.Pending}");
+                .HasFilter($"\"{nameof(Payment.Status)}\" = {(int)PaymentStatus.Created}");
             entity.Property(x => x.RowVersion)
                 .IsRowVersion();
         });
