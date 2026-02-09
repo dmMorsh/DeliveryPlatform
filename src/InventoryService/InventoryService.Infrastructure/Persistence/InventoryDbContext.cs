@@ -16,6 +16,7 @@ public class InventoryDbContext : DbContext
     public DbSet<StockReservation> StockReservation => Set<StockReservation>();
     public DbSet<OutboxMessage> OutboxMessages => Set<OutboxMessage>();
     public DbSet<ProcessedCommand> ProcessedCommands => Set<ProcessedCommand>();// TODO переместить в HF бд
+    public DbSet<Shared.Contracts.Events.ProcessedEvent> ProcessedEvents => Set<Shared.Contracts.Events.ProcessedEvent>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -32,6 +33,16 @@ public class InventoryDbContext : DbContext
         {
             entity.HasIndex(x => new { x.OrderId, x.ProductId })
                 .IsUnique();
+        });
+
+        modelBuilder.Entity<Shared.Contracts.Events.ProcessedEvent>(entity =>
+        {
+            entity.HasKey(x => x.Id);
+            entity.HasIndex(x => x.EventId).IsUnique();
+            entity.Property(x => x.EventId).IsRequired();
+            entity.Property(x => x.EventType).IsRequired();
+            entity.Property(x => x.Topic).IsRequired();
+            entity.Property(x => x.Status).IsRequired();
         });
     }
 }

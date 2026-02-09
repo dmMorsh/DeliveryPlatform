@@ -1,0 +1,66 @@
+{
+  "uid": "otel-collector",
+  "title": "OTel Collector",
+  "tags": ["otel", "collector"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "panels": [
+    {
+      "type": "stat",
+      "title": "Collector Up",
+      "gridPos": {"x": 0, "y": 0, "w": 6, "h": 4},
+      "targets": [
+        {
+          "expr": "up{job=\"otel-collector\"}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Received Spans/s",
+      "gridPos": {"x": 6, "y": 0, "w": 9, "h": 8},
+      "targets": [
+        {
+          "expr": "rate(otelcol_receiver_accepted_spans[5m])",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Received Metrics/s",
+      "gridPos": {"x": 15, "y": 0, "w": 9, "h": 8},
+      "targets": [
+        {
+          "expr": "rate(otelcol_receiver_accepted_metric_points[5m])",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Exporter Failures/s",
+      "gridPos": {"x": 0, "y": 8, "w": 12, "h": 8},
+      "targets": [
+        {
+          "expr": "rate(otelcol_exporter_send_failed_spans[5m]) + rate(otelcol_exporter_send_failed_metric_points[5m])",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Processor Dropped/s",
+      "gridPos": {"x": 12, "y": 8, "w": 12, "h": 8},
+      "targets": [
+        {
+          "expr": "rate(otelcol_processor_dropped_spans[5m]) + rate(otelcol_processor_dropped_metric_points[5m])",
+          "refId": "A"
+        }
+      ]
+    }
+  ]
+}

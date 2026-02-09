@@ -14,6 +14,7 @@ using OrderService.Infrastructure.Mapping;
 using OrderService.Infrastructure.Outbox;
 using OrderService.Infrastructure.Persistence;
 using OrderService.Infrastructure.Repositories;
+using OrderService.Infrastructure.Inbox;
 using Serilog;
 using Serilog.Events;
 using Shared.Services;
@@ -41,11 +42,16 @@ builder.Host.UseSerilog((ctx, cfg) =>
 
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
+builder.AddServiceTelemetry("order-service");
 
 // Allow using an in-memory DB for local quick tests by setting USE_INMEMORY_DB=true
 var useInMemory = Environment.GetEnvironmentVariable("USE_INMEMORY_DB") == "true"
                 || string.Equals(builder.Configuration["UseInMemoryDb"], "true", StringComparison.OrdinalIgnoreCase);
 
+if (useInMemory && builder.Environment.IsProduction())
+    throw new InvalidOperationException("In-memory database is not allowed in production.");
+
+string? postgresConnectionString = null;
 if (useInMemory)
 {
     builder.Services.AddDbContext<OrderDbContext>(options =>
@@ -53,10 +59,9 @@ if (useInMemory)
 }
 else
 {
-    var connectionString = builder.Configuration.GetConnectionString("PostgreSQL") 
-        ?? "Host=localhost;Port=5432;Database=delivery_db;Username=postgres;Password=postgres;";
+    postgresConnectionString = ConfigurationGuard.GetRequiredConnectionString(builder.Configuration, builder.Environment, "PostgreSQL");
     builder.Services.AddDbContext<OrderDbContext>(options =>
-        options.UseNpgsql(connectionString));
+        options.UseNpgsql(postgresConnectionString));
     
     // Sharding
     builder.Services.AddSingleton<IShardResolver>(sp =>
@@ -67,12 +72,16 @@ else
     builder.Services.AddScoped<IUnitOfWorkFactory, UnitOfWorkFactory>();
 }
 
+var kafkaBrokers = ConfigurationGuard.GetRequired(builder.Configuration, builder.Environment, "Kafka:Brokers", "localhost:29092");
+
 builder.Services.AddSingleton<IEventProducer, KafkaEventProducer>();
 // Ensure Kafka topics exist on startup
 builder.Services.AddHostedService<KafkaTopicBootstrapper>();
 builder.Services.AddSingleton<IOrderIntegrationEventMapper, IntegrationEventMapper>();
 // Event Consumer from other services
 builder.Services.AddSingleton<OrderEventConsumer>();
+builder.Services.AddHostedService<KafkaEventConsumerHostedService<OrderEventConsumer>>();
+builder.Services.AddScoped<IEventInbox, OrderEventInbox>();
 
 builder.Services.AddScoped<IOrderRepository, OrderRepository>();
 builder.Services.AddScoped<IOrderReadRepository, OrderReadRepository>();
@@ -86,9 +95,20 @@ if (!useInMemory)
 builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy =>
-        policy.AllowAnyOrigin()
-              .AllowAnyMethod()
-              .AllowAnyHeader());
+    {
+        if (builder.Environment.IsDevelopment())
+        {
+            policy.AllowAnyOrigin()
+                .AllowAnyMethod()
+                .AllowAnyHeader();
+            return;
+        }
+
+        var orderCorsOrigins = ConfigurationGuard.GetRequiredArray(builder.Configuration, builder.Environment, "Cors:AllowedOrigins");
+        policy.WithOrigins(orderCorsOrigins)
+            .AllowAnyMethod()
+            .AllowAnyHeader();
+    });
 });
 
 // Register MediatR handlers from Application assembly
@@ -96,9 +116,9 @@ builder.Services
     .AddMediatR(typeof(ApplicationMarker).Assembly)
     .AddTransient(typeof(IPipelineBehavior<,>), typeof(ExceptionBehavior<,>));;
 
-var jwtKey = builder.Configuration["Jwt:Key"] ?? "SUPER_PUPER_SECRET_KEY_I_LOVE_MAKING_KEYS_UP";
-var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? "identity-service";
-var jwtAudience = builder.Configuration["Jwt:Audience"] ?? "platform-api";
+var jwtKey = ConfigurationGuard.GetRequired(builder.Configuration, builder.Environment, "Jwt:Key");
+var jwtIssuer = ConfigurationGuard.GetRequired(builder.Configuration, builder.Environment, "Jwt:Issuer");
+var jwtAudience = ConfigurationGuard.GetRequired(builder.Configuration, builder.Environment, "Jwt:Audience");
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
@@ -130,16 +150,19 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     });
 
 builder.Services.AddAuthorization();
-var connectionString1 = builder.Configuration.GetConnectionString("PostgreSQL") 
-                       ?? "Host=localhost;Port=5432;Database=delivery_db;Username=postgres;Password=postgres;";
-builder.Services.AddHealthChecks()
-    .AddNpgSql(connectionString1)
+
+var healthChecks = builder.Services.AddHealthChecks()
     .AddKafka(new ProducerConfig
-        {
-            BootstrapServers = "kafka:9092"
-        },
-        name: "kafka")
-    ;
+    {
+        BootstrapServers = kafkaBrokers
+    },
+    name: "kafka",
+    tags: new[] { "ready" });
+
+if (!useInMemory && !string.IsNullOrWhiteSpace(postgresConnectionString))
+{
+    healthChecks.AddNpgSql(postgresConnectionString, name: "db", tags: new[] { "ready" });
+}
 
 var app = builder.Build();
 
@@ -158,7 +181,14 @@ app.MapGrpcService<OrderGrpcService>();
 app.UseHttpsRedirection();
 app.UseCors();
 app.MapControllers();
-app.MapHealthChecks("/health");
+app.MapHealthChecks("/health/live", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+{
+    Predicate = _ => false
+});
+app.MapHealthChecks("/health/ready", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+{
+    Predicate = reg => reg.Tags.Contains("ready")
+});
 
 if (!useInMemory)
 {
@@ -171,22 +201,5 @@ else
 {
     Log.Information("Using in-memory database; skipping migrations.");
 }
-
-// Start Kafka consumer in background
-var consumer = app.Services.GetRequiredService<OrderEventConsumer>();
-var cts = new CancellationTokenSource();
-
-_ = Task.Run(async () =>
-{
-    Log.Information("Starting OrderService Kafka consumer (listening to cart.events, courier.events)...");
-    await consumer.StartConsumingAsync(cts.Token);
-}, cts.Token);
-
-// Register shutdown handler
-app.Lifetime.ApplicationStopping.Register(() =>
-{
-    Log.Information("Stopping OrderService consumer...");
-    cts.Cancel();
-});
 
 app.Run();

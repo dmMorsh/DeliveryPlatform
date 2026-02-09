@@ -109,6 +109,7 @@ public class Order : AggregateRoot
             FromAddress = order.From.Street,
             ToAddress = order.To.Street,
             CostCents = order.CostCents.AmountCents,
+            Currency = order.CostCents.Currency,
             Description = order.Description,
             Items = order.Items.Select(i=> new DomainOrderItemSnapshot
             {

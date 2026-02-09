@@ -64,7 +64,16 @@ public class OutboxProcessor : BackgroundService
         {
             try
             {
-                await _producer.PublishAsync(topic: msg.Topic ?? "events", key: msg.AggregateId.ToString(), payload: msg.Payload, headers: new Dictionary<string,string>{{"event-type", msg.Type ?? ""}}, ct);
+                await _producer.PublishAsync(
+                    topic: msg.Topic ?? "events",
+                    key: msg.AggregateId.ToString(),
+                    payload: msg.Payload,
+                    headers: new Dictionary<string, string>
+                    {
+                        { "event-id", msg.EventId },
+                        { "event-type", msg.Type ?? "" }
+                    },
+                    ct);
                 msg.PublishedAt = DateTime.UtcNow;
             }
             catch (Exception ex)

@@ -1,5 +1,7 @@
 using AnalyticsService.Services;
+using Confluent.Kafka;
 using Serilog;
+using Shared.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -12,18 +14,18 @@ builder.Host.UseSerilog((ctx, cfg) =>
 
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
-builder.Services.AddHealthChecks();
+builder.AddServiceTelemetry("analytics-service");
+
+var kafkaBrokers = ConfigurationGuard.GetRequired(builder.Configuration, builder.Environment, "Kafka:Brokers", "localhost:29092");
+builder.Services.AddHealthChecks()
+    .AddCheck("self", () => Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult.Healthy(), tags: new[] { "ready" })
+    .AddKafka(new ProducerConfig { BootstrapServers = kafkaBrokers }, name: "kafka");
 
 // Register analytics consumer
 builder.Services.AddSingleton<AnalyticsEventConsumer>();
-
-builder.Services.AddCors(options =>
-{
-    options.AddDefaultPolicy(policy =>
-        policy.AllowAnyOrigin()
-              .AllowAnyMethod()
-              .AllowAnyHeader());
-});
+builder.Services.AddHostedService<KafkaEventConsumerHostedService<AnalyticsEventConsumer>>();
+builder.Services.AddSingleton<IEventProducer, KafkaEventProducer>();
+builder.Services.AddSingleton<IEventInbox, InMemoryEventInbox>();
 
 var app = builder.Build();
 
@@ -33,25 +35,14 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-app.UseCors();
 app.MapControllers();
-app.MapHealthChecks("/health");
-
-// Start Kafka consumer in background
-var consumer = app.Services.GetRequiredService<AnalyticsEventConsumer>();
-var cts = new CancellationTokenSource();
-
-_ = Task.Run(async () =>
+app.MapHealthChecks("/health/live", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
 {
-    Log.Information("Starting AnalyticsService Kafka consumer...");
-    await consumer.StartConsumingAsync(cts.Token);
-}, cts.Token);
-
-// Register shutdown handler
-app.Lifetime.ApplicationStopping.Register(() =>
+    Predicate = _ => false
+});
+app.MapHealthChecks("/health/ready", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
 {
-    Log.Information("Stopping AnalyticsService consumer...");
-    cts.Cancel();
+    Predicate = reg => reg.Tags.Contains("ready")
 });
 
 app.Run();

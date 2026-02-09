@@ -22,8 +22,11 @@ public class AnalyticsEventConsumer : KafkaEventConsumerBase
 
     public AnalyticsEventConsumer(
         IConfiguration config,
-        ILogger<AnalyticsEventConsumer> logger)
-        : base(config, logger, "cart.events", "order.events", "courier.events")
+        IHostEnvironment env,
+        ILogger<AnalyticsEventConsumer> logger,
+        IServiceScopeFactory scopeFactory,
+        IEventProducer producer)
+        : base(config, env, logger, scopeFactory, producer, null, "cart.events", "order.events", "courier.events")
     {
         _logger = logger;
     }
@@ -31,7 +34,7 @@ public class AnalyticsEventConsumer : KafkaEventConsumerBase
     /// <summary>
     /// Обработка входящих сообщений (async)
     /// </summary>
-    protected override Task HandleMessageAsync(string eventType, string json, ConsumeResult<string, string> message)
+    protected override Task<bool> HandleMessageAsync(string eventType, string json, ConsumeResult<string, string> message)
     {
         try
         {
@@ -63,9 +66,10 @@ public class AnalyticsEventConsumer : KafkaEventConsumerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error handling event {EventType}", eventType);
+            return Task.FromResult(false);
         }
 
-        return Task.CompletedTask;
+        return Task.FromResult(true);
     }
 
     private void HandleOrderCreated(string json)

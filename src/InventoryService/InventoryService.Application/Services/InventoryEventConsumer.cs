@@ -6,6 +6,7 @@ using InventoryService.Application.Models;
 using MediatR;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Shared.Contracts.Events;
 using Shared.Services;
@@ -23,9 +24,11 @@ public class InventoryEventConsumer : KafkaEventConsumerBase
 
     public InventoryEventConsumer(
         IConfiguration config,
+        IHostEnvironment env,
         ILogger<InventoryEventConsumer> logger,
-        IServiceScopeFactory scopeFactory)
-        : base(config, logger, "order.events")
+        IServiceScopeFactory scopeFactory,
+        IEventProducer producer)
+        : base(config, env, logger, scopeFactory, producer, null, "order.events")
     {
         _logger = logger;
         _scopeFactory = scopeFactory;
@@ -34,7 +37,7 @@ public class InventoryEventConsumer : KafkaEventConsumerBase
     /// <summary>
     /// Обработка входящих событий от OrderService
     /// </summary>
-    protected override async Task HandleMessageAsync(string eventType, string json, ConsumeResult<string, string> message)
+    protected override async Task<bool> HandleMessageAsync(string eventType, string json, ConsumeResult<string, string> message)
     {
         try
         {
@@ -56,7 +59,10 @@ public class InventoryEventConsumer : KafkaEventConsumerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error handling event {EventType}", eventType);
+            return false;
         }
+
+        return true;
     }
 
     private async Task HandleStockReservationReleaseRequested(string json)

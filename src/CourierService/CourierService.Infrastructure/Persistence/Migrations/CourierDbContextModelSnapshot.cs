@@ -32,6 +32,10 @@ namespace CourierService.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("AggregateId")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("EventId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
                     b.Property<string>("LastError")
                         .HasColumnType("text");
 
@@ -138,6 +142,57 @@ namespace CourierService.Infrastructure.Persistence.Migrations
                     b.HasIndex("Status");
 
                     b.ToTable("Couriers", "couriers");
+                });
+
+            modelBuilder.Entity("Shared.Contracts.Events.ProcessedEvent", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AggregateId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Attempts")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Error")
+                        .HasColumnType("text");
+
+                    b.Property<string>("EventId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("EventType")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<long>("Offset")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("Partition")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("ProcessedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("ReceivedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Topic")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EventId")
+                        .IsUnique();
+
+                    b.ToTable("ProcessedEvents", "couriers");
                 });
 #pragma warning restore 612, 618
         }

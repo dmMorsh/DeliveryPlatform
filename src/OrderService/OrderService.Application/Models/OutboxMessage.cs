@@ -7,6 +7,7 @@ public class OutboxMessage
 {
     public Guid Id { get; set; }
     public Guid AggregateId { get; set; }
+    public string EventId { get; set; } = string.Empty;
     public string Type { get; set; } = null!;
     public string Payload { get; set; } = null!;
     public string? Topic { get; set; }
@@ -21,6 +22,7 @@ public class OutboxMessage
         {
             Id = Guid.NewGuid(),
             AggregateId = evt.AggregateId,
+            EventId = evt.EventId,
             Type = evt.EventType,
             Payload = EventSerializer.SerializeEvent(evt),
             Topic = (evt.AggregateType ?? "events").ToLowerInvariant() + ".events",

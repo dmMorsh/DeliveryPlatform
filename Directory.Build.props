@@ -43,8 +43,7 @@
     <PackageReference Update="Microsoft.AspNetCore.SignalR.Protocols.MessagePack" Version="9.0.0" />
     
     <!-- Resilience & Health Checks -->
-    <PackageReference Update="Polly" Version="8.2.0" />
-    <PackageReference Update="Polly.CircuitBreaker" Version="8.2.0" />
+    <PackageReference Update="Polly" Version="7.2.4" />
     
     <!-- Testing -->
     <PackageReference Update="xunit" Version="2.6.6" />

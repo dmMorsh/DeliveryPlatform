@@ -14,18 +14,20 @@ public class KafkaTopicBootstrapper : IHostedService
 {
     private readonly IConfiguration _config;
     private readonly ILogger<KafkaTopicBootstrapper> _logger;
+    private readonly IHostEnvironment _env;
 
-    public KafkaTopicBootstrapper(IConfiguration config, ILogger<KafkaTopicBootstrapper> logger)
+    public KafkaTopicBootstrapper(IConfiguration config, IHostEnvironment env, ILogger<KafkaTopicBootstrapper> logger)
     {
         _config = config;
         _logger = logger;
+        _env = env;
     }
 
     public async Task StartAsync(CancellationToken cancellationToken)
     {
         try
         {
-            var brokers = _config["Kafka:Brokers"] ?? "localhost:29092";
+            var brokers = ConfigurationGuard.GetRequired(_config, _env, "Kafka:Brokers", "localhost:29092");
 
             // Read topics from configuration. Support both array and comma-separated string.
             var section = _config.GetSection("Kafka:Topics");
@@ -45,8 +47,27 @@ public class KafkaTopicBootstrapper : IHostedService
                     .ToArray();
             }
 
+            var dlqTopic = _config["Kafka:DLQTopic"] ?? "dlq.events";
+            if (!string.IsNullOrWhiteSpace(dlqTopic) && !topics.Contains(dlqTopic))
+            {
+                var list = topics.ToList();
+                list.Add(dlqTopic);
+                topics = list.ToArray();
+            }
+
+            var retryTopic = _config["Kafka:Retry:Topic"];
+            if (!string.IsNullOrWhiteSpace(retryTopic) && !topics.Contains(retryTopic))
+            {
+                var list = topics.ToList();
+                list.Add(retryTopic);
+                topics = list.ToArray();
+            }
+
             if (topics.Length == 0)
             {
+                if (_env.IsProduction())
+                    throw new InvalidOperationException("Kafka:Topics configuration is required in production.");
+
                 _logger.LogInformation("No Kafka topics configured for bootstrap (Kafka:Topics).");
                 return;
             }

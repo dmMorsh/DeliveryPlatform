@@ -1,13 +1,17 @@
+using System.Text;
 using Confluent.Kafka;
 using CourierService.Application;
 using CourierService.Application.Interfaces;
 using CourierService.Application.Mapping;
 using CourierService.Application.Services;
+using CourierService.Infrastructure.Inbox;
 using CourierService.Infrastructure.Outbox;
 using CourierService.Infrastructure.Persistence;
 using CourierService.Infrastructure.Repositories;
 using MediatR;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using Serilog;
 using Serilog.Events;
 using Shared.Services;
@@ -30,10 +34,14 @@ builder.Host.UseSerilog((ctx, cfg) =>
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
 builder.Services.AddMediatR(typeof(ApplicationMarker).Assembly);
+builder.AddServiceTelemetry("courier-service");
 
 // Allow using an in-memory DB for local quick tests by setting USE_INMEMORY_DB=true
 var useInMemory = Environment.GetEnvironmentVariable("USE_INMEMORY_DB") == "true"
                   || string.Equals(builder.Configuration["UseInMemoryDb"], "true", StringComparison.OrdinalIgnoreCase);
+
+if (useInMemory && builder.Environment.IsProduction())
+    throw new InvalidOperationException("In-memory database is not allowed in production.");
 
 if (useInMemory)
 {
@@ -42,52 +50,109 @@ if (useInMemory)
 }
 else
 {
-    var connectionString = builder.Configuration.GetConnectionString("PostgreSQL") 
-                           ?? "Host=localhost;Port=5432;Database=delivery_db;Username=postgres;Password=postgres;";
+    var connectionString = ConfigurationGuard.GetRequiredConnectionString(builder.Configuration, builder.Environment, "PostgreSQL");
     builder.Services.AddDbContext<CourierDbContext>(options =>
         options.UseNpgsql(connectionString));
 }
+
+var kafkaBrokers = ConfigurationGuard.GetRequired(builder.Configuration, builder.Environment, "Kafka:Brokers", "localhost:29092");
+var redisConnection = ConfigurationGuard.GetRequired(builder.Configuration, builder.Environment, "Redis:Connection", "redis:6379");
+ConfigurationGuard.GetRequired(builder.Configuration, builder.Environment, "gRPC:LocationTrackingService:Url");
 
 // Kafka Event Producer
 builder.Services.AddSingleton<IEventProducer, KafkaEventProducer>();
 
 // Ensure Kafka topics exist on startup
 builder.Services.AddHostedService<KafkaTopicBootstrapper>();
+builder.Services.AddScoped<IEventInbox, CourierEventInbox>();
 // Outbox processor
 if (!useInMemory)
     builder.Services.AddHostedService<OutboxProcessor>();
 
 builder.Services.AddScoped<ICourierRepository, CourierRepository>();
 // Mapper for domain->integration events for courier
-// builder.Services.AddSingleton<ICourierIntegrationEventMapper, CourierEventMapper>();
 builder.Services.AddSingleton<ICourierEventMapper, CourierEventMapper>();
 // gRPC Location Tracking Client
 builder.Services.AddScoped<ILocationTrackingClient>(sp => 
-    new LocationTrackingClientImpl(sp.GetRequiredService<IConfiguration>(), sp.GetRequiredService<ILogger<LocationTrackingClientImpl>>()));
+    new LocationTrackingClientImpl(
+        sp.GetRequiredService<IConfiguration>(),
+        sp.GetRequiredService<IHostEnvironment>(),
+        sp.GetRequiredService<ILogger<LocationTrackingClientImpl>>()));
 // Event Consumer from OrderService
 builder.Services.AddSingleton<CourierEventConsumer>();
+builder.Services.AddHostedService<KafkaEventConsumerHostedService<CourierEventConsumer>>();
 // Unit of Work
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
 builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy =>
-        policy.AllowAnyOrigin()
-              .AllowAnyMethod()
-              .AllowAnyHeader());
+    {
+        if (builder.Environment.IsDevelopment())
+        {
+            policy.AllowAnyOrigin()
+                .AllowAnyMethod()
+                .AllowAnyHeader();
+            return;
+        }
+
+        var courierCorsOrigins = ConfigurationGuard.GetRequiredArray(builder.Configuration, builder.Environment, "Cors:AllowedOrigins");
+        policy.WithOrigins(courierCorsOrigins)
+            .AllowAnyMethod()
+            .AllowAnyHeader();
+    });
 });
 
-var connectionString1 = builder.Configuration.GetConnectionString("PostgreSQL") 
-                        ?? "Host=localhost;Port=5432;Database=delivery_db;Username=postgres;Password=postgres;";
+// Auth
+var jwtKey = ConfigurationGuard.GetRequired(builder.Configuration, builder.Environment, "Jwt:Key");
+var jwtIssuer = ConfigurationGuard.GetRequired(builder.Configuration, builder.Environment, "Jwt:Issuer");
+var jwtAudience = ConfigurationGuard.GetRequired(builder.Configuration, builder.Environment, "Jwt:Audience");
+
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+
+            ValidIssuer = jwtIssuer,
+            ValidAudience = jwtAudience,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
+        };
+
+        options.Events = new JwtBearerEvents
+        {
+            OnMessageReceived = context =>
+            {
+                var accessToken = context.Request.Headers["authorization"];
+                if (!string.IsNullOrEmpty(accessToken))
+                {
+                    context.Token = accessToken.ToString().Replace("Bearer ", "");
+                }
+                return Task.CompletedTask;
+            }
+        };
+    });
+
+builder.Services.AddAuthorization();
+
+var connectionString1 = builder.Configuration.GetConnectionString("PostgreSQL");
+if (string.IsNullOrWhiteSpace(connectionString1))
+    throw new InvalidOperationException("PostgreSQL connection string is required.");
 builder.Services.AddHealthChecks()
-    .AddNpgSql(connectionString1)
-    .AddRedis("redis:6379",
-        name: "redis")
+    .AddNpgSql(connectionString1, name: "db", tags: new[] { "ready" })
+    .AddRedis(redisConnection,
+        name: "redis",
+        tags: new[] { "ready" })
     .AddKafka(new ProducerConfig
         {
-            BootstrapServers = "kafka:9092"
+            BootstrapServers = kafkaBrokers
         },
-        name: "kafka");
+        name: "kafka",
+        tags: new[] { "ready" });
 
 var app = builder.Build();
 
@@ -98,8 +163,17 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 app.UseCors();
+app.UseAuthentication();
+app.UseAuthorization();
 app.MapControllers();
-app.MapHealthChecks("/health");
+app.MapHealthChecks("/health/live", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+{
+    Predicate = _ => false
+});
+app.MapHealthChecks("/health/ready", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+{
+    Predicate = reg => reg.Tags.Contains("ready")
+});
 
 if (!useInMemory)
 {
@@ -112,22 +186,5 @@ else
 {
     Log.Information("Using in-memory database; skipping migrations.");
 }
-
-// Start Kafka consumer in background
-var consumer = app.Services.GetRequiredService<CourierEventConsumer>();
-var cts = new CancellationTokenSource();
-
-_ = Task.Run(async () =>
-{
-    Log.Information("Starting CourierService Kafka consumer (listening to order.events)...");
-    await consumer.StartConsumingAsync(cts.Token);
-}, cts.Token);
-
-// Register shutdown handler
-app.Lifetime.ApplicationStopping.Register(() =>
-{
-    Log.Information("Stopping CourierService consumer...");
-    cts.Cancel();
-});
 
 app.Run();

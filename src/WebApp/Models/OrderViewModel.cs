@@ -6,6 +6,10 @@ public class OrderViewModel
     public string OrderNumber { get; set; } = "";
 
     public string Status { get; set; }
+    public string? PaymentStatus { get; set; }
+    public string? PaymentProvider { get; set; }
+    public string? PaymentUrl { get; set; }
+    public Guid? PaymentId { get; set; }
 
     public string FromAddress { get; set; } = "";
     public string ToAddress { get; set; } = "";

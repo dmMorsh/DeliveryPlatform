@@ -1,0 +1,56 @@
+syntax = "proto3";
+
+option csharp_namespace = "Shared.Proto";
+
+service PaymentGrpc {
+  rpc CreatePayment (CreatePaymentRequest) returns (PaymentActionResponse);
+  rpc StartPayment (StartPaymentRequest) returns (PaymentActionResponse);
+  rpc CapturePayment (CapturePaymentRequest) returns (PaymentActionResponse);
+  rpc CancelPayment (CancelPaymentRequest) returns (PaymentActionResponse);
+  rpc RefundPayment (RefundPaymentRequest) returns (PaymentActionResponse);
+  rpc GetPaymentStatus (GetPaymentStatusRequest) returns (GetPaymentStatusResponse);
+}
+
+message CreatePaymentRequest {
+  string orderId = 1;
+  int64 amountCents = 2;
+  string currency = 3;
+}
+
+message StartPaymentRequest {
+  string orderId = 1;
+  string provider = 2;
+  bool capture = 3;
+}
+
+message CapturePaymentRequest {
+  string orderId = 1;
+  int64 amountCents = 2;
+}
+
+message CancelPaymentRequest {
+  string orderId = 1;
+}
+
+message RefundPaymentRequest {
+  string orderId = 1;
+  int64 amountCents = 2;
+}
+
+message GetPaymentStatusRequest {
+  string orderId = 1;
+}
+
+message PaymentActionResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message GetPaymentStatusResponse {
+  bool found = 1;
+  string status = 2;
+  string paymentId = 3;
+  string provider = 4;
+  string externalPaymentId = 5;
+  string paymentUrl = 6;
+}

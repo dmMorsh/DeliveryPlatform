@@ -18,6 +18,7 @@ $services = @(
     @{ Name = "Couriers"; Cat = "CourierService" },
     @{ Name = "Inventory"; Cat = "InventoryService"; },
     @{ Name = "Orders";  Cat = "OrderService"; }
+    @{ Name = "Payment";  Cat = "PaymentService"; }
 )
 
 foreach ($svc in $services) {

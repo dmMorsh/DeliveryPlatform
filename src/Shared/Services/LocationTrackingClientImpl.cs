@@ -1,7 +1,9 @@
 using Grpc.Net.Client;
 using LocationTracking;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Polly;
 
 namespace Shared.Services;
 
@@ -9,12 +11,14 @@ public class LocationTrackingClientImpl : ILocationTrackingClient
 {
     private readonly ILogger<LocationTrackingClientImpl> _logger;
     private readonly string _serviceUrl;
+    private readonly IAsyncPolicy _policy;
     private LocationTrackingService.LocationTrackingServiceClient? _client;
 
-    public LocationTrackingClientImpl(IConfiguration config, ILogger<LocationTrackingClientImpl> logger)
+    public LocationTrackingClientImpl(IConfiguration config, IHostEnvironment env, ILogger<LocationTrackingClientImpl> logger)
     {
         _logger = logger;
-        _serviceUrl = config["gRPC:LocationTrackingService:Url"] ?? "https://localhost:7070";
+        _serviceUrl = ConfigurationGuard.GetRequired(config, env, "gRPC:LocationTrackingService:Url", "https://localhost:7070");
+        _policy = HttpResiliencePolicies.CreateGrpcPolicyWrap(_logger);
     }
 
     private LocationTrackingService.LocationTrackingServiceClient GetClient()
@@ -41,7 +45,7 @@ public class LocationTrackingClientImpl : ILocationTrackingClient
                 TimestampMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
             };
 
-            var response = await client.UpdateLocationAsync(request);
+            var response = await _policy.ExecuteAsync(() => client.UpdateLocationAsync(request).ResponseAsync);
 
             _logger.LogInformation(
                 "Updated location for courier {CourierId}: ({Latitude}, {Longitude})",
@@ -62,7 +66,7 @@ public class LocationTrackingClientImpl : ILocationTrackingClient
         {
             var client = GetClient();
             var request = new GetLocationRequest { CourierId = courierId.ToString() };
-            var response = await client.GetCourierLocationAsync(request);
+            var response = await _policy.ExecuteAsync(() => client.GetCourierLocationAsync(request).ResponseAsync);
 
             _logger.LogInformation(
                 "Retrieved location for courier {CourierId}: ({Latitude}, {Longitude})",

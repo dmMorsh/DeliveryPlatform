@@ -1,6 +1,7 @@
 using LocationTrackingService.Services;
 using Serilog;
 using StackExchange.Redis;
+using Shared.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -14,11 +15,11 @@ builder.Host.UseSerilog((ctx, cfg) =>
 // Add services
 builder.Services.AddGrpc();
 builder.Services.AddOpenApi();
-builder.Services.AddHealthChecks();
+builder.AddServiceTelemetry("location-tracking-service");
 builder.Services.AddScoped<ILocationService, LocationService>();
 
 // Redis configuration
-var redisConn = builder.Configuration["Redis:Connection"] ?? "localhost:6379";
+var redisConn = ConfigurationGuard.GetRequired(builder.Configuration, builder.Environment, "Redis:Connection", "localhost:6379");
 try
 {
     var mux = ConnectionMultiplexer.Connect(redisConn);
@@ -30,12 +31,27 @@ catch (Exception ex)
     builder.Services.AddSingleton<IConnectionMultiplexer>(_ => throw new InvalidOperationException($"Failed to connect to Redis at {redisConn}", ex));
 }
 
+builder.Services.AddHealthChecks()
+    .AddRedis(redisConn, name: "redis", tags: new[] { "ready" })
+    .AddCheck("self", () => Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult.Healthy(), tags: new[] { "ready" });
+
 builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy =>
-        policy.AllowAnyOrigin()
-              .AllowAnyMethod()
-              .AllowAnyHeader());
+    {
+        if (builder.Environment.IsDevelopment())
+        {
+            policy.AllowAnyOrigin()
+                .AllowAnyMethod()
+                .AllowAnyHeader();
+            return;
+        }
+
+        var locationCorsOrigins = ConfigurationGuard.GetRequiredArray(builder.Configuration, builder.Environment, "Cors:AllowedOrigins");
+        policy.WithOrigins(locationCorsOrigins)
+            .AllowAnyMethod()
+            .AllowAnyHeader();
+    });
 });
 
 var app = builder.Build();
@@ -47,14 +63,17 @@ if (app.Environment.IsDevelopment())
 
 app.UseRouting();
 app.UseCors();
-app.MapHealthChecks("/health");
+app.MapHealthChecks("/health/live", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+{
+    Predicate = _ => false
+});
+app.MapHealthChecks("/health/ready", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+{
+    Predicate = reg => reg.Tags.Contains("ready")
+});
 
 // Map gRPC services
 app.MapGrpcService<LocationTrackingServiceImpl>();
-
-// REST API for health check
-app.MapGet("/health", () => 
-    Results.Ok(new { status = "healthy", service = "LocationTrackingService" }));
 
 Log.Information("LocationTrackingService started. gRPC on {Address}", app.Urls.FirstOrDefault() ?? "https://0.0.0.0:7070");
 

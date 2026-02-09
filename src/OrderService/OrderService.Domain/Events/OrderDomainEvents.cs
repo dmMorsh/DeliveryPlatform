@@ -11,6 +11,7 @@ public record OrderCreatedDomainEvent : DomainEvent
     public string FromAddress { get; init; } = string.Empty;
     public string ToAddress { get; init; } = string.Empty;
     public long CostCents { get; init; }
+    public string Currency { get; init; } = string.Empty;
     public string? Description { get; init; }
 
     public required IReadOnlyList<DomainOrderItemSnapshot> Items { get; init; }

@@ -15,10 +15,15 @@
 
   <ItemGroup>
     <PackageReference Include="StackExchange.Redis" Version="2.8.0" />
+    <PackageReference Include="AspNetCore.HealthChecks.Redis" Version="9.0.0" />
   </ItemGroup>
 
   <ItemGroup>
     <Protobuf Include="..\Shared\Proto\location_tracking.proto" GrpcServices="Server" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Shared\Shared.csproj" />
   </ItemGroup>
 
 </Project>

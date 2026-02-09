@@ -19,6 +19,7 @@ public record OrderCreatedEvent : IntegrationEvent
     public double ToLatitude { get; init; }
     public double ToLongitude { get; init; }
     public long CostCents { get; init; }
+    public string Currency { get; init; } = string.Empty;
     public DateTime CreatedAt { get; init; }
     public required IReadOnlyCollection<IntegrationOrderItemSnapshot> Items { get; init; }
     public string? Description { get; init; }

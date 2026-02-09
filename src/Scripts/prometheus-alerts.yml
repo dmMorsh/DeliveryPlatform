@@ -1,0 +1,67 @@
+groups:
+  - name: deliveryplatform-infra
+    rules:
+      - alert: OtelCollectorDown
+        expr: up{job="otel-collector"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "OpenTelemetry Collector is down"
+          description: "No scrape target for otel-collector. Check container and logs."
+
+      - alert: PrometheusTargetsMissing
+        expr: sum(up) < 1
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Prometheus has no targets up"
+          description: "All scrape targets are down or missing."
+
+      - alert: ScrapeLatencyHigh
+        expr: histogram_quantile(0.95, sum by (le) (rate(scrape_duration_seconds_bucket[5m]))) > 1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Prometheus scrape latency high"
+          description: "p95 scrape duration > 1s. Check exporter load."
+
+      - alert: KafkaJmxDown
+        expr: up{job="kafka-jmx"} == 0
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Kafka JMX exporter is down"
+          description: "No scrape target for kafka-jmx-exporter."
+
+      - alert: KafkaUnderReplicatedPartitions
+        expr: sum(kafka_server_replicamanager_underreplicatedpartitions) > 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Kafka under-replicated partitions"
+          description: "Kafka has under-replicated partitions."
+
+  - name: deliveryplatform-otel
+    rules:
+      - alert: OTelExporterFailures
+        expr: rate(otelcol_exporter_send_failed_spans[5m]) > 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "OTel exporter failures"
+          description: "Exporter failures detected for spans."
+
+      - alert: OTelDroppedData
+        expr: rate(otelcol_processor_dropped_spans[5m]) > 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "OTel processor dropped data"
+          description: "Spans were dropped by processor."

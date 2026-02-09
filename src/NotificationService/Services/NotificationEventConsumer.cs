@@ -15,9 +15,12 @@ public class NotificationEventConsumer : KafkaEventConsumerBase
 
     public NotificationEventConsumer(
         IConfiguration config,
+        IHostEnvironment env,
         ILogger<NotificationEventConsumer> logger,
-        INotificationService notificationService)
-        : base(config, logger, "order.events", "courier.events")
+        INotificationService notificationService,
+        IServiceScopeFactory scopeFactory,
+        IEventProducer producer)
+        : base(config, env, logger, scopeFactory, producer, null, "order.events", "courier.events")
     {
         _logger = logger;
         _notificationService = notificationService;
@@ -26,7 +29,7 @@ public class NotificationEventConsumer : KafkaEventConsumerBase
     /// <summary>
     /// Обработка входящих сообщений (async)
     /// </summary>
-    protected override async Task HandleMessageAsync(string eventType, string json, ConsumeResult<string, string> message)
+    protected override async Task<bool> HandleMessageAsync(string eventType, string json, ConsumeResult<string, string> message)
     {
         try
         {
@@ -57,7 +60,10 @@ public class NotificationEventConsumer : KafkaEventConsumerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error handling event {EventType}", eventType);
+            return false;
         }
+
+        return true;
     }
 
     private void HandleOrderCreated(string json)

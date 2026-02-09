@@ -2,6 +2,7 @@ using System.Text;
 using System.Text.Json;
 using Confluent.Kafka;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Shared.Contracts.Events;
 
@@ -31,12 +32,12 @@ public class KafkaEventProducer : IEventProducer, IAsyncDisposable
     private readonly ILogger<KafkaEventProducer> _logger;
     private readonly string _defaultTopic;
 
-    public KafkaEventProducer(IConfiguration config, ILogger<KafkaEventProducer> logger)
+    public KafkaEventProducer(IConfiguration config, IHostEnvironment env, ILogger<KafkaEventProducer> logger)
     {
         _logger = logger;
         
-        var brokers = config["Kafka:Brokers"] ?? "localhost:29092";
-        _defaultTopic = config["Kafka:DefaultTopic"] ?? "events";
+        var brokers = ConfigurationGuard.GetRequired(config, env, "Kafka:Brokers", "localhost:29092");
+        _defaultTopic = ConfigurationGuard.GetRequired(config, env, "Kafka:DefaultTopic", "events");
 
         var producerConfig = new ProducerConfig
         {
@@ -109,6 +110,7 @@ public class KafkaEventProducer : IEventProducer, IAsyncDisposable
                 Value = value,
                 Headers = new Headers
                 {
+                    { "event-id", Encoding.UTF8.GetBytes(@event.EventId) },
                     { "event-type", Encoding.UTF8.GetBytes(@event.EventType) },
                     { "aggregate-type", Encoding.UTF8.GetBytes(@event.AggregateType) },
                     { "timestamp", Encoding.UTF8.GetBytes(@event.Timestamp.ToString("O")) }

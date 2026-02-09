@@ -1,3 +1,5 @@
+using System.Text;
+using Confluent.Kafka;
 using Hangfire;
 using Hangfire.PostgreSql;
 using InventoryService.Application;
@@ -6,11 +8,14 @@ using InventoryService.Application.MediatR;
 using InventoryService.Application.Services;
 using InventoryService.Application.Utils;
 using InventoryService.Infrastructure.Hangfire;
+using InventoryService.Infrastructure.Inbox;
 using InventoryService.Infrastructure.Mapping;
 using InventoryService.Infrastructure.Outbox;
 using InventoryService.Infrastructure.Persistence;
 using MediatR;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using Serilog;
 using Serilog.Events;
 using Shared.Services;
@@ -40,6 +45,9 @@ builder.Host.UseSerilog((ctx, cfg) =>
 var useInMemory = Environment.GetEnvironmentVariable("USE_INMEMORY_DB") == "true"
                   || string.Equals(builder.Configuration["UseInMemoryDb"], "true", StringComparison.OrdinalIgnoreCase);
 
+if (useInMemory && builder.Environment.IsProduction())
+    throw new InvalidOperationException("In-memory database is not allowed in production.");
+
 if (useInMemory)
 {
     builder.Services.AddDbContext<InventoryDbContext>(options =>
@@ -49,8 +57,7 @@ if (useInMemory)
 else
 {   // DbContext
     // Для OutboxProcessor-а и Hangfire
-    var connectionString = builder.Configuration.GetConnectionString("Default") 
-                           ?? "Host=localhost;Port=5432;Database=delivery_db;Username=postgres;Password=postgres;";
+    var connectionString = ConfigurationGuard.GetRequiredConnectionString(builder.Configuration, builder.Environment, "PostgreSQL");
     builder.Services.AddDbContext<InventoryDbContext>(options =>
         options.UseNpgsql(connectionString));
     // Outbox processor
@@ -60,7 +67,7 @@ else
     builder.Services.AddHangfire(config =>
         // config.UsePostgreSqlStorage(connectionString, new PostgreSqlStorageOptions { PrepareSchemaIfNecessary = true }));
         config.UsePostgreSqlStorage(options =>
-            options.UseNpgsqlConnection(builder.Configuration.GetConnectionString("Default")), 
+            options.UseNpgsqlConnection(builder.Configuration.GetConnectionString("PostgreSQL")), 
             new PostgreSqlStorageOptions { PrepareSchemaIfNecessary = true })
         );
     builder.Services.AddHangfireServer();
@@ -75,10 +82,20 @@ else
     builder.Services.AddScoped<IUnitOfWorkFactory, UnitOfWorkFactory>();
 }
 
+var kafkaBrokers = ConfigurationGuard.GetRequired(builder.Configuration, builder.Environment, "Kafka:Brokers", "localhost:29092");
+
 builder.Services.AddControllers();
 builder.Services
     .AddMediatR(typeof(ApplicationMarker).Assembly)
     .AddTransient(typeof(IPipelineBehavior<,>), typeof(HangfireRetryBehavior<,>));
+builder.AddServiceTelemetry("inventory-service");
+var inventoryHealthChecks = builder.Services.AddHealthChecks()
+    .AddKafka(new ProducerConfig { BootstrapServers = kafkaBrokers }, name: "kafka");
+if (!useInMemory)
+{
+    var pg = builder.Configuration.GetConnectionString("PostgreSQL") ?? string.Empty;
+    inventoryHealthChecks.AddNpgSql(pg, name: "db", tags: new[] { "ready" });
+}
 
 // Kafka Event Producer
 builder.Services.AddSingleton<IEventProducer, KafkaEventProducer>();
@@ -86,16 +103,82 @@ builder.Services.AddSingleton<IEventProducer, KafkaEventProducer>();
 builder.Services.AddHostedService<KafkaTopicBootstrapper>();
 // Event Consumer from OrderService
 builder.Services.AddSingleton<InventoryEventConsumer>();
+builder.Services.AddHostedService<KafkaEventConsumerHostedService<InventoryEventConsumer>>();
+builder.Services.AddScoped<IEventInbox, InventoryEventInbox>();
 
 builder.Services.AddSingleton<IStockIntegrationEventMapper, StockIntegrationEventMapper>();
+
+// Auth
+var jwtKey = ConfigurationGuard.GetRequired(builder.Configuration, builder.Environment, "Jwt:Key");
+var jwtIssuer = ConfigurationGuard.GetRequired(builder.Configuration, builder.Environment, "Jwt:Issuer");
+var jwtAudience = ConfigurationGuard.GetRequired(builder.Configuration, builder.Environment, "Jwt:Audience");
+
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+
+            ValidIssuer = jwtIssuer,
+            ValidAudience = jwtAudience,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
+        };
+
+        options.Events = new JwtBearerEvents
+        {
+            OnMessageReceived = context =>
+            {
+                var accessToken = context.Request.Headers["authorization"];
+                if (!string.IsNullOrEmpty(accessToken))
+                {
+                    context.Token = accessToken.ToString().Replace("Bearer ", "");
+                }
+                return Task.CompletedTask;
+            }
+        };
+    });
+
+builder.Services.AddAuthorization();
+builder.Services.AddCors(options =>
+{
+    options.AddDefaultPolicy(policy =>
+    {
+        if (builder.Environment.IsDevelopment())
+        {
+            policy.AllowAnyOrigin()
+                .AllowAnyMethod()
+                .AllowAnyHeader();
+            return;
+        }
+
+        var inventoryCorsOrigins = ConfigurationGuard.GetRequiredArray(builder.Configuration, builder.Environment, "Cors:AllowedOrigins");
+        policy.WithOrigins(inventoryCorsOrigins)
+            .AllowAnyMethod()
+            .AllowAnyHeader();
+    });
+});
 
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
 
+app.UseAuthentication();
 app.UseAuthorization();
+app.UseCors();
 
 app.MapControllers();
+app.MapHealthChecks("/health/live", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+{
+    Predicate = _ => false
+});
+app.MapHealthChecks("/health/ready", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+{
+    Predicate = reg => reg.Tags.Contains("ready")
+});
 
 if (!useInMemory)
 {
@@ -109,23 +192,9 @@ else
     Log.Information("Using in-memory database; skipping migrations.");
 }
 
-// Start Kafka consumer in background
-var consumer = app.Services.GetRequiredService<InventoryEventConsumer>();
-var cts = new CancellationTokenSource();
-
-_ = Task.Run(async () =>
+if (app.Environment.IsDevelopment())
 {
-    Log.Information("Starting InventoryService Kafka consumer (listening to order.events)...");
-    await consumer.StartConsumingAsync(cts.Token);
-}, cts.Token);
-
-app.UseHangfireDashboard("/hangfire");
-
-// Register shutdown handler
-app.Lifetime.ApplicationStopping.Register(() =>
-{
-    Log.Information("Stopping InventoryService consumer...");
-    cts.Cancel();
-});
+    app.UseHangfireDashboard("/hangfire");
+}
 
 app.Run();

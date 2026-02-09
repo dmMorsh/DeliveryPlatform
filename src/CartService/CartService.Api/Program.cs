@@ -4,10 +4,12 @@ using CartService.Application;
 using CartService.Application.Interfaces;
 using CartService.Application.Mapping;
 using CartService.Application.Services;
+using CartService.Infrastructure.Inbox;
 using CartService.Infrastructure.Grpc;
 using CartService.Infrastructure.Outbox;
 using CartService.Infrastructure.Persistence;
 using CartService.Infrastructure.Repositories;
+using Confluent.Kafka;
 using MediatR;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
@@ -22,6 +24,9 @@ var builder = WebApplication.CreateBuilder(args);
 var useInMemory = Environment.GetEnvironmentVariable("USE_INMEMORY_DB") == "true"
                   || string.Equals(builder.Configuration["UseInMemoryDb"], "true", StringComparison.OrdinalIgnoreCase);
 
+if (useInMemory && builder.Environment.IsProduction())
+    throw new InvalidOperationException("In-memory database is not allowed in production.");
+
 if (useInMemory)
 {
     builder.Services.AddDbContext<CartDbContext>(options =>
@@ -29,21 +34,35 @@ if (useInMemory)
 }
 else
 {
-    var connectionString = builder.Configuration.GetConnectionString("PostgreSQL") 
-                           ?? "Host=localhost;Port=5432;Database=delivery_db;Username=postgres;Password=postgres;";
+    var connectionString = ConfigurationGuard.GetRequiredConnectionString(builder.Configuration, builder.Environment, "PostgreSQL");
     builder.Services.AddDbContext<CartDbContext>(options =>
         options.UseNpgsql(connectionString));
 }
+
+var kafkaBrokers = ConfigurationGuard.GetRequired(builder.Configuration, builder.Environment, "Kafka:Brokers", "localhost:29092");
 
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddTransient<GrpcAuthHeaderHandler>();
 
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
+builder.AddServiceTelemetry("cart-service");
+var cartHealthChecks = builder.Services.AddHealthChecks()
+    .AddKafka(new ProducerConfig { BootstrapServers = kafkaBrokers }, name: "kafka");
+if (!useInMemory)
+{
+    var pg = builder.Configuration.GetConnectionString("PostgreSQL") ?? string.Empty;
+    cartHealthChecks.AddNpgSql(pg, name: "db", tags: new[] { "ready" });
+}
+
 builder.Services.AddGrpcClient<OrderGrpc.OrderGrpcClient>(o =>
 {
-    o.Address = new Uri("https://localhost:7204");
-}).AddHttpMessageHandler<GrpcAuthHeaderHandler>();
+    var orderGrpcUrl = ConfigurationGuard.GetRequired(builder.Configuration, builder.Environment, "gRPC:OrderService:Url", "https://localhost:7204");
+    o.Address = new Uri(orderGrpcUrl);
+})
+    .AddHttpMessageHandler<GrpcAuthHeaderHandler>()
+    .AddPolicyHandler((sp, _) =>
+        HttpResiliencePolicies.CreatePolicyWrap(sp.GetRequiredService<ILogger<OrderGrpc.OrderGrpcClient>>()));
 
 builder.Services.AddScoped<IOrderService, OrderGrpcService>();
 
@@ -51,6 +70,7 @@ builder.Services.AddScoped<IOrderService, OrderGrpcService>();
 builder.Services.AddSingleton<IEventProducer, KafkaEventProducer>();
 // Ensure Kafka topics exist on startup
 builder.Services.AddHostedService<KafkaTopicBootstrapper>();
+builder.Services.AddScoped<IEventInbox, CartEventInbox>();
 
 // Cart DDD services
 builder.Services.AddMediatR(typeof(ApplicationMarker).Assembly);
@@ -60,14 +80,15 @@ builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddSingleton<ICartIntegrationEventMapper, CartEventMapper>();
 // Event Consumer from OrderService
 builder.Services.AddSingleton<CartEventConsumer>();
+builder.Services.AddHostedService<KafkaEventConsumerHostedService<CartEventConsumer>>();
 // Outbox processor
 if (!useInMemory)
     builder.Services.AddHostedService<OutboxProcessor>();
 
 // Auth
-var jwtKey = builder.Configuration["Jwt:Key"] ?? "SUPER_PUPER_SECRET_KEY_I_LOVE_MAKING_KEYS_UP";
-var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? "identity-service";
-var jwtAudience = builder.Configuration["Jwt:Audience"] ?? "platform-api";
+var jwtKey = ConfigurationGuard.GetRequired(builder.Configuration, builder.Environment, "Jwt:Key");
+var jwtIssuer = ConfigurationGuard.GetRequired(builder.Configuration, builder.Environment, "Jwt:Issuer");
+var jwtAudience = ConfigurationGuard.GetRequired(builder.Configuration, builder.Environment, "Jwt:Audience");
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
@@ -99,15 +120,41 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     });
 
 builder.Services.AddAuthorization();
+builder.Services.AddCors(options =>
+{
+    options.AddDefaultPolicy(policy =>
+    {
+        if (builder.Environment.IsDevelopment())
+        {
+            policy.AllowAnyOrigin()
+                .AllowAnyMethod()
+                .AllowAnyHeader();
+            return;
+        }
+
+        var cartCorsOrigins = ConfigurationGuard.GetRequiredArray(builder.Configuration, builder.Environment, "Cors:AllowedOrigins");
+        policy.WithOrigins(cartCorsOrigins)
+            .AllowAnyMethod()
+            .AllowAnyHeader();
+    });
+});
 
 var app = builder.Build();
 
 //Auth
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseCors();
 
 app.MapControllers();
-app.MapGet("/health", () => "OK");
+app.MapHealthChecks("/health/live", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+{
+    Predicate = _ => false
+});
+app.MapHealthChecks("/health/ready", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+{
+    Predicate = reg => reg.Tags.Contains("ready")
+});
 
 if (app.Environment.IsDevelopment())
 {
@@ -126,22 +173,5 @@ else
 {
     Log.Information("Using in-memory database; skipping migrations.");
 }
-
-// Start Kafka consumer in background
-var consumer = app.Services.GetRequiredService<CartEventConsumer>();
-var cts = new CancellationTokenSource();
-
-_ = Task.Run(async () =>
-{
-    Log.Information("Starting CartService Kafka consumer (listening to order.events)...");
-    await consumer.StartConsumingAsync(cts.Token);
-}, cts.Token);
-
-// Register shutdown handler
-app.Lifetime.ApplicationStopping.Register(() =>
-{
-    Log.Information("Stopping CartService consumer...");
-    cts.Cancel();
-});
 
 app.Run();

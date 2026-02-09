@@ -12,6 +12,7 @@ public class PaymentDbContext : DbContext
 
     public DbSet<Payment> Payments => Set<Payment>();
     public DbSet<OutboxMessage> OutboxMessages => Set<OutboxMessage>();
+    public DbSet<Shared.Contracts.Events.ProcessedEvent> ProcessedEvents => Set<Shared.Contracts.Events.ProcessedEvent>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -25,7 +26,18 @@ public class PaymentDbContext : DbContext
                 .IsUnique()
                 .HasFilter($"\"{nameof(Payment.Status)}\" = {(int)PaymentStatus.Created}");
             entity.Property(x => x.RowVersion)
-                .IsRowVersion();
+                .IsRowVersion()
+                .HasDefaultValue(Array.Empty<byte>());
+        });
+
+        modelBuilder.Entity<Shared.Contracts.Events.ProcessedEvent>(entity =>
+        {
+            entity.HasKey(x => x.Id);
+            entity.HasIndex(x => x.EventId).IsUnique();
+            entity.Property(x => x.EventId).IsRequired();
+            entity.Property(x => x.EventType).IsRequired();
+            entity.Property(x => x.Topic).IsRequired();
+            entity.Property(x => x.Status).IsRequired();
         });
     }
 }

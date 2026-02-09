@@ -4,6 +4,41 @@
 
 <p>Status: @Model.Status</p>
 
+<h3>Payment</h3>
+
+@if (TempData["PaymentError"] != null)
+{
+    <p style="color: #b00">@TempData["PaymentError"]</p>
+}
+
+@if (string.IsNullOrWhiteSpace(Model.PaymentStatus))
+{
+    <p>Payment is being prepared.</p>
+}
+else if (string.Equals(Model.PaymentStatus, "Created", StringComparison.OrdinalIgnoreCase))
+{
+    <form asp-controller="Orders" asp-action="Pay" asp-route-id="@Model.Id" method="post">
+        @Html.AntiForgeryToken()
+        <button type="submit">Pay</button>
+    </form>
+}
+else if (string.Equals(Model.PaymentStatus, "Pending", StringComparison.OrdinalIgnoreCase)
+        || string.Equals(Model.PaymentStatus, "Authorized", StringComparison.OrdinalIgnoreCase))
+{
+    @if (!string.IsNullOrWhiteSpace(Model.PaymentUrl))
+    {
+        <a href="@Model.PaymentUrl">Continue payment</a>
+    }
+    else
+    {
+        <p>Payment is pending. Please wait.</p>
+    }
+}
+else
+{
+    <p>Payment status: @Model.PaymentStatus</p>
+}
+
 <h3>Route</h3>
 <p><b>From:</b> @Model.FromAddress</p>
 <p><b>To:</b> @Model.ToAddress</p>

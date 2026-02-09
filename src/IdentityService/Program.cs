@@ -4,6 +4,7 @@ using IdentityService.Infrastructure.Security;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
+using Shared.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -16,8 +17,9 @@ builder.Host.UseSerilog((ctx, cfg) =>
        .MinimumLevel.Information());
 
 // Db
+var identityConnectionString = ConfigurationGuard.GetRequiredConnectionString(builder.Configuration, builder.Environment, "Default");
 builder.Services.AddDbContext<IdentityDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("Default")));
+    options.UseNpgsql(identityConnectionString));
 
 // Identity
 builder.Services
@@ -32,9 +34,30 @@ builder.Services
 
 // Controllers
 builder.Services.AddControllers();
+builder.AddServiceTelemetry("identity-service");
+builder.Services.AddCors(options =>
+{
+    options.AddDefaultPolicy(policy =>
+    {
+        if (builder.Environment.IsDevelopment())
+        {
+            policy.AllowAnyOrigin()
+                .AllowAnyMethod()
+                .AllowAnyHeader();
+            return;
+        }
+
+        var identityCorsOrigins = ConfigurationGuard.GetRequiredArray(builder.Configuration, builder.Environment, "Cors:AllowedOrigins");
+        policy.WithOrigins(identityCorsOrigins)
+            .AllowAnyMethod()
+            .AllowAnyHeader();
+    });
+});
 
 // Services
 builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
+builder.Services.AddHealthChecks()
+    .AddNpgSql(identityConnectionString, name: "db", tags: new[] { "ready" });
 
 var app = builder.Build();
 
@@ -44,4 +67,13 @@ dbContext.Database.Migrate();
 Log.Information("Database migration completed for OrderService");
 
 app.MapControllers();
+app.UseCors();
+app.MapHealthChecks("/health/live", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+{
+    Predicate = _ => false
+});
+app.MapHealthChecks("/health/ready", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+{
+    Predicate = reg => reg.Tags.Contains("ready")
+});
 app.Run();

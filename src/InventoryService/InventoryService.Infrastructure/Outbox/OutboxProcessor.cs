@@ -77,6 +77,7 @@ public class OutboxProcessor : BackgroundService
                     payload: msg.Payload,
                     headers: new Dictionary<string, string>
                     {
+                        ["event-id"] = msg.EventId,
                         ["event-type"] = msg.Type,
                         ["occurred-at"] = msg.OccurredAt.ToString("O")
                     },

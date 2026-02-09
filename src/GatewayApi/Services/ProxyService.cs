@@ -1,5 +1,6 @@
 using System.Net.Http.Headers;
 using System.Text.Json;
+using Shared.Services;
 
 namespace GatewayApi.Services;
 
@@ -19,21 +20,21 @@ public class ProxyService : IProxyService
     private readonly ILogger<ProxyService> _logger;
     private readonly Dictionary<string, string> _serviceUrls;
 
-    public ProxyService(IHttpClientFactory httpClientFactory, ILogger<ProxyService> logger, IConfiguration config)
+    public ProxyService(IHttpClientFactory httpClientFactory, ILogger<ProxyService> logger, IConfiguration config, IWebHostEnvironment env)
     {
         _httpClientFactory = httpClientFactory;
         _logger = logger;
 
-        // Получаем URLs сервисов из конфигурации
         _serviceUrls = new Dictionary<string, string>
         {
-            ["auth-service"] = config["Services:AuthServiceUrl"] ?? "http://localhost:5292",
-            ["catalog-service"] = config["Services:CatalogServiceUrl"] ?? "http://localhost:5201",
-            ["cart-service"] = config["Services:CartServiceUrl"] ?? "https://localhost:7202",
-            ["inventory-service"] = config["Services:InventoryServiceUrl"] ?? "http://localhost:5203",
-            ["order-service"] = config["Services:OrderServiceUrl"] ?? "https://localhost:7204",
-            ["courier-service"] = config["Services:CourierServiceUrl"] ?? "http://localhost:5205",
-            ["location-tracking"] = config["Services:LocationTrackingUrl"] ?? "http://localhost:5127"
+            ["auth-service"] = ConfigurationGuard.GetRequired(config, env, "Services:AuthServiceUrl", "http://localhost:5292"),
+            ["catalog-service"] = ConfigurationGuard.GetRequired(config, env, "Services:CatalogServiceUrl", "http://localhost:5201"),
+            ["cart-service"] = ConfigurationGuard.GetRequired(config, env, "Services:CartServiceUrl", "https://localhost:7202"),
+            ["inventory-service"] = ConfigurationGuard.GetRequired(config, env, "Services:InventoryServiceUrl", "http://localhost:5203"),
+            ["order-service"] = ConfigurationGuard.GetRequired(config, env, "Services:OrderServiceUrl", "https://localhost:7204"),
+            ["payment-service"] = ConfigurationGuard.GetRequired(config, env, "Services:PaymentServiceUrl", "http://localhost:5205"),
+            ["courier-service"] = ConfigurationGuard.GetRequired(config, env, "Services:CourierServiceUrl", "http://localhost:5206"),
+            ["location-tracking"] = ConfigurationGuard.GetRequired(config, env, "Services:LocationTrackingUrl", "http://localhost:5127")
         };
     }
 
@@ -47,7 +48,7 @@ public class ProxyService : IProxyService
                 return (default, 500, $"Service {serviceName} not found");
             }
 
-            var client = _httpClientFactory.CreateClient();
+            var client = _httpClientFactory.CreateClient("proxy");
             var url = $"{baseUrl}{path}";
             
             _logger.LogInformation("Proxying POST request to {Url}", url);
@@ -87,7 +88,7 @@ public class ProxyService : IProxyService
                 return (default, 500, $"Service {serviceName} not found");
             }
 
-            var client = _httpClientFactory.CreateClient();
+            var client = _httpClientFactory.CreateClient("proxy");
             var url = $"{baseUrl}{path}";
 
             _logger.LogInformation("Proxying GET request to {Url}", url);
@@ -127,7 +128,7 @@ public class ProxyService : IProxyService
                 return (default, 500, $"Service {serviceName} not found");
             }
 
-            var client = _httpClientFactory.CreateClient();
+            var client = _httpClientFactory.CreateClient("proxy");
             var url = $"{baseUrl}{path}";
 
             _logger.LogInformation("Proxying PUT request to {Url}", url);

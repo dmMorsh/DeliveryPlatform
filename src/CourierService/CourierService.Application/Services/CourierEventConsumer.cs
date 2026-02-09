@@ -1,6 +1,8 @@
 using System.Text.Json;
 using Confluent.Kafka;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Shared.Contracts.Events;
 using Shared.Services;
@@ -17,8 +19,11 @@ public class CourierEventConsumer : KafkaEventConsumerBase
 
     public CourierEventConsumer(
         IConfiguration config,
-        ILogger<CourierEventConsumer> logger)
-        : base(config, logger, "order.events")
+        IHostEnvironment env,
+        ILogger<CourierEventConsumer> logger,
+        IServiceScopeFactory scopeFactory,
+        IEventProducer producer)
+        : base(config, env, logger, scopeFactory, producer, null, "order.events")
     {
         _logger = logger;
     }
@@ -26,7 +31,7 @@ public class CourierEventConsumer : KafkaEventConsumerBase
     /// <summary>
     /// Обработка входящих событий от OrderService
     /// </summary>
-    protected override async Task HandleMessageAsync(string eventType, string json, ConsumeResult<string, string> message)
+    protected override async Task<bool> HandleMessageAsync(string eventType, string json, ConsumeResult<string, string> message)
     {
         try
         {
@@ -48,7 +53,10 @@ public class CourierEventConsumer : KafkaEventConsumerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error handling event {EventType}", eventType);
+            return false;
         }
+
+        return true;
     }
 
     private async Task HandleOrderAssigned(string json)

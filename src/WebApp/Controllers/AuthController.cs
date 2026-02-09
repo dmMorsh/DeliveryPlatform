@@ -17,19 +17,21 @@ public class AuthController : Controller
     }
 
     [HttpGet]
-    public IActionResult Login()
+    public IActionResult Login(string? returnUrl = null)
     {
+        ViewData["ReturnUrl"] = returnUrl;
         return View();
     }
 
     [HttpPost]
-    public async Task<IActionResult> Login(LoginViewModel model, CancellationToken ct)
+    public async Task<IActionResult> Login(LoginViewModel model, string? returnUrl, CancellationToken ct)
     {
         var token = await _api.LoginAsync(model, ct);
 
         if (token == null)
         {
             ModelState.AddModelError("", "Invalid login");
+            ViewData["ReturnUrl"] = returnUrl;
             return View(model);
         }
 
@@ -55,6 +57,9 @@ public class AuthController : Controller
 
         await HttpContext.SignInAsync(principal);
         
+        if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl))
+            return LocalRedirect(returnUrl);
+
         return RedirectToAction("Index", "Catalog");
     }
 

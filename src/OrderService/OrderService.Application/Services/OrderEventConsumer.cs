@@ -3,10 +3,13 @@ using Confluent.Kafka;
 using MediatR;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using OrderService.Application.Commands.MarkStockReservationFailed;
 using OrderService.Application.Commands.UpdateReservedStock;
+using OrderService.Application.Interfaces;
 using OrderService.Application.Models;
+using OrderService.Domain.Aggregates;
 using Shared.Contracts.Events;
 using Shared.Services;
 
@@ -14,7 +17,7 @@ namespace OrderService.Application.Services;
 
 /// <summary>
 /// Обработчик событий из других сервисов для OrderService
-/// Слушает: cart.checked_out, courier.status.changed
+/// Слушает: cart.checked_out, courier.status.changed, payment.*
 /// </summary>
 public class OrderEventConsumer : KafkaEventConsumerBase
 {
@@ -23,8 +26,11 @@ public class OrderEventConsumer : KafkaEventConsumerBase
 
     public OrderEventConsumer(
         IConfiguration config,
-        ILogger<OrderEventConsumer> logger, IServiceScopeFactory scopeFactory)
-        : base(config, logger, "courier.events", "inventory.events")
+        IHostEnvironment env,
+        ILogger<OrderEventConsumer> logger,
+        IServiceScopeFactory scopeFactory,
+        IEventProducer producer)
+        : base(config, env, logger, scopeFactory, producer, null, "courier.events", "inventory.events", "payment.events")
     {
         _logger = logger;
         _scopeFactory = scopeFactory;
@@ -33,7 +39,7 @@ public class OrderEventConsumer : KafkaEventConsumerBase
     /// <summary>
     /// Обработка входящих событий от других сервисов
     /// </summary>
-    protected override async Task HandleMessageAsync(string eventType, string json, ConsumeResult<string, string> message)
+    protected override async Task<bool> HandleMessageAsync(string eventType, string json, ConsumeResult<string, string> message)
     {
         try
         {
@@ -53,6 +59,21 @@ public class OrderEventConsumer : KafkaEventConsumerBase
                 case "stock.reserve_failed":
                     await HandleStockReserveFailed(json);
                     break;
+                case "payment.authorized":
+                    await HandlePaymentAuthorized(json);
+                    break;
+                case "payment.captured":
+                    await HandlePaymentCaptured(json);
+                    break;
+                case "payment.failed":
+                    await HandlePaymentFailed(json);
+                    break;
+                case "payment.cancelled":
+                    await HandlePaymentCancelled(json);
+                    break;
+                case "payment.refunded":
+                    await HandlePaymentRefunded(json);
+                    break;
                 default:
                     _logger.LogWarning("Unknown event type: {EventType}", eventType);
                     break;
@@ -61,9 +82,128 @@ public class OrderEventConsumer : KafkaEventConsumerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error handling event {EventType}", eventType);
+            return false;
+        }
+
+        return true;
+    }
+
+    private async Task HandlePaymentAuthorized(string json)
+    {
+        try
+        {
+            var @event = JsonSerializer.Deserialize<PaymentAuthorizedEvent>(json,
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            if (@event == null) return;
+
+            await UpdateOrderStatusFromPayment(@event.OrderId, OrderStatus.Confirmed, "payment.authorized");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error processing PaymentAuthorizedEvent");
         }
     }
 
+    private async Task HandlePaymentCaptured(string json)
+    {
+        try
+        {
+            var @event = JsonSerializer.Deserialize<PaymentCapturedEvent>(json,
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            if (@event == null) return;
+
+            await UpdateOrderStatusFromPayment(@event.OrderId, OrderStatus.Confirmed, "payment.captured");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error processing PaymentCapturedEvent");
+        }
+    }
+
+    private async Task HandlePaymentFailed(string json)
+    {
+        try
+        {
+            var @event = JsonSerializer.Deserialize<PaymentFailedEvent>(json,
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            if (@event == null) return;
+
+            await UpdateOrderStatusFromPayment(@event.OrderId, OrderStatus.Failed, "payment.failed");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error processing PaymentFailedEvent");
+        }
+    }
+
+    private async Task HandlePaymentCancelled(string json)
+    {
+        try
+        {
+            var @event = JsonSerializer.Deserialize<PaymentCancelledEvent>(json,
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            if (@event == null) return;
+
+            await UpdateOrderStatusFromPayment(@event.OrderId, OrderStatus.Cancelled, "payment.cancelled");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error processing PaymentCancelledEvent");
+        }
+    }
+
+    private async Task HandlePaymentRefunded(string json)
+    {
+        try
+        {
+            var @event = JsonSerializer.Deserialize<PaymentRefundedEvent>(json,
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            if (@event == null) return;
+
+            await UpdateOrderStatusFromPayment(@event.OrderId, OrderStatus.Cancelled, "payment.refunded");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error processing PaymentRefundedEvent");
+        }
+    }
+
+    private async Task UpdateOrderStatusFromPayment(Guid orderId, OrderStatus newStatus, string reason)
+    {
+        using var scope = _scopeFactory.CreateScope();
+        var factory = scope.ServiceProvider.GetRequiredService<IUnitOfWorkFactory>();
+        var mapper = scope.ServiceProvider.GetRequiredService<IOrderIntegrationEventMapper>();
+
+        await using var uow = factory.Create(orderId);
+        var order = await uow.Orders.GetOrderByIdAsync(orderId, default);
+        if (order == null)
+            return;
+
+        if (order.Status is OrderStatus.Delivered or OrderStatus.InDelivery or OrderStatus.Assigned or OrderStatus.Assigning)
+        {
+            _logger.LogInformation(
+                "Skipping payment status update for order {OrderId}. Current status {Status}, target {TargetStatus}, reason {Reason}",
+                orderId,
+                order.Status,
+                newStatus,
+                reason);
+            return;
+        }
+
+        if (order.Status == newStatus)
+            return;
+
+        order.ChangeStatus(newStatus);
+
+        var outboxMessages = order.DomainEvents
+            .Select(mapper.MapFromDomainEvent)
+            .Where(ie => ie != null)
+            .Select(OutboxMessage.From!)
+            .ToList();
+
+        await uow.SaveChangesAsync(outboxMessages);
+        order.ClearDomainEvents();
+    }
     private async Task HandleStockReserveFailed(string json)
     {
         try

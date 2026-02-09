@@ -32,6 +32,10 @@ namespace OrderService.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("AggregateId")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("EventId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
                     b.Property<string>("LastError")
                         .HasColumnType("text");
 
@@ -129,17 +133,71 @@ namespace OrderService.Infrastructure.Persistence.Migrations
                     b.ToTable("Orders", "order");
                 });
 
+            modelBuilder.Entity("Shared.Contracts.Events.ProcessedEvent", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AggregateId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Attempts")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Error")
+                        .HasColumnType("text");
+
+                    b.Property<string>("EventId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("EventType")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<long>("Offset")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("Partition")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("ProcessedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("ReceivedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Topic")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EventId")
+                        .IsUnique();
+
+                    b.ToTable("ProcessedEvents", "order");
+                });
+
             modelBuilder.Entity("OrderService.Domain.Aggregates.Order", b =>
                 {
-                    b.OwnsOne("OrderService.Domain.ValueObjects.Money", "CostCents", b1 =>
+                    b.OwnsOne("OrderService.Domain.ValueObjects.Address", "From", b1 =>
                         {
                             b1.Property<Guid>("OrderId")
                                 .HasColumnType("uuid");
 
-                            b1.Property<long>("AmountCents")
-                                .HasColumnType("bigint");
+                            b1.Property<double>("Latitude")
+                                .HasColumnType("double precision");
 
-                            b1.Property<string>("Currency")
+                            b1.Property<double>("Longitude")
+                                .HasColumnType("double precision");
+
+                            b1.Property<string>("Street")
                                 .IsRequired()
                                 .HasColumnType("text");
 
@@ -151,7 +209,7 @@ namespace OrderService.Infrastructure.Persistence.Migrations
                                 .HasForeignKey("OrderId");
                         });
 
-                    b.OwnsOne("OrderService.Domain.ValueObjects.Address", "From", b1 =>
+                    b.OwnsOne("OrderService.Domain.ValueObjects.Address", "To", b1 =>
                         {
                             b1.Property<Guid>("OrderId")
                                 .HasColumnType("uuid");
@@ -207,18 +265,15 @@ namespace OrderService.Infrastructure.Persistence.Migrations
                                 .HasForeignKey("OrderId");
                         });
 
-                    b.OwnsOne("OrderService.Domain.ValueObjects.Address", "To", b1 =>
+                    b.OwnsOne("OrderService.Domain.ValueObjects.Money", "CostCents", b1 =>
                         {
                             b1.Property<Guid>("OrderId")
                                 .HasColumnType("uuid");
 
-                            b1.Property<double>("Latitude")
-                                .HasColumnType("double precision");
+                            b1.Property<long>("AmountCents")
+                                .HasColumnType("bigint");
 
-                            b1.Property<double>("Longitude")
-                                .HasColumnType("double precision");
-
-                            b1.Property<string>("Street")
+                            b1.Property<string>("Currency")
                                 .IsRequired()
                                 .HasColumnType("text");
 

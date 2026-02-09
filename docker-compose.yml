@@ -57,9 +57,12 @@ services:
       KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_JMX_PORT: 9101
+      KAFKA_JMX_HOSTNAME: kafka
 
     ports:
       - "29092:29092" # внешний адресс: localhost:29092
+      - "9101:9101"
     healthcheck:
       test:
         [
@@ -71,6 +74,22 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+
+  kafka-jmx-exporter:
+    image: bitnami/jmx-exporter:0.20.0
+    container_name: kafka-jmx-exporter
+    depends_on:
+      - kafka
+    command:
+      [
+        "9102",
+        "/etc/jmx-exporter/kafka-jmx-exporter.yml",
+        "kafka:9101"
+      ]
+    volumes:
+      - ./src/Scripts/kafka-jmx-exporter.yml:/etc/jmx-exporter/kafka-jmx-exporter.yml:ro
+    ports:
+      - "9102:9102"
   
   kafka-ui:
     image: provectuslabs/kafka-ui:latest
@@ -83,6 +102,65 @@ services:
     depends_on:
       - kafka
 
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.99.0
+    container_name: otel-collector
+    command: ["--config=/etc/otel-collector-config.yaml"]
+    volumes:
+      - ./src/Scripts/otel-collector-config.yaml:/etc/otel-collector-config.yaml:ro
+    ports:
+      - "4317:4317" # OTLP gRPC
+      - "4318:4318" # OTLP HTTP
+      - "9464:9464" # Prometheus scrape
+    depends_on:
+      - kafka
+
+  dlq-service:
+    build:
+      context: .
+      dockerfile: src/DlqService/Dockerfile
+    container_name: delivery-dlq-service
+    depends_on:
+      kafka:
+        condition: service_healthy
+      otel-collector:
+        condition: service_started
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:8080
+      ASPNETCORE_Kestrel__EndpointDefaults__Protocols: Http1AndHttp2
+      Kafka__Brokers: kafka:9092
+      Kafka__DLQTopic: dlq.events
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+    ports:
+      - "5300:8080"
+    restart: unless-stopped
+
+  prometheus:
+    image: prom/prometheus:v2.52.0
+    container_name: prometheus
+    volumes:
+      - ./src/Scripts/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./src/Scripts/prometheus-alerts.yml:/etc/prometheus/prometheus-alerts.yml:ro
+    ports:
+      - "9090:9090"
+    depends_on:
+      - otel-collector
+
+  grafana:
+    image: grafana/grafana:10.4.2
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+    volumes:
+      - ./src/Scripts/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./src/Scripts/grafana/dashboards:/etc/grafana/dashboards:ro
+    depends_on:
+      - prometheus
+
   # .NET Microservices
   gateway-api:
     build:
@@ -93,50 +171,164 @@ services:
       - postgres
       - redis
       - kafka
+      - otel-collector
     environment:
       ASPNETCORE_ENVIRONMENT: Development
-      ASPNETCORE_URLS: http://+:5000
+      ASPNETCORE_URLS: http://+:8080
+      ASPNETCORE_Kestrel__EndpointDefaults__Protocols: Http1AndHttp2
+      Kafka__Brokers: kafka:9092
+      Jwt__Key: "dev-key"
+      Jwt__Issuer: "identity-service"
+      Jwt__Audience: "platform-api"
+      Services__AuthServiceUrl: http://identity-service:8080
+      Services__CatalogServiceUrl: http://catalog-service:8080
+      Services__CartServiceUrl: http://cart-service:8080
+      Services__InventoryServiceUrl: http://inventory-service:8080
+      Services__OrderServiceUrl: http://order-service:8080
+      Services__CourierServiceUrl: http://courier-service:8080
+      Services__LocationTrackingUrl: http://location-tracking-service:8080
+      gRPC__LocationTrackingService__Url: http://location-tracking-service:8080
+      DOTNET_SYSTEM_NET_HTTP_SOCKETSHTTPHANDLER_HTTP2UNENCRYPTEDSUPPORT: "true"
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
     ports:
-      - "5000:5000"
+      - "5000:8080"
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+
+  identity-service:
+    build:
+      context: .
+      dockerfile: src/IdentityService/Dockerfile
+    container_name: delivery-identity-service
+    depends_on:
+      postgres:
+        condition: service_healthy
+      otel-collector:
+        condition: service_started
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:8080
+      ASPNETCORE_Kestrel__EndpointDefaults__Protocols: Http1AndHttp2
+      ConnectionStrings__Default: Host=postgres;Port=5432;Database=delivery_db;Username=postgres;Password=postgres;
+      Jwt__Key: "dev-key"
+      Jwt__Issuer: "identity-service"
+      Jwt__Audience: "platform-api"
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+    ports:
+      - "5292:8080"
+    restart: unless-stopped
 
   order-service:
     build:
       context: .
-      dockerfile: src/OrderService/Dockerfile
+      dockerfile: src/OrderService/OrderService.Api/Dockerfile
     container_name: delivery-order-service
     depends_on:
       postgres:
         condition: service_healthy
       kafka:
         condition: service_healthy
+      otel-collector:
+        condition: service_started
     environment:
       ASPNETCORE_ENVIRONMENT: Development
-      ASPNETCORE_URLS: http://+:5001
-      POSTGRES_HOST: postgres
-      POSTGRES_PORT: 5432
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: delivery_db
-      KAFKA_BROKERS: kafka:29092
+      ASPNETCORE_URLS: http://+:8080
+      ASPNETCORE_Kestrel__EndpointDefaults__Protocols: Http1AndHttp2
+      ConnectionStrings__PostgreSQL: Host=postgres;Port=5432;Database=delivery_db;Username=postgres;Password=postgres;
+      Kafka__Brokers: kafka:9092
+      Jwt__Key: "dev-key"
+      Jwt__Issuer: "identity-service"
+      Jwt__Audience: "platform-api"
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
     ports:
-      - "5001:5001"
+      - "5204:8080"
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5001/health"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+
+  cart-service:
+    build:
+      context: .
+      dockerfile: src/CartService/CartService.Api/Dockerfile
+    container_name: delivery-cart-service
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      order-service:
+        condition: service_healthy
+      otel-collector:
+        condition: service_started
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:8080
+      ASPNETCORE_Kestrel__EndpointDefaults__Protocols: Http1AndHttp2
+      ConnectionStrings__PostgreSQL: Host=postgres;Port=5432;Database=delivery_db;Username=postgres;Password=postgres;
+      Kafka__Brokers: kafka:9092
+      Jwt__Key: "dev-key"
+      Jwt__Issuer: "identity-service"
+      Jwt__Audience: "platform-api"
+      gRPC__OrderService__Url: http://order-service:8080
+      DOTNET_SYSTEM_NET_HTTP_SOCKETSHTTPHANDLER_HTTP2UNENCRYPTEDSUPPORT: "true"
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+    ports:
+      - "5202:8080"
+    restart: unless-stopped
+
+  catalog-service:
+    build:
+      context: .
+      dockerfile: src/CatalogService/CatalogService.Api/Dockerfile
+    container_name: delivery-catalog-service
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      otel-collector:
+        condition: service_started
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:8080
+      ASPNETCORE_Kestrel__EndpointDefaults__Protocols: Http1AndHttp2
+      ConnectionStrings__PostgreSQL: Host=postgres;Port=5432;Database=delivery_db;Username=postgres;Password=postgres;
+      Kafka__Brokers: kafka:9092
+      Jwt__Key: "dev-key"
+      Jwt__Issuer: "identity-service"
+      Jwt__Audience: "platform-api"
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+    ports:
+      - "5201:8080"
+    restart: unless-stopped
+
+  inventory-service:
+    build:
+      context: .
+      dockerfile: src/InventoryService/InventoryService.Api/Dockerfile
+    container_name: delivery-inventory-service
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      otel-collector:
+        condition: service_started
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:8080
+      ASPNETCORE_Kestrel__EndpointDefaults__Protocols: Http1AndHttp2
+      ConnectionStrings__Default: Host=postgres;Port=5432;Database=delivery_db;Username=postgres;Password=postgres;
+      Kafka__Brokers: kafka:9092
+      Jwt__Key: "dev-key"
+      Jwt__Issuer: "identity-service"
+      Jwt__Audience: "platform-api"
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+    ports:
+      - "5203:8080"
+    restart: unless-stopped
 
   courier-service:
     build:
       context: .
-      dockerfile: src/CourierService/Dockerfile
+      dockerfile: src/CourierService/CourierService.Api/Dockerfile
     container_name: delivery-courier-service
     depends_on:
       postgres:
@@ -145,25 +337,113 @@ services:
         condition: service_healthy
       kafka:
         condition: service_healthy
+      otel-collector:
+        condition: service_started
     environment:
       ASPNETCORE_ENVIRONMENT: Development
-      ASPNETCORE_URLS: http://+:5002
-      POSTGRES_HOST: postgres
-      POSTGRES_PORT: 5432
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: delivery_db
-      REDIS_HOST: redis
-      REDIS_PORT: 6379
-      KAFKA_BROKERS: kafka:29092
+      ASPNETCORE_URLS: http://+:8080
+      ASPNETCORE_Kestrel__EndpointDefaults__Protocols: Http1AndHttp2
+      ConnectionStrings__PostgreSQL: Host=postgres;Port=5432;Database=delivery_db;Username=postgres;Password=postgres;
+      Redis__Connection: redis:6379
+      Kafka__Brokers: kafka:9092
+      Jwt__Key: "dev-key"
+      Jwt__Issuer: "identity-service"
+      Jwt__Audience: "platform-api"
+      gRPC__LocationTrackingService__Url: http://location-tracking-service:8080
+      DOTNET_SYSTEM_NET_HTTP_SOCKETSHTTPHANDLER_HTTP2UNENCRYPTEDSUPPORT: "true"
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
     ports:
-      - "5002:5002"
+      - "5205:8080"
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5002/health"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+
+  payment-service:
+    build:
+      context: .
+      dockerfile: src/PaymentService/PaymentService.Api/Dockerfile
+    container_name: delivery-payment-service
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      otel-collector:
+        condition: service_started
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:8080
+      ASPNETCORE_Kestrel__EndpointDefaults__Protocols: Http1AndHttp2
+      Kafka__Brokers: kafka:9092
+      Jwt__Key: "dev-key"
+      Jwt__Issuer: "identity-service"
+      Jwt__Audience: "platform-api"
+      ConnectionStrings__Hangfire: Host=postgres;Port=5432;Database=delivery_db;Username=postgres;Password=postgres;
+      Payments__ShardMap__ConnectionString: Host=postgres;Port=5432;Database=delivery_db;Username=postgres;Password=postgres;
+      Payments__Sharding__Shards__0__Name: payments-0
+      Payments__Sharding__Shards__0__ConnectionString: Host=postgres;Port=5432;Database=delivery_db;Username=postgres;Password=postgres;
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+    ports:
+      - "5206:8080"
+    restart: unless-stopped
+
+  analytics-service:
+    build:
+      context: .
+      dockerfile: src/AnalyticsService/Dockerfile
+    container_name: delivery-analytics-service
+    depends_on:
+      kafka:
+        condition: service_healthy
+      otel-collector:
+        condition: service_started
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:8080
+      ASPNETCORE_Kestrel__EndpointDefaults__Protocols: Http1AndHttp2
+      Kafka__Brokers: kafka:9092
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+    ports:
+      - "5178:8080"
+    restart: unless-stopped
+
+  notification-service:
+    build:
+      context: .
+      dockerfile: src/NotificationService/Dockerfile
+    container_name: delivery-notification-service
+    depends_on:
+      kafka:
+        condition: service_healthy
+      otel-collector:
+        condition: service_started
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:8080
+      ASPNETCORE_Kestrel__EndpointDefaults__Protocols: Http1AndHttp2
+      Kafka__Brokers: kafka:9092
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+    ports:
+      - "5231:8080"
+    restart: unless-stopped
+
+  location-tracking-service:
+    build:
+      context: .
+      dockerfile: src/LocationTrackingService/Dockerfile
+    container_name: delivery-location-tracking-service
+    depends_on:
+      redis:
+        condition: service_healthy
+      otel-collector:
+        condition: service_started
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:8080
+      ASPNETCORE_Kestrel__EndpointDefaults__Protocols: Http1AndHttp2
+      Redis__Connection: redis:6379
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+    ports:
+      - "5127:8080"
+    restart: unless-stopped
 
 volumes:
   postgres_data:

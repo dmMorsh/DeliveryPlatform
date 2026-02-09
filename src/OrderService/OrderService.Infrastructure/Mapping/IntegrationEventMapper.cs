@@ -76,6 +76,7 @@ public class IntegrationEventMapper : IOrderIntegrationEventMapper
             FromAddress = e.FromAddress,
             ToAddress = e.ToAddress,
             CostCents = e.CostCents,
+            Currency = e.Currency,
             Description = e.Description,
             Timestamp = e.OccurredAt,
             Items = (snapshots ?? e.Items).Select(i => new IntegrationOrderItemSnapshot

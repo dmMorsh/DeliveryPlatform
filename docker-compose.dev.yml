@@ -1,0 +1,128 @@
+services:
+  gateway-api:
+    env_file: .env
+    environment:
+      Jwt__Key: ${JWT_KEY}
+      Jwt__Issuer: ${JWT_ISSUER}
+      Jwt__Audience: ${JWT_AUDIENCE}
+      Kafka__Brokers: ${KAFKA_BROKERS}
+      Kafka__DLQTopic: ${KAFKA_DLQ_TOPIC}
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT}
+      Cors__AllowedOrigins__0: ${CORS_ALLOWED_ORIGIN_0}
+      Cors__AllowedOrigins__1: ${CORS_ALLOWED_ORIGIN_1}
+
+  identity-service:
+    env_file: .env
+    environment:
+      ConnectionStrings__Default: Host=${POSTGRES_HOST};Port=${POSTGRES_PORT};Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD};
+      Jwt__Key: ${JWT_KEY}
+      Jwt__Issuer: ${JWT_ISSUER}
+      Jwt__Audience: ${JWT_AUDIENCE}
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT}
+      Cors__AllowedOrigins__0: ${CORS_ALLOWED_ORIGIN_0}
+      Cors__AllowedOrigins__1: ${CORS_ALLOWED_ORIGIN_1}
+
+  order-service:
+    env_file: .env
+    environment:
+      ConnectionStrings__PostgreSQL: Host=${POSTGRES_HOST};Port=${POSTGRES_PORT};Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD};
+      Kafka__Brokers: ${KAFKA_BROKERS}
+      Jwt__Key: ${JWT_KEY}
+      Jwt__Issuer: ${JWT_ISSUER}
+      Jwt__Audience: ${JWT_AUDIENCE}
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT}
+      Cors__AllowedOrigins__0: ${CORS_ALLOWED_ORIGIN_0}
+      Cors__AllowedOrigins__1: ${CORS_ALLOWED_ORIGIN_1}
+
+  cart-service:
+    env_file: .env
+    environment:
+      ConnectionStrings__PostgreSQL: Host=${POSTGRES_HOST};Port=${POSTGRES_PORT};Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD};
+      Kafka__Brokers: ${KAFKA_BROKERS}
+      gRPC__OrderService__Url: http://order-service:8080
+      Jwt__Key: ${JWT_KEY}
+      Jwt__Issuer: ${JWT_ISSUER}
+      Jwt__Audience: ${JWT_AUDIENCE}
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT}
+      Cors__AllowedOrigins__0: ${CORS_ALLOWED_ORIGIN_0}
+      Cors__AllowedOrigins__1: ${CORS_ALLOWED_ORIGIN_1}
+
+  catalog-service:
+    env_file: .env
+    environment:
+      ConnectionStrings__PostgreSQL: Host=${POSTGRES_HOST};Port=${POSTGRES_PORT};Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD};
+      Kafka__Brokers: ${KAFKA_BROKERS}
+      Jwt__Key: ${JWT_KEY}
+      Jwt__Issuer: ${JWT_ISSUER}
+      Jwt__Audience: ${JWT_AUDIENCE}
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT}
+      Cors__AllowedOrigins__0: ${CORS_ALLOWED_ORIGIN_0}
+      Cors__AllowedOrigins__1: ${CORS_ALLOWED_ORIGIN_1}
+
+  inventory-service:
+    env_file: .env
+    environment:
+      ConnectionStrings__Default: Host=${POSTGRES_HOST};Port=${POSTGRES_PORT};Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD};
+      Kafka__Brokers: ${KAFKA_BROKERS}
+      Jwt__Key: ${JWT_KEY}
+      Jwt__Issuer: ${JWT_ISSUER}
+      Jwt__Audience: ${JWT_AUDIENCE}
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT}
+      Cors__AllowedOrigins__0: ${CORS_ALLOWED_ORIGIN_0}
+      Cors__AllowedOrigins__1: ${CORS_ALLOWED_ORIGIN_1}
+
+  courier-service:
+    env_file: .env
+    environment:
+      ConnectionStrings__PostgreSQL: Host=${POSTGRES_HOST};Port=${POSTGRES_PORT};Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD};
+      Redis__Connection: ${REDIS_CONNECTION}
+      Kafka__Brokers: ${KAFKA_BROKERS}
+      gRPC__LocationTrackingService__Url: http://location-tracking-service:8080
+      Jwt__Key: ${JWT_KEY}
+      Jwt__Issuer: ${JWT_ISSUER}
+      Jwt__Audience: ${JWT_AUDIENCE}
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT}
+      Cors__AllowedOrigins__0: ${CORS_ALLOWED_ORIGIN_0}
+      Cors__AllowedOrigins__1: ${CORS_ALLOWED_ORIGIN_1}
+
+  payment-service:
+    env_file: .env
+    environment:
+      Kafka__Brokers: ${KAFKA_BROKERS}
+      Jwt__Key: ${JWT_KEY}
+      Jwt__Issuer: ${JWT_ISSUER}
+      Jwt__Audience: ${JWT_AUDIENCE}
+      ConnectionStrings__Hangfire: Host=${POSTGRES_HOST};Port=${POSTGRES_PORT};Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD};
+      Payments__ShardMap__ConnectionString: Host=${POSTGRES_HOST};Port=${POSTGRES_PORT};Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD};
+      Payments__Sharding__Shards__0__Name: payments-0
+      Payments__Sharding__Shards__0__ConnectionString: Host=${POSTGRES_HOST};Port=${POSTGRES_PORT};Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD};
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT}
+      Cors__AllowedOrigins__0: ${CORS_ALLOWED_ORIGIN_0}
+      Cors__AllowedOrigins__1: ${CORS_ALLOWED_ORIGIN_1}
+
+  analytics-service:
+    env_file: .env
+    environment:
+      Kafka__Brokers: ${KAFKA_BROKERS}
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT}
+
+  notification-service:
+    env_file: .env
+    environment:
+      Kafka__Brokers: ${KAFKA_BROKERS}
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT}
+
+  location-tracking-service:
+    env_file: .env
+    environment:
+      Redis__Connection: ${REDIS_CONNECTION}
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT}
+      Cors__AllowedOrigins__0: ${CORS_ALLOWED_ORIGIN_0}
+      Cors__AllowedOrigins__1: ${CORS_ALLOWED_ORIGIN_1}
+
+  dlq-service:
+    env_file: .env
+    environment:
+      Kafka__Brokers: ${KAFKA_BROKERS}
+      Kafka__DLQTopic: ${KAFKA_DLQ_TOPIC}
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT}

@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
+    <TargetFramework>net9.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
@@ -18,10 +18,10 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Shared\Shared.csproj" />
-    <ProjectReference Include="..\GatewayApi\GatewayApi.csproj" />
-    <ProjectReference Include="..\OrderService\OrderService.Api\OrderService.Api.csproj" />
-    <ProjectReference Include="..\CourierService\CourierService.Api\CourierService.Api.csproj" />
     <ProjectReference Include="..\LocationTrackingService\LocationTrackingService.csproj" />
+    <ProjectReference Include="..\PaymentService\PaymentService.Domain\PaymentService.Domain.csproj" />
+    <ProjectReference Include="..\PaymentService\PaymentService.Application\PaymentService.Application.csproj" />
+    <ProjectReference Include="..\PaymentService\PaymentService.Infrastructure\PaymentService.Infrastructure.csproj" />
   </ItemGroup>
 
   <ItemGroup>
