@@ -15,7 +15,6 @@ using PaymentService.Infrastructure.Inbox;
 using PaymentService.Infrastructure.Persistence;
 using PaymentService.Infrastructure.Outbox;
 using PaymentService.Infrastructure.Providers;
-using PaymentService.Infrastructure.Repositories;
 using PaymentService.Infrastructure.Sharding;
 using Hangfire;
 using Hangfire.MemoryStorage;
@@ -27,6 +26,7 @@ using Shared.Services;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
+builder.AddServiceTelemetry("payment-service");
 
 builder.Host.UseSerilog((ctx, cfg) =>
     cfg.WriteTo.Console(outputTemplate: "[{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz}] [{Level:u3}] [{SourceContext}] {Message:lj}{NewLine}{Exception}")

@@ -35,7 +35,7 @@
       "gridPos": {"x": 15, "y": 0, "w": 9, "h": 8},
       "targets": [
         {
-          "expr": "sum(rate(process_cpu_time_seconds_total[5m]))",
+          "expr": "sum(rate(process_cpu_time_seconds_total[5m])) or sum(rate(process_cpu_time[5m]))",
           "refId": "A"
         }
       ]
@@ -46,7 +46,7 @@
       "gridPos": {"x": 0, "y": 8, "w": 12, "h": 8},
       "targets": [
         {
-          "expr": "sum(process_resident_memory_bytes)",
+          "expr": "sum(process_resident_memory_bytes) or sum(process_memory_usage) or sum(process_virtual_memory_bytes)",
           "refId": "A"
         }
       ]
@@ -57,7 +57,7 @@
       "gridPos": {"x": 12, "y": 8, "w": 12, "h": 8},
       "targets": [
         {
-          "expr": "sum(dotnet_total_memory_bytes)",
+          "expr": "sum(process_runtime_dotnet_gc_heap_size) or sum(dotnet_total_memory_bytes)",
           "refId": "A"
         }
       ]

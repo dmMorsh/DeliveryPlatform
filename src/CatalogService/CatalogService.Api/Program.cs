@@ -17,6 +17,8 @@ using Shared.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.AddServiceTelemetry("catalog-service");
+
 // Add services to the container.
 // Allow using an in-memory DB for local quick tests by setting USE_INMEMORY_DB=true
 var useInMemory = Environment.GetEnvironmentVariable("USE_INMEMORY_DB") == "true"

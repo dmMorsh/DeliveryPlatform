@@ -93,4 +93,68 @@ public class LocationTrackingServiceImpl : LocationTracking.LocationTrackingServ
             };
         }
     }
+
+    /// <summary>
+    /// Обновить локацию курьера (streaming)
+    /// </summary>
+    public override async Task StreamLocation(
+        IAsyncStreamReader<UpdateLocationRequest> requestStream,
+        IServerStreamWriter<LocationUpdate> responseStream,
+        ServerCallContext context)
+    {
+        try
+        {
+            await foreach (var request in requestStream.ReadAllAsync(context.CancellationToken))
+            {
+                _logger.LogInformation(
+                    "Stream location update: Courier {CourierId} at ({Latitude}, {Longitude})",
+                    request.CourierId, request.Latitude, request.Longitude);
+
+                await _locationService.UpdateCourierLocationAsync(
+                    Guid.Parse(request.CourierId),
+                    request.Latitude,
+                    request.Longitude,
+                    request.Accuracy,
+                    DateTimeOffset.FromUnixTimeMilliseconds(request.TimestampMs));
+
+                await responseStream.WriteAsync(new LocationUpdate
+                {
+                    Success = true,
+                    Message = "Location updated successfully",
+                    CourierId = request.CourierId
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error in StreamLocation");
+        }
+    }
+
+    /// <summary>
+    /// Получить историю локации курьера
+    /// </summary>
+    public override async Task<CourierLocationHistory> GetCourierLocationHistory(
+        GetLocationHistoryRequest request,
+        ServerCallContext context)
+    {
+        var courierId = Guid.Parse(request.CourierId);
+        var from = request.FromTimestampMs > 0
+            ? DateTimeOffset.FromUnixTimeMilliseconds(request.FromTimestampMs)
+            : (DateTimeOffset?)null;
+
+        var limit = request.Limit <= 0 ? 100 : request.Limit;
+        var history = await _locationService.GetCourierLocationHistoryAsync(courierId, from, limit);
+
+        var response = new CourierLocationHistory { CourierId = request.CourierId };
+        response.Points.AddRange(history.Select(h => new LocationPoint
+        {
+            Latitude = h.Latitude,
+            Longitude = h.Longitude,
+            TimestampMs = h.UpdatedAt.ToUnixTimeMilliseconds(),
+            Accuracy = h.Accuracy
+        }));
+
+        return response;
+    }
 }

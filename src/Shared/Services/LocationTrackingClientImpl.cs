@@ -80,4 +80,32 @@ public class LocationTrackingClientImpl : ILocationTrackingClient
             return (0, 0, false);
         }
     }
+
+    public async Task<IReadOnlyList<(double Latitude, double Longitude, long TimestampMs, int Accuracy)>> GetCourierLocationHistoryAsync(
+        Guid courierId,
+        long fromTimestampMs = 0,
+        int limit = 100)
+    {
+        try
+        {
+            var client = GetClient();
+            var request = new GetLocationHistoryRequest
+            {
+                CourierId = courierId.ToString(),
+                FromTimestampMs = fromTimestampMs,
+                Limit = limit
+            };
+
+            var response = await _policy.ExecuteAsync(() => client.GetCourierLocationHistoryAsync(request).ResponseAsync);
+
+            return response.Points
+                .Select(p => (p.Latitude, p.Longitude, p.TimestampMs, p.Accuracy))
+                .ToList();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting location history for courier {CourierId}", courierId);
+            return Array.Empty<(double, double, long, int)>();
+        }
+    }
 }

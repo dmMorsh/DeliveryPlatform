@@ -20,6 +20,8 @@ using Shared.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.AddServiceTelemetry("cart-service");
+
 // Allow using an in-memory DB for local quick tests by setting USE_INMEMORY_DB=true
 var useInMemory = Environment.GetEnvironmentVariable("USE_INMEMORY_DB") == "true"
                   || string.Equals(builder.Configuration["UseInMemoryDb"], "true", StringComparison.OrdinalIgnoreCase);

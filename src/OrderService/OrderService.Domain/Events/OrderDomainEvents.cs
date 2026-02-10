@@ -10,6 +10,10 @@ public record OrderCreatedDomainEvent : DomainEvent
     public Guid ClientId { get; init; }
     public string FromAddress { get; init; } = string.Empty;
     public string ToAddress { get; init; } = string.Empty;
+    public double FromLatitude { get; init; }
+    public double FromLongitude { get; init; }
+    public double ToLatitude { get; init; }
+    public double ToLongitude { get; init; }
     public long CostCents { get; init; }
     public string Currency { get; init; } = string.Empty;
     public string? Description { get; init; }

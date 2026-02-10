@@ -11,12 +11,13 @@ get_method_body() {
 TS=$(date +"%Y%m%d%H%M%S")
 
 SERVICES=(
-#  CartService
-#  CatalogService
-#  CourierService
-#  OrderService
+  CartService
+  CatalogService
+  CourierService
+  OrderService
   PaymentService
-#  InventoryService
+  InventoryService
+  DeliveryService
 )
 
 get_contexts() {
@@ -38,6 +39,9 @@ get_contexts() {
       ;;
     InventoryService)
       echo "InventoryDbContext"
+      ;;
+    DeliveryService)
+      echo "DeliveryDbContext"
       ;;
     *)
       echo ""

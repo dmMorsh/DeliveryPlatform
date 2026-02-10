@@ -7,6 +7,7 @@ service LocationTrackingService {
   rpc StreamLocation (stream UpdateLocationRequest) returns (stream LocationUpdate);
   rpc UpdateLocation (UpdateLocationRequest) returns (LocationUpdate);
   rpc GetCourierLocation (GetLocationRequest) returns (CourierLocation);
+  rpc GetCourierLocationHistory (GetLocationHistoryRequest) returns (CourierLocationHistory);
 }
 
 // Запрос на обновление локации
@@ -37,4 +38,23 @@ message CourierLocation {
   double longitude = 3;
   int64 last_update_ms = 4;
   int32 status = 5; // 0=offline, 1=online, 2=on_delivery, 3=resting
+}
+
+// Запрос на историю локаций
+message GetLocationHistoryRequest {
+  string courier_id = 1;
+  int64 from_timestamp_ms = 2;
+  int32 limit = 3;
+}
+
+message LocationPoint {
+  double latitude = 1;
+  double longitude = 2;
+  int64 timestamp_ms = 3;
+  int32 accuracy = 4;
+}
+
+message CourierLocationHistory {
+  string courier_id = 1;
+  repeated LocationPoint points = 2;
 }

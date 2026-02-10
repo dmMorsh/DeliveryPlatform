@@ -8,6 +8,7 @@ using Microsoft.Extensions.Logging;
 using OrderService.Application.Commands.MarkStockReservationFailed;
 using OrderService.Application.Commands.UpdateOrderStatusFromPayment;
 using OrderService.Application.Commands.UpdateReservedStock;
+using OrderService.Application.Commands.UpdateOrder;
 using OrderService.Application.Models;
 using OrderService.Domain.Aggregates;
 using Shared.Contracts.Events;
@@ -30,7 +31,7 @@ public class OrderEventConsumer : KafkaEventConsumerBase
         ILogger<OrderEventConsumer> logger,
         IServiceScopeFactory scopeFactory,
         IEventProducer producer)
-        : base(config, env, logger, scopeFactory, producer, null, "courier.events", "inventory.events", "payment.events")
+        : base(config, env, logger, scopeFactory, producer, null, "courier.events", "inventory.events", "payment.events", "delivery.events")
     {
         _logger = logger;
         _scopeFactory = scopeFactory;
@@ -73,6 +74,30 @@ public class OrderEventConsumer : KafkaEventConsumerBase
                     break;
                 case "payment.refunded":
                     await HandlePaymentRefunded(json);
+                    break;
+                case "delivery.assigned":
+                    await HandleDeliveryAssigned(json);
+                    break;
+                case "delivery.accepted":
+                    await HandleDeliveryAccepted(json);
+                    break;
+                case "delivery.picked_up":
+                    await HandleDeliveryPickedUp(json);
+                    break;
+                case "delivery.in_transit":
+                    await HandleDeliveryInTransit(json);
+                    break;
+                case "delivery.delivered":
+                    await HandleDeliveryDelivered(json);
+                    break;
+                case "delivery.cancelled":
+                    await HandleDeliveryCancelled(json);
+                    break;
+                case "delivery.failed":
+                    await HandleDeliveryFailed(json);
+                    break;
+                case "delivery.returned":
+                    await HandleDeliveryReturned(json);
                     break;
                 default:
                     _logger.LogWarning("Unknown event type: {EventType}", eventType);
@@ -299,5 +324,91 @@ public class OrderEventConsumer : KafkaEventConsumerBase
         {
             _logger.LogError(ex, "Error processing CourierStatusChangedEvent");
         }
+    }
+
+    private async Task HandleDeliveryAssigned(string json)
+    {
+        var @event = JsonSerializer.Deserialize<DeliveryAssignedEvent>(json,
+            new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        if (@event == null) return;
+
+        await UpdateOrderFromDelivery(@event.OrderId, @event.CourierId, OrderStatus.Assigned);
+    }
+
+    private async Task HandleDeliveryAccepted(string json)
+    {
+        var @event = JsonSerializer.Deserialize<DeliveryAcceptedEvent>(json,
+            new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        if (@event == null) return;
+
+        await UpdateOrderFromDelivery(@event.OrderId, @event.CourierId, OrderStatus.Assigned);
+    }
+
+    private async Task HandleDeliveryPickedUp(string json)
+    {
+        var @event = JsonSerializer.Deserialize<DeliveryPickedUpEvent>(json,
+            new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        if (@event == null) return;
+
+        await UpdateOrderFromDelivery(@event.OrderId, @event.CourierId, OrderStatus.InDelivery);
+    }
+
+    private async Task HandleDeliveryInTransit(string json)
+    {
+        var @event = JsonSerializer.Deserialize<DeliveryInTransitEvent>(json,
+            new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        if (@event == null) return;
+
+        await UpdateOrderFromDelivery(@event.OrderId, @event.CourierId, OrderStatus.InDelivery);
+    }
+
+    private async Task HandleDeliveryDelivered(string json)
+    {
+        var @event = JsonSerializer.Deserialize<DeliveryDeliveredEvent>(json,
+            new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        if (@event == null) return;
+
+        await UpdateOrderFromDelivery(@event.OrderId, @event.CourierId, OrderStatus.Delivered);
+    }
+
+    private async Task HandleDeliveryCancelled(string json)
+    {
+        var @event = JsonSerializer.Deserialize<DeliveryCancelledEvent>(json,
+            new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        if (@event == null) return;
+
+        await UpdateOrderFromDelivery(@event.OrderId, @event.CourierId, OrderStatus.Cancelled);
+    }
+
+    private async Task HandleDeliveryFailed(string json)
+    {
+        var @event = JsonSerializer.Deserialize<DeliveryFailedEvent>(json,
+            new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        if (@event == null) return;
+
+        await UpdateOrderFromDelivery(@event.OrderId, @event.CourierId, OrderStatus.Failed);
+    }
+
+    private async Task HandleDeliveryReturned(string json)
+    {
+        var @event = JsonSerializer.Deserialize<DeliveryReturnedEvent>(json,
+            new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        if (@event == null) return;
+
+        await UpdateOrderFromDelivery(@event.OrderId, @event.CourierId, OrderStatus.Failed);
+    }
+
+    private async Task UpdateOrderFromDelivery(Guid orderId, Guid? courierId, OrderStatus status)
+    {
+        using var scope = _scopeFactory.CreateScope();
+        var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
+
+        var model = new UpdateOrderModel
+        {
+            CourierId = courierId,
+            Status = status
+        };
+
+        await mediator.Send(new UpdateOrderCommand(orderId, model));
     }
 }
