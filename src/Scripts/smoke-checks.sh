@@ -8,6 +8,15 @@ SOLUTION="${ROOT_DIR}/DeliveryPlatform.sln"
 mkdir -p "${ROOT_DIR}/logs"
 echo "Smoke checks started at $(date -u +"%Y-%m-%dT%H:%M:%SZ")" | tee "${OUTPUT}"
 
+echo "ROOT_DIR=$ROOT_DIR" | tee "${OUTPUT}"
+ls -la "$ROOT_DIR" | tee -a "${OUTPUT}"
+
+echo "Checking solution file:" | tee -a "${OUTPUT}"
+ls -la "$SOLUTION" | tee -a "${OUTPUT}"
+
+dotnet --info | tee -a "${OUTPUT}"
+
+
 echo "Building solution..." | tee -a "${OUTPUT}"
 dotnet restore "$SOLUTION" >> "${OUTPUT}" 2>&1
 dotnet build "$SOLUTION" --no-restore >> "${OUTPUT}" 2>&1
