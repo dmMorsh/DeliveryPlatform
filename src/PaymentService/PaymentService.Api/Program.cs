@@ -59,6 +59,7 @@ builder.Services.Configure<PaymentShardMapOptions>(builder.Configuration.GetSect
 builder.Services.AddSingleton<IPaymentShardMapDbContextFactory, PaymentShardMapDbContextFactory>();
 builder.Services.Configure<SberbankOptions>(builder.Configuration.GetSection("Payments:Sberbank"));
 builder.Services.Configure<YooMoneyOptions>(builder.Configuration.GetSection("Payments:YooMoney"));
+builder.Services.Configure<FakePaymentOptions>(builder.Configuration.GetSection("Payments:FakeProvider"));
 builder.Services.Configure<PaymentStatusCheckOptions>(builder.Configuration.GetSection("Payments:StatusCheck"));
 builder.Services.Configure<WebhookOptions>(builder.Configuration.GetSection("Payments:Webhooks"));
 builder.Services.AddHttpClient<SberbankPaymentProvider>()
@@ -67,8 +68,12 @@ builder.Services.AddHttpClient<SberbankPaymentProvider>()
 builder.Services.AddHttpClient<YooMoneyPaymentProvider>()
     .AddPolicyHandler((sp, _) =>
         HttpResiliencePolicies.CreatePolicyWrap(sp.GetRequiredService<ILogger<YooMoneyPaymentProvider>>()));
+builder.Services.AddHttpClient<FakePaymentProvider>()
+    .AddPolicyHandler((sp, _) =>
+        HttpResiliencePolicies.CreatePolicyWrap(sp.GetRequiredService<ILogger<FakePaymentProvider>>()));
 builder.Services.AddScoped<IPaymentProvider, SberbankPaymentProvider>();
 builder.Services.AddScoped<IPaymentProvider, YooMoneyPaymentProvider>();
+builder.Services.AddScoped<IPaymentProvider, FakePaymentProvider>();
 builder.Services.AddScoped<IPaymentProviderResolver, PaymentProviderResolver>();
 builder.Services.AddScoped<IPaymentStatusCheckScheduler, PaymentStatusCheckScheduler>();
 builder.Services.AddSingleton<IWebhookValidator, WebhookValidator>();
