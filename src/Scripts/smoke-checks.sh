@@ -3,16 +3,24 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 OUTPUT="${ROOT_DIR}/logs/smoke-checks.txt"
+SOLUTION="${ROOT_DIR}/MySolution.sln"
 
 mkdir -p "${ROOT_DIR}/logs"
 echo "Smoke checks started at $(date -u +"%Y-%m-%dT%H:%M:%SZ")" | tee "${OUTPUT}"
 
 echo "Building solution..." | tee -a "${OUTPUT}"
-dotnet build "${ROOT_DIR}" >> "${OUTPUT}"
+dotnet restore "$SOLUTION" >> "${OUTPUT}" 2>&1
+dotnet build "$SOLUTION" --no-restore >> "${OUTPUT}" 2>&1
 
 echo "Checking unit tests (if any)..." | tee -a "${OUTPUT}"
-if dotnet test "${ROOT_DIR}" --list-tests | grep -q .; then
-  dotnet test "${ROOT_DIR}" >> "${OUTPUT}"
+
+set +e
+dotnet test "$SOLUTION" --list-tests >> "${OUTPUT}" 2>&1
+HAS_TESTS=$?
+set -e
+
+if [ "$HAS_TESTS" -eq 0 ]; then
+  dotnet test "$SOLUTION" >> "${OUTPUT}" 2>&1
 else
   echo "No tests discovered; skipping." | tee -a "${OUTPUT}"
 fi
