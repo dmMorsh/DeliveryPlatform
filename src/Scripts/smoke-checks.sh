@@ -3,7 +3,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 OUTPUT="${ROOT_DIR}/logs/smoke-checks.txt"
-SOLUTION="${ROOT_DIR}/MySolution.sln"
+SOLUTION="${ROOT_DIR}/DeliveryPlatform.sln"
 
 mkdir -p "${ROOT_DIR}/logs"
 echo "Smoke checks started at $(date -u +"%Y-%m-%dT%H:%M:%SZ")" | tee "${OUTPUT}"
