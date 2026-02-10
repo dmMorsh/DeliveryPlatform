@@ -11,7 +11,7 @@
     <p style="color: #b00">@TempData["PaymentError"]</p>
 }
 
-@if (string.IsNullOrWhiteSpace(Model.PaymentStatus))
+@if (Model.Status.ToLower() == "reserved" && string.IsNullOrWhiteSpace(Model.PaymentStatus))
 {
     <p>Payment is being prepared.</p>
 }
@@ -34,9 +34,9 @@ else if (string.Equals(Model.PaymentStatus, "Pending", StringComparison.OrdinalI
         <p>Payment is pending. Please wait.</p>
     }
 }
-else
+else if (string.IsNullOrWhiteSpace(Model.PaymentStatus))
 {
-    <p>Payment status: @Model.PaymentStatus</p>
+    <p>Payment status: noting to pay 🤷</p>
 }
 
 <h3>Route</h3>

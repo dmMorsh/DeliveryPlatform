@@ -6,9 +6,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using PaymentService.Application.Commands.CreatePayment;
-using PaymentService.Application.Interfaces;
+using PaymentService.Application.Commands.ProcessOrderCanceled;
 using PaymentService.Application.Models;
-using PaymentService.Domain.Aggregates;
 using Shared.Contracts.Events;
 using Shared.Services;
 
@@ -92,54 +91,8 @@ public class PaymentEventConsumer : KafkaEventConsumerBase
             if (@event == null) return;
 
             using var scope = _scopeFactory.CreateScope();
-            var factory = scope.ServiceProvider.GetRequiredService<IUnitOfWorkFactory>();
-            var providers = scope.ServiceProvider.GetRequiredService<IPaymentProviderResolver>();
-            var mapper = scope.ServiceProvider.GetRequiredService<IPaymentIntegrationEventMapper>();
-
-            await using var uow = factory.Create(@event.OrderId);
-            var payment = await uow.Payments.GetByOrderId(@event.OrderId);
-            if (payment is null)
-                return;
-
-            if (payment.Status is PaymentStatus.Refunded or PaymentStatus.Cancelled or PaymentStatus.Failed)
-                return;
-
-            var outbox = new List<OutboxMessage>();
-            var prev = payment.Status;
-
-            if (payment.Status == PaymentStatus.Captured)
-            {
-                if (string.IsNullOrWhiteSpace(payment.ExternalPaymentId))
-                    return;
-
-                var provider = providers.Get(payment.Provider);
-                await provider.RefundPayment(payment.ExternalPaymentId, payment.AmountCents, payment.Currency, default);
-                payment.MarkRefunded();
-                if (payment.Status != prev)
-                    outbox.Add(OutboxMessage.From(mapper.MapRefunded(payment)));
-            }
-            else if (payment.Status is PaymentStatus.Authorized or PaymentStatus.Pending)
-            {
-                if (!string.IsNullOrWhiteSpace(payment.ExternalPaymentId))
-                {
-                    var provider = providers.Get(payment.Provider);
-                    await provider.CancelPayment(payment.ExternalPaymentId, default);
-                }
-
-                payment.MarkCancelled();
-                if (payment.Status != prev)
-                    outbox.Add(OutboxMessage.From(mapper.MapCancelled(payment)));
-            }
-            else if (payment.Status == PaymentStatus.Created)
-            {
-                payment.MarkCancelled();
-                if (payment.Status != prev)
-                    outbox.Add(OutboxMessage.From(mapper.MapCancelled(payment)));
-            }
-
-            if (!string.IsNullOrWhiteSpace(payment.ExternalPaymentId))
-                await uow.Payments.UpsertExternalPaymentIdMap(payment.OrderId, payment.Id, payment.ExternalPaymentId, payment.Provider);
-            await uow.SaveChangesAsync(outbox);
+            var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
+            await mediator.Send(new ProcessOrderCanceledCommand(@event.OrderId));
         }
         catch (Exception ex)
         {

@@ -6,8 +6,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using OrderService.Application.Commands.MarkStockReservationFailed;
+using OrderService.Application.Commands.UpdateOrderStatusFromPayment;
 using OrderService.Application.Commands.UpdateReservedStock;
-using OrderService.Application.Interfaces;
 using OrderService.Application.Models;
 using OrderService.Domain.Aggregates;
 using Shared.Contracts.Events;
@@ -171,38 +171,8 @@ public class OrderEventConsumer : KafkaEventConsumerBase
     private async Task UpdateOrderStatusFromPayment(Guid orderId, OrderStatus newStatus, string reason)
     {
         using var scope = _scopeFactory.CreateScope();
-        var factory = scope.ServiceProvider.GetRequiredService<IUnitOfWorkFactory>();
-        var mapper = scope.ServiceProvider.GetRequiredService<IOrderIntegrationEventMapper>();
-
-        await using var uow = factory.Create(orderId);
-        var order = await uow.Orders.GetOrderByIdAsync(orderId, default);
-        if (order == null)
-            return;
-
-        if (order.Status is OrderStatus.Delivered or OrderStatus.InDelivery or OrderStatus.Assigned or OrderStatus.Assigning)
-        {
-            _logger.LogInformation(
-                "Skipping payment status update for order {OrderId}. Current status {Status}, target {TargetStatus}, reason {Reason}",
-                orderId,
-                order.Status,
-                newStatus,
-                reason);
-            return;
-        }
-
-        if (order.Status == newStatus)
-            return;
-
-        order.ChangeStatus(newStatus);
-
-        var outboxMessages = order.DomainEvents
-            .Select(mapper.MapFromDomainEvent)
-            .Where(ie => ie != null)
-            .Select(OutboxMessage.From!)
-            .ToList();
-
-        await uow.SaveChangesAsync(outboxMessages);
-        order.ClearDomainEvents();
+        var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
+        await mediator.Send(new UpdateOrderStatusFromPaymentCommand(orderId, newStatus, reason));
     }
     private async Task HandleStockReserveFailed(string json)
     {
