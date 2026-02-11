@@ -114,6 +114,18 @@ services:
       - "9464:9464" # Prometheus scrape
     depends_on:
       - kafka
+      - tempo
+
+  tempo:
+    image: grafana/tempo:2.5.0
+    container_name: tempo
+    command: ["-config.file=/etc/tempo.yaml"]
+    volumes:
+      - ./src/Scripts/tempo.yaml:/etc/tempo.yaml:ro
+    ports:
+      - "3200:3200" # Tempo HTTP
+      - "4319:4317" # OTLP gRPC (host)
+    restart: unless-stopped
 
   dlq-service:
     build:

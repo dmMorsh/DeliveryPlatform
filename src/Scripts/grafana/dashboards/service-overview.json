@@ -6,6 +6,14 @@
   "schemaVersion": 39,
   "version": 1,
   "refresh": "30s",
+  "links": [
+    {
+      "type": "link",
+      "title": "View traces (Tempo)",
+      "url": "/explore?orgId=1&left=%7B%22datasource%22:%22Tempo%22,%22queries%22:%5B%7B%22query%22:%22%7B%20resource.service.name%20=%20%5C%22$service%5C%22%20%7D%22,%22refId%22:%22A%22%7D%5D%7D",
+      "targetBlank": true
+    }
+  ],
   "templating": {
     "list": [
       {
@@ -27,6 +35,13 @@
     {
       "type": "stat",
       "title": "Requests/sec",
+      "links": [
+        {
+          "title": "View traces (Tempo)",
+          "url": "/explore?orgId=1&left=%7B%22datasource%22:%22Tempo%22,%22queries%22:%5B%7B%22query%22:%22%7B%20resource.service.name%20=%20%5C%22$service%5C%22%20%7D%22,%22refId%22:%22A%22%7D%5D%7D&from=${__from}&to=${__to}",
+          "targetBlank": true
+        }
+      ],
       "gridPos": {"x": 0, "y": 0, "w": 6, "h": 4},
       "targets": [
         {
@@ -38,6 +53,13 @@
     {
       "type": "stat",
       "title": "Error % (5xx)",
+      "links": [
+        {
+          "title": "View traces (Tempo)",
+          "url": "/explore?orgId=1&left=%7B%22datasource%22:%22Tempo%22,%22queries%22:%5B%7B%22query%22:%22%7B%20resource.service.name%20=%20%5C%22$service%5C%22%20%7D%22,%22refId%22:%22A%22%7D%5D%7D&from=${__from}&to=${__to}",
+          "targetBlank": true
+        }
+      ],
       "gridPos": {"x": 6, "y": 0, "w": 6, "h": 4},
       "targets": [
         {
@@ -60,6 +82,13 @@
     {
       "type": "stat",
       "title": "HTTP p95 (s)",
+      "links": [
+        {
+          "title": "View traces (Tempo)",
+          "url": "/explore?orgId=1&left=%7B%22datasource%22:%22Tempo%22,%22queries%22:%5B%7B%22query%22:%22%7B%20resource.service.name%20=%20%5C%22$service%5C%22%20%7D%22,%22refId%22:%22A%22%7D%5D%7D&from=${__from}&to=${__to}",
+          "targetBlank": true
+        }
+      ],
       "gridPos": {"x": 18, "y": 0, "w": 6, "h": 4},
       "targets": [
         {

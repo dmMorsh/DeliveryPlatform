@@ -21,6 +21,7 @@ public static class TelemetryExtensions
                     .AddAspNetCoreInstrumentation()
                     .AddHttpClientInstrumentation()
                     .AddGrpcClientInstrumentation()
+                    .AddSqlClientInstrumentation()
                     .AddOtlpExporter();
             })
             .WithMetrics(metrics =>
@@ -31,6 +32,7 @@ public static class TelemetryExtensions
                     .AddHttpClientInstrumentation()
                     .AddRuntimeInstrumentation()
                     .AddProcessInstrumentation()
+                    .AddSqlClientInstrumentation()
                     .AddOtlpExporter();
             });
     }

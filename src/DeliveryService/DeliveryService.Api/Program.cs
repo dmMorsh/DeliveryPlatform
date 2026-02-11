@@ -17,6 +17,7 @@ using Serilog;
 using Serilog.Events;
 using Shared.Services;
 using StackExchange.Redis;
+using OpenTelemetry.Metrics;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -37,6 +38,7 @@ builder.Services.AddControllers();
 builder.Services.AddOpenApi();
 builder.Services.AddMediatR(typeof(ApplicationMarker).Assembly);
 builder.AddServiceTelemetry("delivery-service");
+builder.Services.AddOpenTelemetry().WithMetrics(m => m.AddMeter("DeliveryService.Assignment"));
 
 var useInMemory = Environment.GetEnvironmentVariable("USE_INMEMORY_DB") == "true"
                   || string.Equals(builder.Configuration["UseInMemoryDb"], "true", StringComparison.OrdinalIgnoreCase);

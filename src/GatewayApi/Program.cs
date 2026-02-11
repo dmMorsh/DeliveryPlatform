@@ -1,8 +1,10 @@
+using System.Diagnostics;
 using System.Text;
 using System.Threading.RateLimiting;
 using GatewayApi.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
+using OpenTelemetry;
 using Serilog;
 using Shared.Services;
 
@@ -136,6 +138,33 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+app.Use(async (context, next) =>
+{
+    var correlationId = context.Request.Headers.TryGetValue("X-Correlation-Id", out var headerValue)
+        ? headerValue.ToString()
+        : null;
+
+    if (string.IsNullOrWhiteSpace(correlationId))
+    {
+        correlationId = context.TraceIdentifier;
+        context.Request.Headers["X-Correlation-Id"] = correlationId;
+    }
+
+    if (Activity.Current != null)
+    {
+        Activity.Current.SetTag("correlation.id", correlationId);
+    }
+
+    Baggage.SetBaggage("correlation.id", correlationId);
+
+    context.Response.OnStarting(() =>
+    {
+        context.Response.Headers["X-Correlation-Id"] = correlationId;
+        return Task.CompletedTask;
+    });
+
+    await next();
+});
 app.UseCors();
 app.UseAuthentication();
 app.UseAuthorization();
