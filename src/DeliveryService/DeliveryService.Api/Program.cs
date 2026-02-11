@@ -68,6 +68,7 @@ if (!useInMemory)
 builder.Services.AddScoped<IDeliveryRepository, DeliveryRepository>();
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddSingleton<IDeliveryEventMapper, DeliveryEventMapper>();
+builder.Services.AddSingleton<IAssignmentQueue, RedisAssignmentQueue>();
 
 builder.Services.AddHttpClient<ICourierDirectory, CourierDirectoryHttpClient>();
 

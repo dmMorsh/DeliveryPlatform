@@ -21,7 +21,7 @@ public class CourierDirectoryHttpClient : ICourierDirectory
     {
         _client = client;
         _logger = logger;
-        _baseUrl = ConfigurationGuard.GetRequired(config, env, "Services:CourierService:Url", "http://localhost:7006");
+        _baseUrl = ConfigurationGuard.GetRequired(config, env, "Services:CourierService:Url", "http://localhost:5206");
     }
 
     public async Task<IReadOnlyList<CourierCandidate>> GetActiveCouriersAsync(CancellationToken ct = default)

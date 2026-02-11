@@ -35,11 +35,14 @@ public class DeliveryDbContext : DbContext
             {
                 b.ToTable("DeliveryAssignmentAttempts", "delivery");
                 b.WithOwner().HasForeignKey("DeliveryId");
-                b.HasKey("Id");
+                b.HasKey(x => x.Id);
+                b.Property(x => x.Id).ValueGeneratedNever();
                 b.Property(x => x.CourierId).IsRequired();
                 b.Property(x => x.Status).IsRequired();
                 b.Property(x => x.OfferedAt).IsRequired();
             });
+            entity.Navigation(e => e.AssignmentAttempts)
+                .UsePropertyAccessMode(PropertyAccessMode.Field);
         });
 
         modelBuilder.Entity<Shared.Contracts.Events.ProcessedEvent>(entity =>

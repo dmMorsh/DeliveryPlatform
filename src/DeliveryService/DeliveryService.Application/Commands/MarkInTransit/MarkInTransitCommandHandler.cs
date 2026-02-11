@@ -32,7 +32,6 @@ public class MarkInTransitCommandHandler : IRequestHandler<MarkInTransitCommand,
             return ApiResponse.ErrorResponse("Courier mismatch");
 
         delivery.MarkInTransit();
-        await _repository.UpdateAsync(delivery, ct);
 
         var outbox = delivery.DomainEvents
             .Select(_eventMapper.MapFromDomainEvent)

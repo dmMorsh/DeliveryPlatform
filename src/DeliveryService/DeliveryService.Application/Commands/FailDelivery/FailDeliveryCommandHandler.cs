@@ -29,7 +29,6 @@ public class FailDeliveryCommandHandler : IRequestHandler<FailDeliveryCommand, A
             return ApiResponse.ErrorResponse("Delivery not found");
 
         delivery.Fail(request.Reason);
-        await _repository.UpdateAsync(delivery, ct);
 
         var outbox = delivery.DomainEvents
             .Select(_eventMapper.MapFromDomainEvent)

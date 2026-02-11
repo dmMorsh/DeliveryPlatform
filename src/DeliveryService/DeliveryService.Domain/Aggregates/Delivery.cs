@@ -1,4 +1,5 @@
 using System.Security.Cryptography;
+using DeliveryService.Domain.Entities;
 using DeliveryService.Domain.Events;
 using DeliveryService.Domain.SeedWork;
 
@@ -23,49 +24,6 @@ public enum DeliveryAssignmentStatus
     Accepted = 1,
     Declined = 2,
     Expired = 3
-}
-
-public class DeliveryAssignmentAttempt
-{
-    public Guid Id { get; private set; } = Guid.NewGuid();
-    public Guid CourierId { get; private set; }
-    public DeliveryAssignmentStatus Status { get; private set; }
-    public DateTime OfferedAt { get; private set; }
-    public DateTime? RespondedAt { get; private set; }
-    public DateTime? ExpiresAt { get; private set; }
-    public string? Reason { get; private set; }
-
-    private DeliveryAssignmentAttempt() { }
-
-    public static DeliveryAssignmentAttempt Offer(Guid courierId, DateTime expiresAt)
-    {
-        return new DeliveryAssignmentAttempt
-        {
-            CourierId = courierId,
-            Status = DeliveryAssignmentStatus.Offered,
-            OfferedAt = DateTime.UtcNow,
-            ExpiresAt = expiresAt
-        };
-    }
-
-    public void Accept()
-    {
-        Status = DeliveryAssignmentStatus.Accepted;
-        RespondedAt = DateTime.UtcNow;
-    }
-
-    public void Decline(string? reason)
-    {
-        Status = DeliveryAssignmentStatus.Declined;
-        RespondedAt = DateTime.UtcNow;
-        Reason = reason;
-    }
-
-    public void Expire()
-    {
-        Status = DeliveryAssignmentStatus.Expired;
-        RespondedAt = DateTime.UtcNow;
-    }
 }
 
 public class Delivery : AggregateRoot
@@ -107,7 +65,7 @@ public class Delivery : AggregateRoot
 
     private Delivery() { }
 
-    public static Delivery CreateFromOrder(
+    public static Delivery Create(
         Guid orderId,
         Guid clientId,
         string fromAddress,

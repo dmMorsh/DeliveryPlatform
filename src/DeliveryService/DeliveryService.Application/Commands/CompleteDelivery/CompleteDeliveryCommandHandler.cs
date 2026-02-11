@@ -32,7 +32,6 @@ public class CompleteDeliveryCommandHandler : IRequestHandler<CompleteDeliveryCo
             return ApiResponse.ErrorResponse("Courier mismatch");
 
         delivery.Complete(request.Signature, request.PhotoUrl, request.Notes, request.VerificationCode);
-        await _repository.UpdateAsync(delivery, ct);
 
         var outbox = delivery.DomainEvents
             .Select(_eventMapper.MapFromDomainEvent)

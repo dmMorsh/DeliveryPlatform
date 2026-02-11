@@ -51,10 +51,4 @@ public class DeliveryRepository : IDeliveryRepository
     {
         await _db.Deliveries.AddAsync(delivery, ct);
     }
-
-    public Task UpdateAsync(Delivery delivery, CancellationToken ct = default)
-    {
-        _db.Deliveries.Update(delivery);
-        return Task.CompletedTask;
-    }
 }

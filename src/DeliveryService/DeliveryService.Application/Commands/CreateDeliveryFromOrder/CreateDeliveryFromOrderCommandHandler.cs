@@ -1,7 +1,6 @@
 using DeliveryService.Application.Interfaces;
 using DeliveryService.Application.Mapping;
 using DeliveryService.Application.Models;
-using DeliveryService.Domain.Aggregates;
 using MediatR;
 using Microsoft.Extensions.Logging;
 using Shared.Utilities;
@@ -33,15 +32,7 @@ public class CreateDeliveryFromOrderCommandHandler : IRequestHandler<CreateDeliv
         if (existing != null)
             return ApiResponse.SuccessResponse();
 
-        var delivery = Delivery.CreateFromOrder(
-            request.OrderId,
-            request.ClientId,
-            request.FromAddress,
-            request.ToAddress,
-            request.FromLatitude,
-            request.FromLongitude,
-            request.ToLatitude,
-            request.ToLongitude);
+        var delivery = DeliveryFactory.CreateFromOrder(request);
 
         await _repository.AddAsync(delivery, ct);
 

@@ -67,6 +67,31 @@ builder.Services.AddHttpClient<InventoryApiClient>(client =>
         HttpResiliencePolicies.CreatePolicyWrap(sp.GetRequiredService<ILogger<InventoryApiClient>>()))
     .AddHttpMessageHandler<AuthTokenHandler>();
 
+var courierServiceUrl = builder.Configuration.GetValue<string>("Services:CourierServiceUrl") ?? "http://localhost:5206";
+var deliveryServiceUrl = builder.Configuration.GetValue<string>("Services:DeliveryServiceUrl") ?? "http://localhost:5207";
+
+builder.Services.AddHttpClient<CourierApiClient>(client =>
+    {
+        client.BaseAddress = new Uri(courierServiceUrl);
+    })
+    .AddPolicyHandler((sp, _) =>
+        HttpResiliencePolicies.CreatePolicyWrap(sp.GetRequiredService<ILogger<CourierApiClient>>()))
+    .AddHttpMessageHandler<AuthTokenHandler>();
+
+builder.Services.AddHttpClient<DeliveryApiClient>(client =>
+    {
+        client.BaseAddress = new Uri(deliveryServiceUrl);
+    })
+    .AddPolicyHandler((sp, _) =>
+        HttpResiliencePolicies.CreatePolicyWrap(sp.GetRequiredService<ILogger<DeliveryApiClient>>()))
+    .AddHttpMessageHandler<AuthTokenHandler>();
+
+builder.Services.AddScoped<ILocationTrackingClient>(sp =>
+    new LocationTrackingClientImpl(
+        sp.GetRequiredService<IConfiguration>(),
+        sp.GetRequiredService<IHostEnvironment>(),
+        sp.GetRequiredService<ILogger<LocationTrackingClientImpl>>()));
+
 var app = builder.Build();
 
 app.UseStaticFiles();

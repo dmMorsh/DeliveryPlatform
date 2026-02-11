@@ -32,7 +32,6 @@ public class MarkPickedUpCommandHandler : IRequestHandler<MarkPickedUpCommand, A
             return ApiResponse.ErrorResponse("Courier mismatch");
 
         delivery.MarkPickedUp();
-        await _repository.UpdateAsync(delivery, ct);
 
         var outbox = delivery.DomainEvents
             .Select(_eventMapper.MapFromDomainEvent)

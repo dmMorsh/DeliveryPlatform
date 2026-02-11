@@ -122,6 +122,38 @@
           "refId": "A"
         }
       ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Delivery Assignment (per 5m)",
+      "gridPos": {"x": 0, "y": 28, "w": 24, "h": 8},
+      "targets": [
+        {
+          "expr": "sum(rate(delivery_assignment_enqueue_total[5m]))",
+          "refId": "A",
+          "legendFormat": "enqueue"
+        },
+        {
+          "expr": "sum(rate(delivery_assignment_dequeue_total[5m]))",
+          "refId": "B",
+          "legendFormat": "dequeue"
+        },
+        {
+          "expr": "sum(rate(delivery_assignment_offer_success_total[5m]))",
+          "refId": "C",
+          "legendFormat": "offer_success"
+        },
+        {
+          "expr": "sum(rate(delivery_assignment_offer_retry_total[5m]))",
+          "refId": "D",
+          "legendFormat": "offer_retry"
+        },
+        {
+          "expr": "sum(rate(delivery_assignment_reconcile_total[5m]))",
+          "refId": "E",
+          "legendFormat": "reconcile"
+        }
+      ]
     }
   ]
 }

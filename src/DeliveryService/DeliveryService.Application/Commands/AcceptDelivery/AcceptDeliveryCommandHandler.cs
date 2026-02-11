@@ -33,7 +33,6 @@ public class AcceptDeliveryCommandHandler : IRequestHandler<AcceptDeliveryComman
             return ApiResponse.ErrorResponse("Delivery not found");
 
         delivery.AcceptOffer(request.CourierId);
-        await _repository.UpdateAsync(delivery, ct);
 
         var outbox = delivery.DomainEvents
             .Select(_eventMapper.MapFromDomainEvent)

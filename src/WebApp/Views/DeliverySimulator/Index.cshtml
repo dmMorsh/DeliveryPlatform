@@ -1,0 +1,174 @@
+@model WebApp.Models.DeliverySimulatorViewModel
+@{
+    ViewData["Title"] = "Delivery Simulator";
+}
+
+<div class="row">
+    <div class="col-12">
+        <h2>Delivery Simulator</h2>
+        @if (TempData["Result"] != null)
+        {
+            <div class="alert alert-info">@TempData["Result"]</div>
+        }
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Register Courier</h5>
+                <form asp-action="RegisterCourier" method="post">
+                    <div class="mb-2">
+                        <label class="form-label">Full Name</label>
+                        <input class="form-control" asp-for="Register.FullName" />
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label">Phone</label>
+                        <input class="form-control" asp-for="Register.Phone" />
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label">Email</label>
+                        <input class="form-control" asp-for="Register.Email" />
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label">Document Number</label>
+                        <input class="form-control" asp-for="Register.DocumentNumber" />
+                    </div>
+                    <button class="btn btn-primary">Register</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Update Courier Status</h5>
+                <form asp-action="UpdateCourier" method="post">
+                    <div class="mb-2">
+                        <label class="form-label">Courier Id</label>
+                        <input class="form-control" asp-for="CourierUpdate.CourierId" />
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label">Status (0=Offline,1=Online,2=OnDelivery,3=Resting)</label>
+                        <input class="form-control" asp-for="CourierUpdate.Status" />
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label">Latitude</label>
+                        <input class="form-control" asp-for="CourierUpdate.CurrentLatitude" />
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label">Longitude</label>
+                        <input class="form-control" asp-for="CourierUpdate.CurrentLongitude" />
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label">Is Active</label>
+                        <select class="form-select" asp-for="CourierUpdate.IsActive">
+                            <option value="">(no change)</option>
+                            <option value="true">true</option>
+                            <option value="false">false</option>
+                        </select>
+                    </div>
+                    <button class="btn btn-primary">Update</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Update Location (gRPC)</h5>
+                <form asp-action="UpdateLocation" method="post">
+                    <div class="mb-2">
+                        <label class="form-label">Courier Id</label>
+                        <input class="form-control" asp-for="LocationUpdate.CourierId" />
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label">Latitude</label>
+                        <input class="form-control" asp-for="LocationUpdate.Latitude" />
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label">Longitude</label>
+                        <input class="form-control" asp-for="LocationUpdate.Longitude" />
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label">Accuracy</label>
+                        <input class="form-control" asp-for="LocationUpdate.Accuracy" />
+                    </div>
+                    <button class="btn btn-primary">Send Location</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Lookup Delivery</h5>
+                <form asp-action="LookupDelivery" method="post">
+                    <div class="mb-2">
+                        <label class="form-label">Delivery Id</label>
+                        <input class="form-control" asp-for="DeliveryLookup.DeliveryId" />
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label">Order Id</label>
+                        <input class="form-control" asp-for="DeliveryLookup.OrderId" />
+                    </div>
+                    <button class="btn btn-secondary">Lookup</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Delivery Actions</h5>
+                <form method="post">
+                    <div class="row">
+                        <div class="col-md-4 mb-2">
+                            <label class="form-label">Delivery Id</label>
+                            <input class="form-control" asp-for="DeliveryAction.DeliveryId" />
+                        </div>
+                        <div class="col-md-4 mb-2">
+                            <label class="form-label">Courier Id</label>
+                            <input class="form-control" asp-for="DeliveryAction.CourierId" />
+                        </div>
+                        <div class="col-md-4 mb-2">
+                            <label class="form-label">Reason</label>
+                            <input class="form-control" asp-for="DeliveryAction.Reason" />
+                        </div>
+                        <div class="col-md-4 mb-2">
+                            <label class="form-label">Verification Code</label>
+                            <input class="form-control" asp-for="DeliveryAction.VerificationCode" />
+                        </div>
+                        <div class="col-md-4 mb-2">
+                            <label class="form-label">Signature</label>
+                            <input class="form-control" asp-for="DeliveryAction.Signature" />
+                        </div>
+                        <div class="col-md-4 mb-2">
+                            <label class="form-label">Photo Url</label>
+                            <input class="form-control" asp-for="DeliveryAction.PhotoUrl" />
+                        </div>
+                        <div class="col-md-12 mb-2">
+                            <label class="form-label">Notes</label>
+                            <input class="form-control" asp-for="DeliveryAction.Notes" />
+                        </div>
+                    </div>
+                    <div class="d-flex flex-wrap gap-2">
+                        <button class="btn btn-success" formaction="@Url.Action("Accept")">Accept</button>
+                        <button class="btn btn-outline-secondary" formaction="@Url.Action("Decline")">Decline</button>
+                        <button class="btn btn-primary" formaction="@Url.Action("PickUp")">Picked Up</button>
+                        <button class="btn btn-primary" formaction="@Url.Action("Start")">In Transit</button>
+                        <button class="btn btn-success" formaction="@Url.Action("Complete")">Complete</button>
+                        <button class="btn btn-warning" formaction="@Url.Action("Fail")">Fail</button>
+                        <button class="btn btn-warning" formaction="@Url.Action("Return")">Return</button>
+                        <button class="btn btn-danger" formaction="@Url.Action("Cancel")">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>

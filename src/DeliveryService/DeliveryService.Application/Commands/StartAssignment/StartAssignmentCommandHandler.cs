@@ -1,3 +1,4 @@
+using System.Diagnostics.Metrics;
 using DeliveryService.Application.Interfaces;
 using DeliveryService.Application.Mapping;
 using DeliveryService.Application.Models;
@@ -10,10 +11,14 @@ namespace DeliveryService.Application.Commands.StartAssignment;
 
 public class StartAssignmentCommandHandler : IRequestHandler<StartAssignmentCommand, ApiResponse>
 {
+    private static readonly Meter Meter = new("DeliveryService.Assignment", "1.0.0");
+    private static readonly Counter<long> EnqueueTotal = Meter.CreateCounter<long>("delivery_assignment_enqueue_total");
+
     private readonly IDeliveryRepository _repository;
     private readonly IAssignmentService _assignmentService;
     private readonly IUnitOfWork _uow;
     private readonly IDeliveryEventMapper _eventMapper;
+    private readonly IAssignmentQueue _queue;
     private readonly ILogger<StartAssignmentCommandHandler> _logger;
 
     public StartAssignmentCommandHandler(
@@ -21,12 +26,14 @@ public class StartAssignmentCommandHandler : IRequestHandler<StartAssignmentComm
         IAssignmentService assignmentService,
         IUnitOfWork uow,
         IDeliveryEventMapper eventMapper,
+        IAssignmentQueue queue,
         ILogger<StartAssignmentCommandHandler> logger)
     {
         _repository = repository;
         _assignmentService = assignmentService;
         _uow = uow;
         _eventMapper = eventMapper;
+        _queue = queue;
         _logger = logger;
     }
 
@@ -45,8 +52,10 @@ public class StartAssignmentCommandHandler : IRequestHandler<StartAssignmentComm
         if (!offered)
             _logger.LogWarning("No available couriers for delivery {DeliveryId}", delivery.Id);
 
-        await _repository.UpdateAsync(delivery, ct);
-
+        var enqueueAt = delivery.CurrentOfferExpiresAt ?? DateTime.UtcNow;
+        await _queue.EnqueueAsync(delivery.Id, enqueueAt, false, ct);
+        EnqueueTotal.Add(1);
+        
         var outbox = delivery.DomainEvents
             .Select(_eventMapper.MapFromDomainEvent)
             .Where(e => e != null)

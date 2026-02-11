@@ -33,7 +33,6 @@ public class CancelDeliveryByOrderCommandHandler : IRequestHandler<CancelDeliver
             return ApiResponse.SuccessResponse();
 
         delivery.Cancel(request.Reason);
-        await _repository.UpdateAsync(delivery, ct);
 
         var outbox = delivery.DomainEvents
             .Select(_eventMapper.MapFromDomainEvent)

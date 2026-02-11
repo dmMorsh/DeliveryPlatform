@@ -39,9 +39,7 @@ public class DeclineDeliveryCommandHandler : IRequestHandler<DeclineDeliveryComm
         var offered = await _assignmentService.OfferNextCourierAsync(delivery, ct);
         if (!offered)
             _logger.LogWarning("No available couriers after decline for delivery {DeliveryId}", delivery.Id);
-
-        await _repository.UpdateAsync(delivery, ct);
-
+        
         var outbox = delivery.DomainEvents
             .Select(_eventMapper.MapFromDomainEvent)
             .Where(e => e != null)
