@@ -58,10 +58,4 @@ public class CouriersController : ControllerBase
             return BadRequest(result);
         return Ok(result);
     }
-
-    [HttpGet("health")]
-    public IActionResult Health()
-    {
-        return Ok(new { status = "healthy", service = "CourierService" });
-    }
 }

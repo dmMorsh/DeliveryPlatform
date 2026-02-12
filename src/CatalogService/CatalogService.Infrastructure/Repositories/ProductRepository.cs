@@ -24,16 +24,6 @@ public class ProductRepository : IProductRepository
         await _context.Products.AddAsync(product, ct);
     }
 
-    public Task UpdateAsync(Product product, CancellationToken ct = default)
-    {
-        var existing = _context.Products.FirstOrDefault(x => x.Id == product.Id);
-        if (existing != null)
-        {
-            _context.Entry(existing).CurrentValues.SetValues(product);
-        }
-        return Task.CompletedTask;
-    }
-
     public Task<List<Product>> SearchAsync(string? requestSearchTerm, CancellationToken ct = default)
     {
         throw new NotImplementedException();

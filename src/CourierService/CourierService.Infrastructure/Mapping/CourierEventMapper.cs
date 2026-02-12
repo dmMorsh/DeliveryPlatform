@@ -1,15 +1,9 @@
+using CourierService.Application.Interfaces;
 using CourierService.Domain.Events;
 using Shared.Contracts.Events;
 using DomainEvent = CourierService.Domain.SeedWork.DomainEvent;
 
-namespace CourierService.Application.Mapping;
-
-public interface ICourierEventMapper
-{
-    CourierStatusChangedEvent MapCourierStatusChangedEvent(Guid courierId, int oldStatus, int newStatus);
-    CourierLocationUpdatedEvent MapLocationUpdatedEvent(Guid courierId, double latitude, double longitude);
-    IntegrationEvent? MapFromDomainEvent(DomainEvent domainEvent);
-}
+namespace CourierService.Infrastructure.Mapping;
 
 public class CourierEventMapper : ICourierEventMapper
 {
@@ -44,6 +38,7 @@ public class CourierEventMapper : ICourierEventMapper
                 CourierId = e.CourierId, 
                 PreviousStatus = (int)e.PreviousStatus,
                 NewStatus = (int)e.NewStatus,
+                ChangedAt = DateTime.UtcNow,
                 Timestamp = e.OccurredAt 
             },
             CourierLocationUpdatedDomainEvent e => new CourierLocationUpdatedEvent 
@@ -51,6 +46,7 @@ public class CourierEventMapper : ICourierEventMapper
                 CourierId = e.CourierId, 
                 Latitude = e.Latitude, 
                 Longitude = e.Longitude, 
+                UpdatedAt = DateTime.UtcNow,
                 Timestamp = e.OccurredAt 
             },
             

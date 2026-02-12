@@ -23,7 +23,6 @@ namespace OrderService.Application.Services;
 public class OrderEventConsumer : KafkaEventConsumerBase
 {
     private new readonly ILogger<OrderEventConsumer> _logger;
-    private readonly IServiceScopeFactory _scopeFactory;
 
     public OrderEventConsumer(
         IConfiguration config,
@@ -34,7 +33,6 @@ public class OrderEventConsumer : KafkaEventConsumerBase
         : base(config, env, logger, scopeFactory, producer, null, "courier.events", "inventory.events", "payment.events", "delivery.events")
     {
         _logger = logger;
-        _scopeFactory = scopeFactory;
     }
 
     /// <summary>

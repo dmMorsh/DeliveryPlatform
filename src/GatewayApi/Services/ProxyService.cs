@@ -12,6 +12,7 @@ public interface IProxyService
     Task<(T? Data, int StatusCode, string? Error)> ProxyPostAsync<T>(string serviceName, string path, HttpContext httpContext, object? body, CancellationToken ct = default);
     Task<(T? Data, int StatusCode, string? Error)> ProxyGetAsync<T>(string serviceName, string path, HttpContext httpContext, CancellationToken ct = default);
     Task<(T? Data, int StatusCode, string? Error)> ProxyPutAsync<T>(string serviceName, string path, HttpContext httpContext, object body, CancellationToken ct = default);
+    Task<(T? Data, int StatusCode, string? Error)> ProxyDeleteAsync<T>(string serviceName, string path, HttpContext httpContext, CancellationToken ct = default);
 }
 
 public class ProxyService : IProxyService
@@ -37,7 +38,7 @@ public class ProxyService : IProxyService
             ["location-tracking"] = ConfigurationGuard.GetRequired(config, env, "Services:LocationTrackingUrl", "http://localhost:5127")
         };
     }
-
+    // C reate
     public async Task<(T? Data, int StatusCode, string? Error)> ProxyPostAsync<T>(string serviceName, string path, HttpContext httpContext, object? body, CancellationToken ct = default)
     {
         try
@@ -76,8 +77,7 @@ public class ProxyService : IProxyService
             return (default, 500, ex.Message);
         }
     }
-
-
+    // R ead
     public async Task<(T? Data, int StatusCode, string? Error)> ProxyGetAsync<T>(string serviceName, string path, HttpContext httpContext, CancellationToken ct = default)
     {
         try
@@ -117,7 +117,7 @@ public class ProxyService : IProxyService
             return (default, 500, ex.Message);
         }
     }
-
+    // U pdate
     public async Task<(T? Data, int StatusCode, string? Error)> ProxyPutAsync<T>(string serviceName, string path, HttpContext httpContext, object body, CancellationToken ct = default)
     {
         try
@@ -156,7 +156,47 @@ public class ProxyService : IProxyService
             return (default, 500, ex.Message);
         }
     }
+    // D elete
+    public async Task<(T? Data, int StatusCode, string? Error)> ProxyDeleteAsync<T>(string serviceName, string path, HttpContext httpContext, CancellationToken ct = default)
+    {
+        try
+        {
+            if (!_serviceUrls.TryGetValue(serviceName, out var baseUrl))
+            {
+                _logger.LogError("Service {ServiceName} not found in configuration", serviceName);
+                return (default, 500, $"Service {serviceName} not found");
+            }
 
+            var client = _httpClientFactory.CreateClient("proxy");
+            var url = $"{baseUrl}{path}";
+
+            _logger.LogInformation("Proxying DELETE request to {Url}", url);
+
+            var response = await SendProxyRequestAsync(HttpMethod.Delete, client, httpContext, url, null, ct);
+            var content = await response.Content.ReadAsStringAsync(ct);
+
+            if (response.IsSuccessStatusCode)
+            {
+                if (content == "Healthy") return (default, (int)response.StatusCode, null);
+                var data = JsonSerializer.Deserialize<T>(content, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                return (data, (int)response.StatusCode, null);
+            }
+
+            _logger.LogWarning("Service {ServiceName} returned status {StatusCode}: {Content}", serviceName, response.StatusCode, content);
+            return (default, (int)response.StatusCode, content);
+        }
+        catch (HttpRequestException ex)
+        {
+            _logger.LogError(ex, "HTTP error calling {ServiceName}", serviceName);
+            return (default, 503, $"Service {serviceName} unavailable: {ex.Message}");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error proxying request to {ServiceName}", serviceName);
+            return (default, 500, ex.Message);
+        }
+    }
+    
     private static async Task<HttpResponseMessage> SendProxyRequestAsync(
         HttpMethod method,
         HttpClient client,

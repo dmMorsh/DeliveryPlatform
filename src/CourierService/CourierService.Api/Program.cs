@@ -1,40 +1,27 @@
-using System.Text;
 using Confluent.Kafka;
 using CourierService.Application;
 using CourierService.Application.Interfaces;
-using CourierService.Application.Mapping;
+using CourierService.Application.MediatR;
 using CourierService.Application.Services;
 using CourierService.Infrastructure.Inbox;
+using CourierService.Infrastructure.Mapping;
 using CourierService.Infrastructure.Outbox;
 using CourierService.Infrastructure.Persistence;
 using CourierService.Infrastructure.Repositories;
 using MediatR;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.IdentityModel.Tokens;
 using Serilog;
-using Serilog.Events;
 using Shared.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Host.UseSerilog((ctx, cfg) =>
-    cfg
-        .MinimumLevel.Information()
-        .Filter.ByExcluding(le =>
-            le.Level == LogEventLevel.Information 
-            && le.Properties.TryGetValue("commandText", out var cmd)
-            && cmd.ToString().StartsWith("\"-- OUTBOX_PROCESSOR_POLL"))
-        .WriteTo.Console(outputTemplate: "[{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz}] [{Level:u3}] [{SourceContext}] {Message:lj}{NewLine}{Exception}")
-        .WriteTo.File("../../logs/CourierService-.log", 
-            rollingInterval: RollingInterval.Day, 
-            outputTemplate: "[{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz}] [{Level:u3}] [{SourceContext}] {Message:lj}{NewLine}{Exception}")
-);
+builder.AddServiceTelemetry("courier-service");
+
+builder.UseExtededSerilog();
 
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
 builder.Services.AddMediatR(typeof(ApplicationMarker).Assembly);
-builder.AddServiceTelemetry("courier-service");
 
 // Allow using an in-memory DB for local quick tests by setting USE_INMEMORY_DB=true
 var useInMemory = Environment.GetEnvironmentVariable("USE_INMEMORY_DB") == "true"
@@ -55,10 +42,6 @@ else
         options.UseNpgsql(connectionString));
 }
 
-var kafkaBrokers = ConfigurationGuard.GetRequired(builder.Configuration, builder.Environment, "Kafka:Brokers", "localhost:29092");
-var redisConnection = ConfigurationGuard.GetRequired(builder.Configuration, builder.Environment, "Redis:Connection", "localhost:6379");
-ConfigurationGuard.GetRequired(builder.Configuration, builder.Environment, "gRPC:LocationTrackingService:Url");
-
 // Kafka Event Producer
 builder.Services.AddSingleton<IEventProducer, KafkaEventProducer>();
 
@@ -74,74 +57,27 @@ builder.Services.AddScoped<ICourierRepository, CourierRepository>();
 builder.Services.AddSingleton<ICourierEventMapper, CourierEventMapper>();
 // gRPC Location Tracking Client
 builder.Services.AddScoped<ILocationTrackingClient>(sp => 
-    new LocationTrackingClientImpl(
+    new LocationTrackingClient(
         sp.GetRequiredService<IConfiguration>(),
         sp.GetRequiredService<IHostEnvironment>(),
-        sp.GetRequiredService<ILogger<LocationTrackingClientImpl>>()));
+        sp.GetRequiredService<ILogger<LocationTrackingClient>>()));
 // Event Consumer from OrderService
 builder.Services.AddSingleton<CourierEventConsumer>();
 builder.Services.AddHostedService<KafkaEventConsumerHostedService<CourierEventConsumer>>();
 // Unit of Work
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
-builder.Services.AddCors(options =>
-{
-    options.AddDefaultPolicy(policy =>
-    {
-        if (builder.Environment.IsDevelopment())
-        {
-            policy.AllowAnyOrigin()
-                .AllowAnyMethod()
-                .AllowAnyHeader();
-            return;
-        }
-
-        var courierCorsOrigins = ConfigurationGuard.GetRequiredArray(builder.Configuration, builder.Environment, "Cors:AllowedOrigins");
-        policy.WithOrigins(courierCorsOrigins)
-            .AllowAnyMethod()
-            .AllowAnyHeader();
-    });
-});
-
 // Auth
-var jwtKey = ConfigurationGuard.GetRequired(builder.Configuration, builder.Environment, "Jwt:Key");
-var jwtIssuer = ConfigurationGuard.GetRequired(builder.Configuration, builder.Environment, "Jwt:Issuer");
-var jwtAudience = ConfigurationGuard.GetRequired(builder.Configuration, builder.Environment, "Jwt:Audience");
-
-builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-    .AddJwtBearer(options =>
-    {
-        options.TokenValidationParameters = new TokenValidationParameters
-        {
-            ValidateIssuer = true,
-            ValidateAudience = true,
-            ValidateLifetime = true,
-            ValidateIssuerSigningKey = true,
-
-            ValidIssuer = jwtIssuer,
-            ValidAudience = jwtAudience,
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
-        };
-
-        options.Events = new JwtBearerEvents
-        {
-            OnMessageReceived = context =>
-            {
-                var accessToken = context.Request.Headers["authorization"];
-                if (!string.IsNullOrEmpty(accessToken))
-                {
-                    context.Token = accessToken.ToString().Replace("Bearer ", "");
-                }
-                return Task.CompletedTask;
-            }
-        };
-    });
-
+builder.AddExtededAuthentication();
 builder.Services.AddAuthorization();
+builder.AddExtededCors();
 
 var connectionString1 = builder.Configuration.GetConnectionString("PostgreSQL");
 if (string.IsNullOrWhiteSpace(connectionString1))
     throw new InvalidOperationException("PostgreSQL connection string is required.");
+
+var kafkaBrokers = ConfigurationGuard.GetRequired(builder.Configuration, builder.Environment, "Kafka:Brokers", "localhost:29092");
+var redisConnection = ConfigurationGuard.GetRequired(builder.Configuration, builder.Environment, "Redis:Connection", "localhost:6379");
 builder.Services.AddHealthChecks()
     .AddNpgSql(connectionString1, name: "db", tags: new[] { "ready" })
     .AddRedis(redisConnection,

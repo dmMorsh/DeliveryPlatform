@@ -1,9 +1,6 @@
-using System.Text;
 using System.Threading.RateLimiting;
 using Confluent.Kafka;
 using MediatR;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.IdentityModel.Tokens;
 using PaymentService.Api.Grpc;
 using PaymentService.Application;
 using PaymentService.Application.Interfaces;
@@ -20,6 +17,7 @@ using Hangfire;
 using Hangfire.MemoryStorage;
 using Hangfire.PostgreSql;
 using Microsoft.EntityFrameworkCore;
+using PaymentService.Application.MediatR;
 using Serilog;
 using Shared.Services;
 
@@ -29,8 +27,10 @@ var builder = WebApplication.CreateBuilder(args);
 builder.AddServiceTelemetry("payment-service");
 
 builder.Host.UseSerilog((ctx, cfg) =>
-    cfg.WriteTo.Console(outputTemplate: "[{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz}] [{Level:u3}] [{SourceContext}] {Message:lj}{NewLine}{Exception}")
-       .WriteTo.File("../../logs/PaymentService-.log",
+    cfg
+        .WriteTo.OpenTelemetry()
+        .WriteTo.Console(outputTemplate: "[{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz}] [{Level:u3}] [{SourceContext}] {Message:lj}{NewLine}{Exception}")
+        .WriteTo.File("../../logs/PaymentService-.log",
            rollingInterval: RollingInterval.Day,
            outputTemplate: "[{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz}] [{Level:u3}] [{SourceContext}] {Message:lj}{NewLine}{Exception}")
        .MinimumLevel.Information());
@@ -44,7 +44,6 @@ builder.Services.AddDbContext<PaymentShardMapDbContext>(options =>
 builder.Services.AddControllers();
 builder.Services.AddGrpc();
 builder.Services.AddOpenApi();
-builder.AddServiceTelemetry("payment-service");
 var kafkaBrokers = ConfigurationGuard.GetRequired(builder.Configuration, builder.Environment, "Kafka:Brokers", "localhost:29092");
 
 builder.Services.AddHealthChecks()
@@ -85,55 +84,10 @@ builder.Services.AddSingleton<PaymentEventConsumer>();
 builder.Services.AddHostedService<KafkaEventConsumerHostedService<PaymentEventConsumer>>();
 builder.Services.AddScoped<IEventInbox, PaymentEventInbox>();
 
-var jwtKey = ConfigurationGuard.GetRequired(builder.Configuration, builder.Environment, "Jwt:Key");
-var jwtIssuer = ConfigurationGuard.GetRequired(builder.Configuration, builder.Environment, "Jwt:Issuer");
-var jwtAudience = ConfigurationGuard.GetRequired(builder.Configuration, builder.Environment, "Jwt:Audience");
-
-builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-    .AddJwtBearer(options =>
-    {
-        options.TokenValidationParameters = new TokenValidationParameters
-        {
-            ValidateIssuer = true,
-            ValidateAudience = true,
-            ValidateLifetime = true,
-            ValidateIssuerSigningKey = true,
-            ValidIssuer = jwtIssuer,
-            ValidAudience = jwtAudience,
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
-        };
-
-        options.Events = new JwtBearerEvents
-        {
-            OnMessageReceived = context =>
-            {
-                var accessToken = context.Request.Headers["authorization"];
-                if (!string.IsNullOrEmpty(accessToken))
-                    context.Token = accessToken.ToString().Replace("Bearer ", "");
-                return Task.CompletedTask;
-            }
-        };
-    });
-
+// Auth
+builder.AddExtededAuthentication();
 builder.Services.AddAuthorization();
-builder.Services.AddCors(options =>
-{
-    options.AddDefaultPolicy(policy =>
-    {
-        if (builder.Environment.IsDevelopment())
-        {
-            policy.AllowAnyOrigin()
-                .AllowAnyMethod()
-                .AllowAnyHeader();
-            return;
-        }
-
-        var paymentCorsOrigins = ConfigurationGuard.GetRequiredArray(builder.Configuration, builder.Environment, "Cors:AllowedOrigins");
-        policy.WithOrigins(paymentCorsOrigins)
-            .AllowAnyMethod()
-            .AllowAnyHeader();
-    });
-});
+builder.AddExtededCors();
 
 builder.Services.AddRateLimiter(options =>
 {

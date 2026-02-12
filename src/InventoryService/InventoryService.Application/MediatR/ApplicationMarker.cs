@@ -1,3 +1,3 @@
-﻿namespace InventoryService.Application;
+﻿namespace InventoryService.Application.MediatR;
 
 public sealed class ApplicationMarker;

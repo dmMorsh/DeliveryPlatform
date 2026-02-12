@@ -16,7 +16,6 @@ namespace DeliveryService.Application.Services;
 public class DeliveryEventConsumer : KafkaEventConsumerBase
 {
     private new readonly ILogger<DeliveryEventConsumer> _logger;
-    private readonly IServiceScopeFactory _scopeFactory;
 
     private static class OrderStatusIds
     {
@@ -34,7 +33,6 @@ public class DeliveryEventConsumer : KafkaEventConsumerBase
         : base(config, env, logger, scopeFactory, producer, null, "order.events")
     {
         _logger = logger;
-        _scopeFactory = scopeFactory;
     }
 
     protected override async Task<bool> HandleMessageAsync(string eventType, string json, ConsumeResult<string, string> message)
@@ -47,16 +45,16 @@ public class DeliveryEventConsumer : KafkaEventConsumerBase
             {
                 case "order.created":
                     await HandleOrderCreated(json);
-                    return true;
+                    break;
                 case "order.status.changed":
                     await HandleOrderStatusChanged(json);
-                    return true;
+                    break;
                 case "order.canceled":
                     await HandleOrderCanceled(json);
-                    return true;
+                    break;
                 default:
                     _logger.LogWarning("Unknown event type: {EventType}", eventType);
-                    return true;
+                    break;
             }
         }
         catch (Exception ex)
@@ -64,6 +62,7 @@ public class DeliveryEventConsumer : KafkaEventConsumerBase
             _logger.LogError(ex, "Error handling event {EventType}", eventType);
             return false;
         }
+        return true;
     }
 
     private async Task HandleOrderCreated(string json)

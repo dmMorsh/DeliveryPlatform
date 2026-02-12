@@ -1,6 +1,7 @@
 using CourierService.Application.Models;
 using CourierService.Domain.Aggregates;
 using Microsoft.EntityFrameworkCore;
+using Shared.Contracts.Events;
 
 namespace CourierService.Infrastructure.Persistence;
 
@@ -12,7 +13,7 @@ public class CourierDbContext : DbContext
 
     public DbSet<Courier> Couriers => Set<Courier>();
     public DbSet<OutboxMessage> OutboxMessages => Set<OutboxMessage>();
-    public DbSet<Shared.Contracts.Events.ProcessedEvent> ProcessedEvents => Set<Shared.Contracts.Events.ProcessedEvent>();
+    public DbSet<ProcessedEvent> ProcessedEvents => Set<ProcessedEvent>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -36,7 +37,7 @@ public class CourierDbContext : DbContext
                 .IsRowVersion();
         });
 
-        modelBuilder.Entity<Shared.Contracts.Events.ProcessedEvent>(entity =>
+        modelBuilder.Entity<ProcessedEvent>(entity =>
         {
             entity.HasKey(x => x.Id);
             entity.HasIndex(x => x.EventId).IsUnique();

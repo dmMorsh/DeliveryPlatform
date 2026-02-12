@@ -23,13 +23,13 @@ public class GetActiveCouriersQueryHandler : IRequestHandler<GetActiveCouriersQu
         try
         {
             var couriers = await _repository.GetActiveCouriersAsync();
-            var dtos = couriers.Select(c =>
+            var views = couriers.Select(c =>
             {
                 var dto = c.Adapt<CourierView>();
                 dto.Status = (int)c.Status;
                 return dto;
             }).ToList();
-            return ApiResponse<List<CourierView>>.SuccessResponse(dtos);
+            return ApiResponse<List<CourierView>>.SuccessResponse(views);
         }
         catch (Exception ex)
         {

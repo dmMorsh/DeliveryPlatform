@@ -1,19 +1,16 @@
-using System.Text;
 using CartService.Api;
-using CartService.Application;
 using CartService.Application.Interfaces;
-using CartService.Application.Mapping;
+using CartService.Application.MediatR;
 using CartService.Application.Services;
 using CartService.Infrastructure.Inbox;
 using CartService.Infrastructure.Grpc;
+using CartService.Infrastructure.Mapping;
 using CartService.Infrastructure.Outbox;
 using CartService.Infrastructure.Persistence;
 using CartService.Infrastructure.Repositories;
 using Confluent.Kafka;
 using MediatR;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.IdentityModel.Tokens;
 using Serilog;
 using Shared.Proto;
 using Shared.Services;
@@ -41,14 +38,13 @@ else
         options.UseNpgsql(connectionString));
 }
 
-var kafkaBrokers = ConfigurationGuard.GetRequired(builder.Configuration, builder.Environment, "Kafka:Brokers", "localhost:29092");
-
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddTransient<GrpcAuthHeaderHandler>();
 
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
-builder.AddServiceTelemetry("cart-service");
+
+var kafkaBrokers = ConfigurationGuard.GetRequired(builder.Configuration, builder.Environment, "Kafka:Brokers", "localhost:29092");
 var cartHealthChecks = builder.Services.AddHealthChecks()
     .AddKafka(new ProducerConfig { BootstrapServers = kafkaBrokers }, name: "kafka");
 if (!useInMemory)
@@ -79,7 +75,7 @@ builder.Services.AddMediatR(typeof(ApplicationMarker).Assembly);
 builder.Services.AddScoped<ICartRepository, CartRepository>();
 builder.Services.AddScoped<ICartReadRepository, CartReadRepository>();
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
-builder.Services.AddSingleton<ICartIntegrationEventMapper, CartEventMapper>();
+builder.Services.AddSingleton<ICartIntegrationEventMapper, CartIntegrationEventMapper>();
 // Event Consumer from OrderService
 builder.Services.AddSingleton<CartEventConsumer>();
 builder.Services.AddHostedService<KafkaEventConsumerHostedService<CartEventConsumer>>();
@@ -88,58 +84,9 @@ if (!useInMemory)
     builder.Services.AddHostedService<OutboxProcessor>();
 
 // Auth
-var jwtKey = ConfigurationGuard.GetRequired(builder.Configuration, builder.Environment, "Jwt:Key");
-var jwtIssuer = ConfigurationGuard.GetRequired(builder.Configuration, builder.Environment, "Jwt:Issuer");
-var jwtAudience = ConfigurationGuard.GetRequired(builder.Configuration, builder.Environment, "Jwt:Audience");
-
-builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-    .AddJwtBearer(options =>
-    {
-        options.TokenValidationParameters = new TokenValidationParameters
-        {
-            ValidateIssuer = true,
-            ValidateAudience = true,
-            ValidateLifetime = true,
-            ValidateIssuerSigningKey = true,
-
-            ValidIssuer = jwtIssuer,
-            ValidAudience = jwtAudience,
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
-        };
-
-        options.Events = new JwtBearerEvents
-        {
-            OnMessageReceived = context =>
-            {
-                var accessToken = context.Request.Headers["authorization"];
-                if (!string.IsNullOrEmpty(accessToken))
-                {
-                    context.Token = accessToken.ToString().Replace("Bearer ", "");
-                }
-                return Task.CompletedTask;
-            }
-        };
-    });
-
+builder.AddExtededAuthentication();
 builder.Services.AddAuthorization();
-builder.Services.AddCors(options =>
-{
-    options.AddDefaultPolicy(policy =>
-    {
-        if (builder.Environment.IsDevelopment())
-        {
-            policy.AllowAnyOrigin()
-                .AllowAnyMethod()
-                .AllowAnyHeader();
-            return;
-        }
-
-        var cartCorsOrigins = ConfigurationGuard.GetRequiredArray(builder.Configuration, builder.Environment, "Cors:AllowedOrigins");
-        policy.WithOrigins(cartCorsOrigins)
-            .AllowAnyMethod()
-            .AllowAnyHeader();
-    });
-});
+builder.AddExtededCors();
 
 var app = builder.Build();
 

@@ -10,10 +10,6 @@
       <ProjectReference Include="..\..\Shared\Shared.csproj" />
       <ProjectReference Include="..\CartService.Domain\CartService.Domain.csproj" />
     </ItemGroup>
-
-    <ItemGroup>
-      <Folder Include="Commands\RemoveItem\" />
-    </ItemGroup>
     
     <ItemGroup>
         <PackageReference Include="MediatR" Version="11.1.0" />
@@ -21,6 +17,10 @@
 
     <ItemGroup>
         <PackageReference Include="Mapster" Version="7.0.0" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Folder Include="Mapping\" />
     </ItemGroup>
 
 </Project>

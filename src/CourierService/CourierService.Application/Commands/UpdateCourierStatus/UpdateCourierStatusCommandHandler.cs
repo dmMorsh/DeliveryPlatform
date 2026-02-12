@@ -1,5 +1,4 @@
 using CourierService.Application.Interfaces;
-using CourierService.Application.Mapping;
 using CourierService.Application.Models;
 using CourierService.Domain.Aggregates;
 using Mapster;
@@ -36,60 +35,35 @@ public class UpdateCourierStatusCommandHandler : IRequestHandler<UpdateCourierSt
             if (courier == null)
                 return ApiResponse<CourierView>.ErrorResponse($"Courier {request.CourierId} not found");
 
-            var dto = request.Model;
+            var model = request.Model;
             var oldStatus = courier.Status;
 
-            if (dto.Status.HasValue && Enum.IsDefined(typeof(CourierStatus), dto.Status.Value))
-                courier.ChangeStatus((CourierStatus)dto.Status.Value);
+            if (model.Status.HasValue && Enum.IsDefined(typeof(CourierStatus), model.Status.Value))
+                courier.ChangeStatus((CourierStatus)model.Status.Value);
 
-            if (dto.CurrentLatitude.HasValue && dto.CurrentLongitude.HasValue)
+            if (model.CurrentLatitude.HasValue && model.CurrentLongitude.HasValue)
             {
-                courier.UpdateLocation(dto.CurrentLatitude.Value, dto.CurrentLongitude.Value);
+                courier.UpdateLocation(model.CurrentLatitude.Value, model.CurrentLongitude.Value);
             }
 
-            if (dto.IsActive.HasValue)
-                if (!dto.IsActive.Value)
+            if (model.IsActive.HasValue)
+                if (!model.IsActive.Value)
                     courier.Deactivate();
-
-            var updated = await _repository.UpdateCourierAsync(courier);
-            if (updated == null)
-                return ApiResponse<CourierView>.ErrorResponse("Failed to update courier");
-
+            
             _logger.LogInformation("Courier {CourierId} updated: {OldStatus} -> {NewStatus}", request.CourierId, oldStatus, courier.Status);
 
             // Map domain events to integration events and stage to outbox
-            var outboxMessages = updated.DomainEvents
+            var outboxMessages = courier.DomainEvents
                 .Select(_eventMapper.MapFromDomainEvent)
                 .Where(ie => ie != null)
                 .Select(OutboxMessage.From!)
                 .ToList();
-
-            // Add status changed event if status was modified
-            if (dto.Status.HasValue && oldStatus != updated.Status)
-            {
-                var statusChangeEvent = _eventMapper.MapCourierStatusChangedEvent(
-                    updated.Id,
-                    (int)oldStatus,
-                    (int)updated.Status);
-                outboxMessages.Add(OutboxMessage.From(statusChangeEvent));
-            }
-
-            // Add location updated event if location was provided
-            if (dto.CurrentLatitude.HasValue && dto.CurrentLongitude.HasValue)
-            {
-                var locationEvent = _eventMapper.MapLocationUpdatedEvent(
-                    updated.Id,
-                    dto.CurrentLatitude.Value,
-                    dto.CurrentLongitude.Value);
-                outboxMessages.Add(OutboxMessage.From(locationEvent));
-            }
             
-            // Commit aggregate atomically
             await _uow.SaveChangesAsync(outboxMessages, cancellationToken);
-            updated.ClearDomainEvents();
+            courier.ClearDomainEvents();
 
-            var result = updated.Adapt<CourierView>();
-            result.Status = (int)updated.Status;
+            var result = courier.Adapt<CourierView>();
+            result.Status = (int)courier.Status;
             return ApiResponse<CourierView>.SuccessResponse(result, "Courier updated successfully");
         }
         catch (Exception ex)

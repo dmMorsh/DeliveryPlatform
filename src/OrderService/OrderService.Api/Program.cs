@@ -1,13 +1,11 @@
-using System.Text;
 using Confluent.Kafka;
 using MediatR;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.IdentityModel.Tokens;
 using OrderService.Api.Grpc;
 using OrderService.Api.Mappings;
 using OrderService.Application;
 using OrderService.Application.Interfaces;
+using OrderService.Application.MediatR;
 using OrderService.Application.Services;
 using OrderService.Application.Utils;
 using OrderService.Infrastructure.Mapping;
@@ -16,33 +14,18 @@ using OrderService.Infrastructure.Persistence;
 using OrderService.Infrastructure.Repositories;
 using OrderService.Infrastructure.Inbox;
 using Serilog;
-using Serilog.Events;
 using Shared.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.AddServiceTelemetry("order-service");
+
 builder.Services.AddGrpc();
 
-#region Serilog
-
-builder.Host.UseSerilog((ctx, cfg) =>
-    cfg
-        .MinimumLevel.Information()
-        .Filter.ByExcluding(le =>
-            le.Level == LogEventLevel.Information 
-            && le.Properties.TryGetValue("commandText", out var cmd)
-            && cmd.ToString().StartsWith("\"-- OUTBOX_PROCESSOR_POLL"))
-        .WriteTo.Console(outputTemplate: "[{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz}] [{Level:u3}] [{SourceContext}] {Message:lj}{NewLine}{Exception}")
-        .WriteTo.File("../../logs/OrderService-.log", 
-           rollingInterval: RollingInterval.Day, 
-           outputTemplate: "[{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz}] [{Level:u3}] [{SourceContext}] {Message:lj}{NewLine}{Exception}")
-    );
-
-#endregion
+builder.UseExtededSerilog();
 
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
-builder.AddServiceTelemetry("order-service");
 
 // Allow using an in-memory DB for local quick tests by setting USE_INMEMORY_DB=true
 var useInMemory = Environment.GetEnvironmentVariable("USE_INMEMORY_DB") == "true"
@@ -92,64 +75,15 @@ builder.Services.AddSingleton<KafkaEventProducer>();
 if (!useInMemory) 
     builder.Services.AddHostedService<OutboxProcessor>();
 
-builder.Services.AddCors(options =>
-{
-    options.AddDefaultPolicy(policy =>
-    {
-        if (builder.Environment.IsDevelopment())
-        {
-            policy.AllowAnyOrigin()
-                .AllowAnyMethod()
-                .AllowAnyHeader();
-            return;
-        }
-
-        var orderCorsOrigins = ConfigurationGuard.GetRequiredArray(builder.Configuration, builder.Environment, "Cors:AllowedOrigins");
-        policy.WithOrigins(orderCorsOrigins)
-            .AllowAnyMethod()
-            .AllowAnyHeader();
-    });
-});
-
 // Register MediatR handlers from Application assembly
 builder.Services
     .AddMediatR(typeof(ApplicationMarker).Assembly)
     .AddTransient(typeof(IPipelineBehavior<,>), typeof(ExceptionBehavior<,>));;
 
-var jwtKey = ConfigurationGuard.GetRequired(builder.Configuration, builder.Environment, "Jwt:Key");
-var jwtIssuer = ConfigurationGuard.GetRequired(builder.Configuration, builder.Environment, "Jwt:Issuer");
-var jwtAudience = ConfigurationGuard.GetRequired(builder.Configuration, builder.Environment, "Jwt:Audience");
-
-builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-    .AddJwtBearer(options =>
-    {
-        options.TokenValidationParameters = new TokenValidationParameters
-        {
-            ValidateIssuer = true,
-            ValidateAudience = true,
-            ValidateLifetime = true,
-            ValidateIssuerSigningKey = true,
-
-            ValidIssuer = jwtIssuer,
-            ValidAudience = jwtAudience,
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
-        };
-
-        options.Events = new JwtBearerEvents
-        {
-            OnMessageReceived = context =>
-            {
-                var accessToken = context.Request.Headers["authorization"];
-                if (!string.IsNullOrEmpty(accessToken))
-                {
-                    context.Token = accessToken.ToString().Replace("Bearer ", "");
-                }
-                return Task.CompletedTask;
-            }
-        };
-    });
-
+// Auth
+builder.AddExtededAuthentication();
 builder.Services.AddAuthorization();
+builder.AddExtededCors();
 
 var healthChecks = builder.Services.AddHealthChecks()
     .AddKafka(new ProducerConfig

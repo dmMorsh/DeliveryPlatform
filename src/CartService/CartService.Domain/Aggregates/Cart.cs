@@ -21,11 +21,19 @@ public class Cart : AggregateRoot
         UpdatedAt = DateTime.UtcNow;
     }
 
-    public void AddItem(CartItem item)
+    public void AddItem(Guid productId, string name, int priceCents, int quantity)
     {
+        var item = new CartItem(productId, name, priceCents, quantity);
         _items.Add(item);
         UpdatedAt = DateTime.UtcNow;
         AddDomainEvent(new CartItemAddedDomainEvent { CartId = Id, ProductId = item.ProductId, Quantity = item.Quantity });
+    }
+    
+    public void RemoveItem(CartItem item)
+    {
+        _items.Remove(item);
+        UpdatedAt = DateTime.UtcNow;
+        AddDomainEvent(new CartItemRemovedDomainEvent { CartId = Id, ProductId = item.ProductId, Quantity = item.Quantity });
     }
 
     public void Clear() => _items.Clear();

@@ -12,7 +12,7 @@ public class UnitOfWork : IUnitOfWork
         _db = db;
     }
 
-    public async Task SaveChangesAsync(List<OutboxMessage> outboxMessages, CancellationToken ct = default)
+    public async Task SaveChangesAsync(List<OutboxMessage> outboxMessages, CancellationToken ct)
     {
         if (outboxMessages.Count > 0)
             _db.OutboxMessages.AddRange(outboxMessages);

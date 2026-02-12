@@ -3,6 +3,7 @@ using InventoryService.Domain.Aggregates;
 using InventoryService.Domain.Entities;
 using InventoryService.Infrastructure.Hangfire;
 using Microsoft.EntityFrameworkCore;
+using Shared.Contracts.Events;
 
 namespace InventoryService.Infrastructure.Persistence;
 
@@ -16,7 +17,7 @@ public class InventoryDbContext : DbContext
     public DbSet<StockReservation> StockReservation => Set<StockReservation>();
     public DbSet<OutboxMessage> OutboxMessages => Set<OutboxMessage>();
     public DbSet<ProcessedCommand> ProcessedCommands => Set<ProcessedCommand>();// TODO переместить в HF бд
-    public DbSet<Shared.Contracts.Events.ProcessedEvent> ProcessedEvents => Set<Shared.Contracts.Events.ProcessedEvent>();
+    public DbSet<ProcessedEvent> ProcessedEvents => Set<ProcessedEvent>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -35,7 +36,7 @@ public class InventoryDbContext : DbContext
                 .IsUnique();
         });
 
-        modelBuilder.Entity<Shared.Contracts.Events.ProcessedEvent>(entity =>
+        modelBuilder.Entity<ProcessedEvent>(entity =>
         {
             entity.HasKey(x => x.Id);
             entity.HasIndex(x => x.EventId).IsUnique();

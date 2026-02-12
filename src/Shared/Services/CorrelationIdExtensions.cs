@@ -7,8 +7,8 @@ namespace Shared.Services;
 
 public static class CorrelationIdExtensions
 {
-    public const string HeaderName = "X-Correlation-Id";
-    public const string PropertyName = "correlation.id";
+    private const string HeaderName = "X-Correlation-Id";
+    private const string PropertyName = "correlation.id";
 
     public static IApplicationBuilder UseCorrelationId(this IApplicationBuilder app)
     {

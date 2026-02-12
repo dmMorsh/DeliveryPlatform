@@ -7,14 +7,14 @@ using Polly;
 
 namespace Shared.Services;
 
-public class LocationTrackingClientImpl : ILocationTrackingClient
+public class LocationTrackingClient : ILocationTrackingClient
 {
-    private readonly ILogger<LocationTrackingClientImpl> _logger;
+    private readonly ILogger<LocationTrackingClient> _logger;
     private readonly string _serviceUrl;
     private readonly IAsyncPolicy _policy;
     private LocationTrackingService.LocationTrackingServiceClient? _client;
 
-    public LocationTrackingClientImpl(IConfiguration config, IHostEnvironment env, ILogger<LocationTrackingClientImpl> logger)
+    public LocationTrackingClient(IConfiguration config, IHostEnvironment env, ILogger<LocationTrackingClient> logger)
     {
         _logger = logger;
         _serviceUrl = ConfigurationGuard.GetRequired(config, env, "gRPC:LocationTrackingService:Url", "https://localhost:7070");

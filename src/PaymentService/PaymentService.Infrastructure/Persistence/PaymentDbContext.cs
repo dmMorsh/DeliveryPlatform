@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using PaymentService.Application.Models;
 using PaymentService.Domain.Aggregates;
+using Shared.Contracts.Events;
 
 namespace PaymentService.Infrastructure.Persistence;
 
@@ -12,7 +13,7 @@ public class PaymentDbContext : DbContext
 
     public DbSet<Payment> Payments => Set<Payment>();
     public DbSet<OutboxMessage> OutboxMessages => Set<OutboxMessage>();
-    public DbSet<Shared.Contracts.Events.ProcessedEvent> ProcessedEvents => Set<Shared.Contracts.Events.ProcessedEvent>();
+    public DbSet<ProcessedEvent> ProcessedEvents => Set<ProcessedEvent>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -30,7 +31,7 @@ public class PaymentDbContext : DbContext
                 .HasDefaultValue(Array.Empty<byte>());
         });
 
-        modelBuilder.Entity<Shared.Contracts.Events.ProcessedEvent>(entity =>
+        modelBuilder.Entity<ProcessedEvent>(entity =>
         {
             entity.HasKey(x => x.Id);
             entity.HasIndex(x => x.EventId).IsUnique();

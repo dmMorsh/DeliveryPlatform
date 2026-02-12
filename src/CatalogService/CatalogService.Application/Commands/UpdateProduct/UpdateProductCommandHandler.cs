@@ -1,6 +1,5 @@
 using CatalogService.Application.Interfaces;
 using CatalogService.Application.Models;
-using CatalogService.Domain.Events;
 using CatalogService.Domain.ValueObjects;
 using MediatR;
 using Shared.Utilities;
@@ -26,42 +25,30 @@ public class UpdateProductCommandHandler : IRequestHandler<UpdateProductCommand,
 
         if (product == null)
             return ApiResponse<ProductView>.ErrorResponse("Product not found");
-
-        var model = request.UpdateProductModel;
         
-        if (model.PriceCents.HasValue && product.PriceCents.AmountCents != model.PriceCents)
+        if (request.PriceCents.HasValue && product.PriceCents.AmountCents != request.PriceCents)
         {
-            var newPrice = new Money(model.PriceCents.Value, model.Currency ?? product.PriceCents.Currency);
+            var newPrice = new Money(request.PriceCents.Value, request.Currency ?? product.PriceCents.Currency);
             product.ChangePrice(newPrice);
         }
 
-        if (!string.IsNullOrWhiteSpace(model.Description) && product.Description != model.Description)
+        if (!string.IsNullOrWhiteSpace(request.Description) && product.Description != request.Description)
         {
-            product.ChangeDescription(model.Description);
+            product.ChangeDescription(request.Description);
         }
 
-        if (model.IsActive.HasValue && product.IsActive != model.IsActive)
+        if (request.IsActive.HasValue && product.IsActive != request.IsActive)
         {
-            if(model.IsActive.Value) 
+            if(request.IsActive.Value) 
                 product.Activate();
             else product.Deactivate();
         }
         
-        await _repo.UpdateAsync(product, ct);
-
-        var outboxMessages = new List<OutboxMessage>();
-
-        foreach (var domainEvent in product.DomainEvents)
-        {
-            if (domainEvent is ProductPriceChanged priceChangedEvent)
-            {
-                var integrationEvent = _eventMapper.MapProductPriceChangedEvent(
-                    product.Id, 
-                    priceChangedEvent.OldPrice.AmountCents, 
-                    priceChangedEvent.NewPrice.AmountCents);
-                outboxMessages.Add(OutboxMessage.From(integrationEvent));
-            }
-        }
+        var outboxMessages = product.DomainEvents
+            .Select(_eventMapper.MapFromDomainEvent)
+            .Where(ie => ie != null)
+            .Select(OutboxMessage.From!)
+            .ToList();
 
         await _uow.SaveChangesAsync(outboxMessages, ct);
         product.ClearDomainEvents();

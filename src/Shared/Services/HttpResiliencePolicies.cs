@@ -61,7 +61,7 @@ public static class HttpResiliencePolicies
                 durationOfBreak: TimeSpan.FromSeconds(30),
                 onBreak: (ex, duration) =>
                 {
-                    logger?.LogWarning($"gRPC circuit opened for {duration}", ex);
+                    logger?.LogWarning("gRPC circuit opened for {TimeSpan}", duration);
                 },
                 onReset: () => logger?.LogInformation("gRPC circuit closed."),
                 onHalfOpen: () => logger?.LogInformation("gRPC circuit half-open."));

@@ -9,6 +9,13 @@ public record CartItemAddedDomainEvent : DomainEvent
     public int Quantity { get; init; }
 }
 
+public record CartItemRemovedDomainEvent : DomainEvent
+{
+    public Guid CartId { get; init; }
+    public Guid ProductId { get; init; }
+    public int Quantity { get; init; }
+}
+
 public record CartCheckedOutDomainEvent : DomainEvent
 {
     public Guid CartId { get; init; }

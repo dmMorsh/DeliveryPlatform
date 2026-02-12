@@ -1,47 +1,39 @@
-using CartService.Application.Mapping;
+using CartService.Application.Interfaces;
 using CartService.Domain.Events;
+using CartService.Domain.SeedWork;
 using Shared.Contracts.Events;
 
 namespace CartService.Infrastructure.Mapping;
 
 public class CartIntegrationEventMapper : ICartIntegrationEventMapper
 {
-    public CartItemAddedEvent MapCartItemAddedEvent(Guid cartId, Guid productId, int quantity)
+    private CartItemAddedEvent MapCartItemAddedEvent(CartItemAddedDomainEvent e)
     {
         return new CartItemAddedEvent
         {
-            CartId = cartId,
-            ProductId = productId,
-            Quantity = quantity
+            CartId = e.CartId,
+            ProductId = e.ProductId,
+            Quantity = e.Quantity,
+            Timestamp = e.OccurredAt
         };
     }
 
-    public CartCheckedOutEvent MapCartCheckedOutEvent(Guid cartId, Guid customerId)
+    private CartCheckedOutEvent MapCartCheckedOutEvent(CartCheckedOutDomainEvent e)
     {
         return new CartCheckedOutEvent
         {
-            CartId = cartId,
-            CustomerId = customerId
+            CartId = e.CartId,
+            CustomerId = e.CustomerId,
+            Timestamp = e.OccurredAt
         };
     }
 
-    public IntegrationEvent? MapFromDomainEvent(Domain.SeedWork.DomainEvent domainEvent)
+    public IntegrationEvent? MapFromDomainEvent(DomainEvent domainEvent)
     {
         return domainEvent switch
         {
-            CartItemAddedDomainEvent e => new CartItemAddedEvent
-            {
-                CartId = e.CartId,
-                ProductId = e.ProductId,
-                Quantity = e.Quantity,
-                Timestamp = e.OccurredAt
-            },
-            CartCheckedOutDomainEvent e => new CartCheckedOutEvent
-            {
-                CartId = e.CartId,
-                CustomerId = e.CustomerId,
-                Timestamp = e.OccurredAt
-            },
+            CartItemAddedDomainEvent e => MapCartItemAddedEvent(e),
+            CartCheckedOutDomainEvent e => MapCartCheckedOutEvent(e),
             _ => null
         };
     }

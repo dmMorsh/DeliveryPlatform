@@ -1,5 +1,4 @@
 using CourierService.Application.Interfaces;
-using CourierService.Application.Mapping;
 using CourierService.Application.Models;
 using CourierService.Domain.Aggregates;
 using Mapster;
@@ -32,16 +31,16 @@ public class RegisterCourierCommandHandler : IRequestHandler<RegisterCourierComm
     {
         try
         {
-            var dto = request.Model;
+            var model = request.Model;
 
-            if (string.IsNullOrWhiteSpace(dto.FullName) || string.IsNullOrWhiteSpace(dto.Phone))
+            if (string.IsNullOrWhiteSpace(model.FullName) || string.IsNullOrWhiteSpace(model.Phone))
                 return ApiResponse<CourierView>.ErrorResponse("Name and phone are required");
 
-            var existingCourier = await _repository.GetCourierByPhoneAsync(dto.Phone);
+            var existingCourier = await _repository.GetCourierByPhoneAsync(model.Phone);
             if (existingCourier != null)
                 return ApiResponse<CourierView>.ErrorResponse("Courier with this phone already exists");
 
-            var courier = Courier.Register(dto.FullName, dto.Phone, dto.Email, dto.DocumentNumber);
+            var courier = Courier.Register(model.FullName, model.Phone, model.Email, model.DocumentNumber);
 
             var created = await _repository.CreateCourierAsync(courier);
             _logger.LogInformation("Courier created: {CourierName} (ID: {CourierId})", created.FullName, created.Id);

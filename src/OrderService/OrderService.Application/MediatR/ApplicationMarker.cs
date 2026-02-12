@@ -1,3 +1,3 @@
-﻿namespace OrderService.Application;
+﻿namespace OrderService.Application.MediatR;
 
 public sealed class ApplicationMarker;

@@ -11,40 +11,36 @@ public class CreateProductCommandHandler : IRequestHandler<CreateProductCommand,
 {
     private readonly IProductRepository _repo;
     private readonly IUnitOfWork _uow;
+    private readonly IProductIntegrationEventMapper _eventMapper;
 
-    public CreateProductCommandHandler(IProductRepository repo, IUnitOfWork uow)
+    public CreateProductCommandHandler(IProductRepository repo, IUnitOfWork uow, IProductIntegrationEventMapper eventMapper)
     {
         _repo = repo;
         _uow = uow;
+        _eventMapper = eventMapper;
     }
 
     public async Task<ApiResponse<ProductView>> Handle(CreateProductCommand request, CancellationToken ct)
     {
-        var model = request.Model;
-
-        if (string.IsNullOrWhiteSpace(model.Name))
+        if (string.IsNullOrWhiteSpace(request.Name))
             return ApiResponse<ProductView>.ErrorResponse("Product name is required");
 
-        var money = new Money(model.PriceCents, model.Currency ?? "USD");
-        var weight = new Weight(model.WeightGrams);
-        var product = new Product(model.Name, model.Description ?? "", money, weight);
+        var money = new Money(request.PriceCents, request.Currency ?? "USD");
+        var weight = new Weight(request.WeightGrams);
+        var product = new Product(request.Name, request.Description ?? "", money, weight);
 
         await _repo.AddAsync(product, ct);
 
         var outboxMessages = product.DomainEvents
-            .Select(de => new OutboxMessage
-            {
-                Id = Guid.NewGuid(),
-                AggregateId = product.Id,
-                Type = de.GetType().Name,
-                OccurredAt = DateTime.UtcNow
-            })
+            .Select(_eventMapper.MapFromDomainEvent)
+            .Where(ie => ie != null)
+            .Select(OutboxMessage.From!)
             .ToList();
 
         await _uow.SaveChangesAsync(outboxMessages, ct);
         product.ClearDomainEvents();
 
-        var view = new ProductView(product.Id, product.Name, model.Description, product.PriceCents.AmountCents, product.PriceCents.Currency, product.WeightGrams.Value);
+        var view = new ProductView(product.Id, product.Name, product.Description, product.PriceCents.AmountCents, product.PriceCents.Currency, product.WeightGrams.Value);
         return ApiResponse<ProductView>.SuccessResponse(view, "Product created successfully");
     }
 }

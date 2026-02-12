@@ -34,24 +34,10 @@ public class CourierRepository : ICourierRepository
 
     public async Task<Courier> CreateCourierAsync(Courier courier)
     {
-        _context.Couriers.Add(courier);
-        // Do not save here - UnitOfWork will commit (keeps repository focused on persistence operations)
+        await _context.Couriers.AddAsync(courier);
         return courier;
     }
-
-    public async Task<Courier?> UpdateCourierAsync(Courier updatedCourier)
-    {
-        var courier = await GetCourierByIdAsync(updatedCourier.Id);
-        if (courier == null)
-            return null;
-
-        // The domain aggregate should be updated through its behavior methods
-        // EF Core will track changes automatically
-        _context.Couriers.Update(updatedCourier);
-        // Do not call SaveChanges here; UnitOfWork will commit
-        return updatedCourier;
-    }
-
+    
     public async Task<(List<Courier> Items, int Total)> GetCouriersPagedAsync(int page = 1, int pageSize = 20)
     {
         var query = _context.Couriers.OrderByDescending(c => c.CreatedAt);

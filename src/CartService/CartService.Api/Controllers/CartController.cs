@@ -1,5 +1,7 @@
+using CartService.Api.Contracts;
 using CartService.Application.Commands.AddItem;
 using CartService.Application.Commands.Checkout;
+using CartService.Application.Commands.RemoveItem;
 using CartService.Application.Models;
 using CartService.Application.Queries.GetCart;
 using MediatR;
@@ -38,13 +40,35 @@ public class CartController : ControllerBase
     }
 
     [HttpPost("items")]
-    public async Task<IActionResult> AddItem([FromBody] AddItemModel model, CancellationToken ct)
+    public async Task<IActionResult> AddItem([FromBody] AddItemRequest request, CancellationToken ct)
     {
         var customerId = GetCustomerIdFromContext();
         if (customerId == Guid.Empty)
             return Unauthorized(new { error = "Customer ID not found in context" });
 
-        var cmd = new AddItemToCartCommand(customerId, model);
+        var cmd = new AddItemToCartCommand(
+            customerId,
+            request.ProductId,
+            request.Name,
+            request.PriceCents,
+            request.Quantity);
+
+        var result = await _mediator.Send(cmd, ct);
+        
+        if (!result.Success)
+            return BadRequest(result);
+
+        return Ok(result);
+    }
+    
+    [HttpDelete("items/{productId}")]
+    public async Task<IActionResult> Remove(Guid productId, CancellationToken ct)
+    {
+        var customerId = GetCustomerIdFromContext();
+        if (customerId == Guid.Empty)
+            return Unauthorized(new { error = "Customer ID not found in context" });
+
+        var cmd = new RemoveItemFromCartCommand(customerId, productId);
 
         var result = await _mediator.Send(cmd, ct);
         

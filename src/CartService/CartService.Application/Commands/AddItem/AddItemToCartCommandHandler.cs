@@ -1,8 +1,6 @@
 using CartService.Application.Interfaces;
-using CartService.Application.Mapping;
 using CartService.Application.Models;
 using CartService.Domain.Aggregates;
-using CartService.Domain.Entities;
 using MediatR;
 using Shared.Utilities;
 
@@ -23,14 +21,14 @@ public class AddItemToCartCommandHandler : IRequestHandler<AddItemToCartCommand,
 
     public async Task<ApiResponse<string>> Handle(AddItemToCartCommand request, CancellationToken ct)
     {
-        var cart = await _repo.GetCartByCustomerIdAsync(request.CustomerId, ct) 
-                   ?? new Cart(request.CustomerId);
+        var cart = await _repo.GetCartByCustomerIdAsync(request.CustomerId, ct);
+        if (cart == null)
+        {
+            cart = new Cart(request.CustomerId);
+            await _repo.AddAsync(cart, ct);
+        }
 
-        var model = request.Model;
-        var item = new CartItem(model.ProductId, model.Name, model.PriceCents, model.Quantity);
-        cart.AddItem(item);
-
-        await _repo.CreateOrUpdateAsync(cart, ct);
+        cart.AddItem(request.ProductId, request.Name, request.PriceCents, request.Quantity);
         
        var outboxMessages = cart.DomainEvents
             .Select(_eventMapper.MapFromDomainEvent)

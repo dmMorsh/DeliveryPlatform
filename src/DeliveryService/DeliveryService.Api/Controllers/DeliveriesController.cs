@@ -1,6 +1,6 @@
 using System.Text.Json;
 using System.Threading.Channels;
-using DeliveryService.Api.DTOs;
+using DeliveryService.Api.Contracts;
 using DeliveryService.Application.Commands.AcceptDelivery;
 using DeliveryService.Application.Commands.CancelDelivery;
 using DeliveryService.Application.Commands.CompleteDelivery;

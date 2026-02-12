@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using OrderService.Application.Models;
 using OrderService.Domain.Aggregates;
+using Shared.Contracts.Events;
 
 namespace OrderService.Infrastructure.Persistence;
 
@@ -12,7 +13,7 @@ public class OrderDbContext : DbContext
 
     public DbSet<Order> Orders => Set<Order>();
     public DbSet<OutboxMessage> OutboxMessages => Set<OutboxMessage>();
-    public DbSet<Shared.Contracts.Events.ProcessedEvent> ProcessedEvents => Set<Shared.Contracts.Events.ProcessedEvent>();
+    public DbSet<ProcessedEvent> ProcessedEvents => Set<ProcessedEvent>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -45,7 +46,7 @@ public class OrderDbContext : DbContext
                 .IsRowVersion();
         });
 
-        modelBuilder.Entity<Shared.Contracts.Events.ProcessedEvent>(entity =>
+        modelBuilder.Entity<ProcessedEvent>(entity =>
         {
             entity.HasKey(x => x.Id);
             entity.HasIndex(x => x.EventId).IsUnique();

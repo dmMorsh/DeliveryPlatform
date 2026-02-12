@@ -20,7 +20,6 @@ namespace PaymentService.Application.Services;
 public class PaymentEventConsumer : KafkaEventConsumerBase
 {
     private new readonly ILogger<PaymentEventConsumer> _logger;
-    private readonly IServiceScopeFactory _scopeFactory;
 
     public PaymentEventConsumer(
         IConfiguration config,
@@ -31,7 +30,6 @@ public class PaymentEventConsumer : KafkaEventConsumerBase
         : base(config, env, logger, scopeFactory, producer, null, "order.events")
     {
         _logger = logger;
-        _scopeFactory = scopeFactory;
     }
 
     protected override async Task<bool> HandleMessageAsync(string eventType, string json, ConsumeResult<string, string> message)

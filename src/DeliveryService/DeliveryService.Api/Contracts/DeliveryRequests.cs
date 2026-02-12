@@ -1,4 +1,4 @@
-namespace DeliveryService.Api.DTOs;
+namespace DeliveryService.Api.Contracts;
 
 public record AcceptDeliveryRequest
 {

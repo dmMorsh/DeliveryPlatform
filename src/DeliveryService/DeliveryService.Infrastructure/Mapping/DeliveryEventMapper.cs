@@ -1,13 +1,9 @@
+using DeliveryService.Application.Interfaces;
 using DeliveryService.Domain.Events;
 using Shared.Contracts.Events;
 using DomainEvent = DeliveryService.Domain.SeedWork.DomainEvent;
 
-namespace DeliveryService.Application.Mapping;
-
-public interface IDeliveryEventMapper
-{
-    IntegrationEvent? MapFromDomainEvent(DomainEvent domainEvent);
-}
+namespace DeliveryService.Infrastructure.Mapping;
 
 public class DeliveryEventMapper : IDeliveryEventMapper
 {

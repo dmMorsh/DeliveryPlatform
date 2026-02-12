@@ -1,3 +1,3 @@
-namespace CartService.Application;
+namespace CartService.Application.MediatR;
 
 public sealed class ApplicationMarker;

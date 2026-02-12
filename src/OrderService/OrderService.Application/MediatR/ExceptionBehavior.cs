@@ -1,7 +1,7 @@
 ﻿using MediatR;
 using Microsoft.Extensions.Logging;
 
-namespace OrderService.Application;
+namespace OrderService.Application.MediatR;
 
 public class ExceptionBehavior<TReq, TRes> : IPipelineBehavior<TReq, TRes> 
     where TReq : IRequest<TRes>

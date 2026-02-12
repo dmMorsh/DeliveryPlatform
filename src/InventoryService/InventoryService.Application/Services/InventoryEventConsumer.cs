@@ -20,7 +20,6 @@ namespace InventoryService.Application.Services;
 public class InventoryEventConsumer : KafkaEventConsumerBase
 {
     private new readonly ILogger<InventoryEventConsumer> _logger;
-    private readonly IServiceScopeFactory _scopeFactory;
 
     public InventoryEventConsumer(
         IConfiguration config,
@@ -31,7 +30,6 @@ public class InventoryEventConsumer : KafkaEventConsumerBase
         : base(config, env, logger, scopeFactory, producer, null, "order.events")
     {
         _logger = logger;
-        _scopeFactory = scopeFactory;
     }
 
     /// <summary>

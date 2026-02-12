@@ -1,6 +1,7 @@
 using DeliveryService.Application.Models;
 using DeliveryService.Domain.Aggregates;
 using Microsoft.EntityFrameworkCore;
+using Shared.Contracts.Events;
 
 namespace DeliveryService.Infrastructure.Persistence;
 
@@ -12,7 +13,7 @@ public class DeliveryDbContext : DbContext
 
     public DbSet<Delivery> Deliveries => Set<Delivery>();
     public DbSet<OutboxMessage> OutboxMessages => Set<OutboxMessage>();
-    public DbSet<Shared.Contracts.Events.ProcessedEvent> ProcessedEvents => Set<Shared.Contracts.Events.ProcessedEvent>();
+    public DbSet<ProcessedEvent> ProcessedEvents => Set<ProcessedEvent>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -45,7 +46,7 @@ public class DeliveryDbContext : DbContext
                 .UsePropertyAccessMode(PropertyAccessMode.Field);
         });
 
-        modelBuilder.Entity<Shared.Contracts.Events.ProcessedEvent>(entity =>
+        modelBuilder.Entity<ProcessedEvent>(entity =>
         {
             entity.HasKey(x => x.Id);
             entity.HasIndex(x => x.EventId).IsUnique();

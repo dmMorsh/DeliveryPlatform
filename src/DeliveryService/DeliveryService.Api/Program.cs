@@ -1,44 +1,31 @@
-using System.Text;
 using Confluent.Kafka;
 using DeliveryService.Application.Interfaces;
 using DeliveryService.Application.Mapping;
 using DeliveryService.Application.MediatR;
 using DeliveryService.Application.Services;
 using DeliveryService.Infrastructure.Inbox;
+using DeliveryService.Infrastructure.Mapping;
 using DeliveryService.Infrastructure.Outbox;
 using DeliveryService.Infrastructure.Persistence;
 using DeliveryService.Infrastructure.Repositories;
 using DeliveryService.Infrastructure.Services;
 using MediatR;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.IdentityModel.Tokens;
 using Serilog;
-using Serilog.Events;
 using Shared.Services;
 using StackExchange.Redis;
-using OpenTelemetry.Metrics;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Host.UseSerilog((ctx, cfg) =>
-    cfg
-        .MinimumLevel.Information()
-        .Filter.ByExcluding(le =>
-            le.Level == LogEventLevel.Information
-            && le.Properties.TryGetValue("commandText", out var cmd)
-            && cmd.ToString().StartsWith("\"-- INFRA_BACKGROUND_POLL"))
-        .WriteTo.Console(outputTemplate: "[{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz}] [{Level:u3}] [{SourceContext}] {Message:lj}{NewLine}{Exception}")
-        .WriteTo.File("../../logs/DeliveryService-.log",
-            rollingInterval: RollingInterval.Day,
-            outputTemplate: "[{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz}] [{Level:u3}] [{SourceContext}] {Message:lj}{NewLine}{Exception}")
-);
+builder.AddServiceTelemetry("delivery-service")
+    .WithMetrics(m => m.AddMeter("DeliveryService.Assignment"));
+
+builder.UseExtededSerilog();
 
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
 builder.Services.AddMediatR(typeof(ApplicationMarker).Assembly);
-builder.AddServiceTelemetry("delivery-service");
-builder.Services.AddOpenTelemetry().WithMetrics(m => m.AddMeter("DeliveryService.Assignment"));
 
 var useInMemory = Environment.GetEnvironmentVariable("USE_INMEMORY_DB") == "true"
                   || string.Equals(builder.Configuration["UseInMemoryDb"], "true", StringComparison.OrdinalIgnoreCase);
@@ -58,9 +45,6 @@ else
         options.UseNpgsql(connectionString));
 }
 
-var kafkaBrokers = ConfigurationGuard.GetRequired(builder.Configuration, builder.Environment, "Kafka:Brokers", "localhost:29092");
-var redisConnection = ConfigurationGuard.GetRequired(builder.Configuration, builder.Environment, "Redis:Connection", "redis:6379");
-
 builder.Services.AddSingleton<IEventProducer, KafkaEventProducer>();
 builder.Services.AddHostedService<KafkaTopicBootstrapper>();
 builder.Services.AddScoped<IEventInbox, DeliveryEventInbox>();
@@ -79,15 +63,18 @@ builder.Services.Configure<DeliveryAssignmentOptions>(
     builder.Configuration.GetSection("Delivery:Assignment"));
 
 builder.Services.AddScoped<ILocationTrackingClient>(sp =>
-    new LocationTrackingClientImpl(
+    new LocationTrackingClient(
         sp.GetRequiredService<IConfiguration>(),
         sp.GetRequiredService<IHostEnvironment>(),
-        sp.GetRequiredService<ILogger<LocationTrackingClientImpl>>()));
+        sp.GetRequiredService<ILogger<LocationTrackingClient>>()));
 
 builder.Services.AddSingleton<DeliveryEventConsumer>();
 builder.Services.AddHostedService<KafkaEventConsumerHostedService<DeliveryEventConsumer>>();
 
 builder.Services.AddHostedService<AssignmentScheduler>();
+
+var kafkaBrokers = ConfigurationGuard.GetRequired(builder.Configuration, builder.Environment, "Kafka:Brokers", "localhost:29092");
+var redisConnection = ConfigurationGuard.GetRequired(builder.Configuration, builder.Environment, "Redis:Connection", "redis:6379");
 
 try
 {
@@ -102,60 +89,6 @@ catch (Exception ex)
         throw new InvalidOperationException($"Failed to connect to Redis at {redisConnection}", ex));
 }
 
-builder.Services.AddCors(options =>
-{
-    options.AddDefaultPolicy(policy =>
-    {
-        if (builder.Environment.IsDevelopment())
-        {
-            policy.AllowAnyOrigin()
-                .AllowAnyMethod()
-                .AllowAnyHeader();
-            return;
-        }
-
-        var courierCorsOrigins = ConfigurationGuard.GetRequiredArray(builder.Configuration, builder.Environment, "Cors:AllowedOrigins");
-        policy.WithOrigins(courierCorsOrigins)
-            .AllowAnyMethod()
-            .AllowAnyHeader();
-    });
-});
-
-var jwtKey = ConfigurationGuard.GetRequired(builder.Configuration, builder.Environment, "Jwt:Key", "dev-key");
-var jwtIssuer = ConfigurationGuard.GetRequired(builder.Configuration, builder.Environment, "Jwt:Issuer", "identity-service");
-var jwtAudience = ConfigurationGuard.GetRequired(builder.Configuration, builder.Environment, "Jwt:Audience", "platform-api");
-
-builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-    .AddJwtBearer(options =>
-    {
-        options.TokenValidationParameters = new TokenValidationParameters
-        {
-            ValidateIssuer = true,
-            ValidateAudience = true,
-            ValidateLifetime = true,
-            ValidateIssuerSigningKey = true,
-
-            ValidIssuer = jwtIssuer,
-            ValidAudience = jwtAudience,
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
-        };
-
-        options.Events = new JwtBearerEvents
-        {
-            OnMessageReceived = context =>
-            {
-                var accessToken = context.Request.Headers["authorization"];
-                if (!string.IsNullOrEmpty(accessToken))
-                {
-                    context.Token = accessToken.ToString().Replace("Bearer ", "");
-                }
-                return Task.CompletedTask;
-            }
-        };
-    });
-
-builder.Services.AddAuthorization();
-
 var connectionString1 = builder.Configuration.GetConnectionString("PostgreSQL");
 if (string.IsNullOrWhiteSpace(connectionString1))
     throw new InvalidOperationException("PostgreSQL connection string is required.");
@@ -164,6 +97,11 @@ builder.Services.AddHealthChecks()
     .AddNpgSql(connectionString1, name: "db", tags: new[] { "ready" })
     .AddRedis(redisConnection, name: "redis", tags: new[] { "ready" })
     .AddKafka(new ProducerConfig { BootstrapServers = kafkaBrokers }, name: "kafka", tags: new[] { "ready" });
+
+// Auth
+builder.AddExtededAuthentication();
+builder.Services.AddAuthorization();
+builder.AddExtededCors();
 
 var app = builder.Build();
 
@@ -177,11 +115,11 @@ app.UseCors();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
-app.MapHealthChecks("/health/live", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+app.MapHealthChecks("/health/live", new HealthCheckOptions
 {
     Predicate = _ => false
 });
-app.MapHealthChecks("/health/ready", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+app.MapHealthChecks("/health/ready", new HealthCheckOptions
 {
     Predicate = reg => reg.Tags.Contains("ready")
 });

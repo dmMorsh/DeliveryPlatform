@@ -1,30 +1,41 @@
 using CatalogService.Application.Interfaces;
+using CatalogService.Domain.Events;
+using CatalogService.Domain.SeedWork;
 using Shared.Contracts.Events;
 
 namespace CatalogService.Infrastructure.Mapping;
 
 public class ProductIntegrationEventMapper : IProductIntegrationEventMapper
 {
-    public ProductPriceChangedEvent MapProductPriceChangedEvent(Guid productId, long oldPriceCents,
-        long newPriceCents)
+    public ProductPriceChangedEvent MapProductPriceChangedEvent(ProductPriceChanged e)
     {
         return new ProductPriceChangedEvent
         {
-            ProductId = productId,
-            OldPriceCents = oldPriceCents,
-            NewPriceCents = newPriceCents
+            ProductId = e.Id,
+            OldPriceCents = e.OldPrice.AmountCents,
+            NewPriceCents = e.NewPrice.AmountCents
         };
     }
 
-    public ProductCreatedEvent MapProductCreatedEvent(Guid productId, string name, string description, long priceCents, int quantityAvailable)
+    public ProductCreatedEvent MapProductCreatedEvent(ProductCreated e)
     {
         return new ProductCreatedEvent
         {
-            ProductId = productId,
-            Name = name,
-            Description = description,
-            PriceCents = priceCents,
-            QuantityAvailable = quantityAvailable
+            ProductId = e.Id,
+            Name = e.Name,
+            Description = e.Description,
+            PriceCents = e.PriceCents.AmountCents,
+            QuantityAvailable = e.QuantityAvailable
+        };
+    }
+
+    public IntegrationEvent? MapFromDomainEvent(DomainEvent domainEvent)
+    {
+        return domainEvent switch
+        {
+            ProductCreated e => MapProductCreatedEvent(e),
+            ProductPriceChanged e => MapProductPriceChangedEvent(e),
+            _ => null
         };
     }
 }

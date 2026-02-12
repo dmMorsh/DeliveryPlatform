@@ -1,3 +1,3 @@
-﻿namespace CatalogService.Application;
+﻿namespace CatalogService.Application.MediatR;
 
 public sealed class ApplicationMarker;

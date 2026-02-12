@@ -1,4 +1,3 @@
-using System.Text;
 using Confluent.Kafka;
 using Hangfire;
 using Hangfire.PostgreSql;
@@ -13,11 +12,9 @@ using InventoryService.Infrastructure.Mapping;
 using InventoryService.Infrastructure.Outbox;
 using InventoryService.Infrastructure.Persistence;
 using MediatR;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.IdentityModel.Tokens;
 using Serilog;
-using Serilog.Events;
 using Shared.Services;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -25,22 +22,7 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 builder.AddServiceTelemetry("inventory-service");
 
-#region Serilog
-
-builder.Host.UseSerilog((ctx, cfg) =>
-    cfg
-        .MinimumLevel.Information()
-        .Filter.ByExcluding(le =>
-            le.Level == LogEventLevel.Information 
-            && le.Properties.TryGetValue("commandText", out var cmd)
-            && cmd.ToString().StartsWith("\"-- OUTBOX_PROCESSOR_POLL"))
-        .WriteTo.Console(outputTemplate: "[{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz}] [{Level:u3}] [{SourceContext}] {Message:lj}{NewLine}{Exception}")
-        .WriteTo.File("../../logs/InventoryService-.log", 
-            rollingInterval: RollingInterval.Day, 
-            outputTemplate: "[{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz}] [{Level:u3}] [{SourceContext}] {Message:lj}{NewLine}{Exception}")
-);
-
-#endregion
+builder.UseExtededSerilog();
 
 // Allow using an in-memory DB for local quick tests by setting USE_INMEMORY_DB=true
 var useInMemory = Environment.GetEnvironmentVariable("USE_INMEMORY_DB") == "true"
@@ -83,13 +65,13 @@ else
     builder.Services.AddScoped<IUnitOfWorkFactory, UnitOfWorkFactory>();
 }
 
-var kafkaBrokers = ConfigurationGuard.GetRequired(builder.Configuration, builder.Environment, "Kafka:Brokers", "localhost:29092");
-
 builder.Services.AddControllers();
 builder.Services
     .AddMediatR(typeof(ApplicationMarker).Assembly)
     .AddTransient(typeof(IPipelineBehavior<,>), typeof(HangfireRetryBehavior<,>));
-builder.AddServiceTelemetry("inventory-service");
+
+var kafkaBrokers = ConfigurationGuard.GetRequired(builder.Configuration, builder.Environment, "Kafka:Brokers", "localhost:29092");
+
 var inventoryHealthChecks = builder.Services.AddHealthChecks()
     .AddKafka(new ProducerConfig { BootstrapServers = kafkaBrokers }, name: "kafka");
 if (!useInMemory)
@@ -110,58 +92,9 @@ builder.Services.AddScoped<IEventInbox, InventoryEventInbox>();
 builder.Services.AddSingleton<IStockIntegrationEventMapper, StockIntegrationEventMapper>();
 
 // Auth
-var jwtKey = ConfigurationGuard.GetRequired(builder.Configuration, builder.Environment, "Jwt:Key");
-var jwtIssuer = ConfigurationGuard.GetRequired(builder.Configuration, builder.Environment, "Jwt:Issuer");
-var jwtAudience = ConfigurationGuard.GetRequired(builder.Configuration, builder.Environment, "Jwt:Audience");
-
-builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-    .AddJwtBearer(options =>
-    {
-        options.TokenValidationParameters = new TokenValidationParameters
-        {
-            ValidateIssuer = true,
-            ValidateAudience = true,
-            ValidateLifetime = true,
-            ValidateIssuerSigningKey = true,
-
-            ValidIssuer = jwtIssuer,
-            ValidAudience = jwtAudience,
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
-        };
-
-        options.Events = new JwtBearerEvents
-        {
-            OnMessageReceived = context =>
-            {
-                var accessToken = context.Request.Headers["authorization"];
-                if (!string.IsNullOrEmpty(accessToken))
-                {
-                    context.Token = accessToken.ToString().Replace("Bearer ", "");
-                }
-                return Task.CompletedTask;
-            }
-        };
-    });
-
+builder.AddExtededAuthentication();
 builder.Services.AddAuthorization();
-builder.Services.AddCors(options =>
-{
-    options.AddDefaultPolicy(policy =>
-    {
-        if (builder.Environment.IsDevelopment())
-        {
-            policy.AllowAnyOrigin()
-                .AllowAnyMethod()
-                .AllowAnyHeader();
-            return;
-        }
-
-        var inventoryCorsOrigins = ConfigurationGuard.GetRequiredArray(builder.Configuration, builder.Environment, "Cors:AllowedOrigins");
-        policy.WithOrigins(inventoryCorsOrigins)
-            .AllowAnyMethod()
-            .AllowAnyHeader();
-    });
-});
+builder.AddExtededCors();
 
 var app = builder.Build();
 
@@ -172,11 +105,11 @@ app.UseAuthorization();
 app.UseCors();
 
 app.MapControllers();
-app.MapHealthChecks("/health/live", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+app.MapHealthChecks("/health/live", new HealthCheckOptions
 {
     Predicate = _ => false
 });
-app.MapHealthChecks("/health/ready", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+app.MapHealthChecks("/health/ready", new HealthCheckOptions
 {
     Predicate = reg => reg.Tags.Contains("ready")
 });

@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
+using Npgsql;
+using OpenTelemetry;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
@@ -8,11 +10,11 @@ namespace Shared.Services;
 
 public static class TelemetryExtensions
 {
-    public static void AddServiceTelemetry(this WebApplicationBuilder builder, string serviceName)
+    public static OpenTelemetryBuilder AddServiceTelemetry(this WebApplicationBuilder builder, string serviceName)
     {
         var resource = ResourceBuilder.CreateDefault().AddService(serviceName);
 
-        builder.Services.AddOpenTelemetry()
+        OpenTelemetryBuilder telemetryBuilder = builder.Services.AddOpenTelemetry()
             .ConfigureResource(r => r.AddService(serviceName))
             .WithTracing(tracing =>
             {
@@ -21,7 +23,7 @@ public static class TelemetryExtensions
                     .AddAspNetCoreInstrumentation()
                     .AddHttpClientInstrumentation()
                     .AddGrpcClientInstrumentation()
-                    .AddSqlClientInstrumentation()
+                    .AddNpgsql()
                     .AddOtlpExporter();
             })
             .WithMetrics(metrics =>
@@ -32,8 +34,8 @@ public static class TelemetryExtensions
                     .AddHttpClientInstrumentation()
                     .AddRuntimeInstrumentation()
                     .AddProcessInstrumentation()
-                    .AddSqlClientInstrumentation()
                     .AddOtlpExporter();
             });
+        return telemetryBuilder;
     }
 }

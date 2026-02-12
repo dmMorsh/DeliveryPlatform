@@ -60,6 +60,27 @@ public class CartController : ControllerBase
         _logger.LogError("Error adding item: {Error}", error);
         return StatusCode(statusCode, new ProxyErrorResponse { Message = error });
     }
+    
+    [HttpDelete("items/{productId}")]
+    public async Task<IActionResult> RemoveItem(Guid productId, CancellationToken ct)
+    {
+        _logger.LogInformation("Gateway: Removing item with productId {productId}", productId);
+
+        var (data, statusCode, error) = await _proxyService.ProxyDeleteAsync<dynamic>(
+            "cart-service",
+            $"/api/cart/items/{productId}",
+            HttpContext,
+            ct
+        );
+
+        if (statusCode >= 200 && statusCode < 300)
+        {
+            return StatusCode(statusCode, data);
+        }
+
+        _logger.LogError("Error adding item: {Error}", error);
+        return StatusCode(statusCode, new ProxyErrorResponse { Message = error });
+    }
 
     [HttpPost("checkout")]
     public async Task<IActionResult> Checkout([FromBody] CheckoutRequest request, CancellationToken ct)

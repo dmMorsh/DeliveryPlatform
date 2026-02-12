@@ -1,5 +1,4 @@
 using CartService.Application.Interfaces;
-using CartService.Application.Mapping;
 using CartService.Application.Models;
 using MediatR;
 using Shared.Utilities;
@@ -32,7 +31,7 @@ public class CheckoutCartCommandHandler : IRequestHandler<CheckoutCartCommand, A
         
         cart.Checkout(orderId);
         
-        await _repo.CreateOrUpdateAsync(cart, ct);
+        await _repo.AddAsync(cart, ct);
         
         var outboxMessages = cart.DomainEvents
             .Select(_eventMapper.MapFromDomainEvent)

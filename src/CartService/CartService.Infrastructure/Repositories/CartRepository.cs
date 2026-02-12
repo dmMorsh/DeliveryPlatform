@@ -14,26 +14,13 @@ public class CartRepository : ICartRepository
         _context = context;
     }
 
-    public async Task<Cart?> GetCartByCustomerIdAsync(Guid customerId, CancellationToken ct = default)
+    public async Task<Cart?> GetCartByCustomerIdAsync(Guid customerId, CancellationToken ct)
     {
         return await _context.Carts.Include(c => c.Items).FirstOrDefaultAsync(c => c.CustomerId == customerId, ct);
     }
 
-    public async Task<Cart> CreateOrUpdateAsync(Cart cart, CancellationToken ct = default)
+    public async Task AddAsync(Cart cart, CancellationToken ct)
     {
-        var existing = await _context.Carts.FindAsync(cart.Id);
-        if (existing == null)
-        {
-            _context.Carts.Add(cart);
-        }
-        else
-        {
-            _context.Entry(existing).CurrentValues.SetValues(cart);
-            // update owned collection
-            _context.Entry(existing).Collection(e => e.Items).CurrentValue = cart.Items.ToList();
-        }
-
-        await _context.SaveChangesAsync();
-        return cart;
+        await _context.Carts.AddAsync(cart, ct);
     }
 }

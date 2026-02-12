@@ -172,6 +172,13 @@ services:
       - ./src/Scripts/grafana/dashboards:/etc/grafana/dashboards:ro
     depends_on:
       - prometheus
+  
+  loki:
+    image: grafana/loki:latest
+    container_name: loki
+    ports:
+      - "3100:3100"
+    command: -config.file=/etc/loki/local-config.yaml
 
   # .NET Microservices
   gateway-api:

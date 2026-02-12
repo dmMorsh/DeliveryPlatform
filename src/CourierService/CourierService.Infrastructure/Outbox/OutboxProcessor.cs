@@ -56,7 +56,7 @@ public class OutboxProcessor : BackgroundService
                 LIMIT {0}
                 FOR UPDATE SKIP LOCKED
             """, BatchSize)
-            .TagWith("OUTBOX_PROCESSOR_POLL")
+            .TagWith("INFRA_BACKGROUND_POLL")
             .ToListAsync(ct);
 
         if (messages.Count == 0) return;

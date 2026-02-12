@@ -86,15 +86,6 @@ public class OrdersController : ControllerBase
         
         return Ok(result);
     }
-
-    /// <summary>
-    /// Health check
-    /// </summary>
-    [HttpGet("health")]
-    public IActionResult Health()
-    {
-        return Ok(new { status = "healthy", service = "OrderService" });
-    }
     
     private Guid GetCustomerIdFromContext()
     {

@@ -91,7 +91,7 @@ public class KafkaTopicBootstrapper : IHostedService
                 // Some topics might already exist; log details and ignore those errors
                 foreach (var e in ex.Results)
                 {
-                    if (e.Error.Code == Confluent.Kafka.ErrorCode.TopicAlreadyExists)
+                    if (e.Error.Code == ErrorCode.TopicAlreadyExists)
                         _logger.LogInformation("Kafka topic already exists: {Topic}", e.Topic);
                     else
                         _logger.LogWarning("Error creating topic {Topic}: {Error}", e.Topic, e.Error.Reason);

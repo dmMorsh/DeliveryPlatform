@@ -21,9 +21,14 @@ public class CatalogController : ControllerBase
     }
 
     [HttpPost]
-    public async Task<IActionResult> CreateProduct([FromBody] CreateProductModel model, CancellationToken ct)
+    public async Task<IActionResult> CreateProduct([FromBody] CreateProductRequest request, CancellationToken ct)
     {
-        var cmd = new CreateProductCommand(model);
+        var cmd = new CreateProductCommand(
+            request.Name,
+            request.Description,
+            request.PriceCents,
+            request.Currency,
+            request.WeightGrams);
         var result = await _mediator.Send(cmd, ct);
         
         if (!result.Success)
@@ -71,9 +76,15 @@ public class CatalogController : ControllerBase
     }
 
     [HttpPut("{id}")]
-    public async Task<IActionResult> UpdateProduct(Guid id, [FromBody] UpdateProductModel model, CancellationToken ct)
+    public async Task<IActionResult> UpdateProduct(Guid id, [FromBody] UpdateProductRequest request, CancellationToken ct)
     {
-        var cmd = new UpdateProductCommand(id, model);
+        var cmd = new UpdateProductCommand(
+            id,
+            request.Name,
+            request.Description,
+            request.PriceCents,
+            request.Currency,
+            request.IsActive);
         var result = await _mediator.Send(cmd, ct);
         
         if (!result.Success)

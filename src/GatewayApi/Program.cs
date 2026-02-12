@@ -1,10 +1,5 @@
-using System.Diagnostics;
-using System.Text;
 using System.Threading.RateLimiting;
 using GatewayApi.Services;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.IdentityModel.Tokens;
-using OpenTelemetry;
 using Serilog;
 using Shared.Services;
 
@@ -46,66 +41,15 @@ builder.Services.AddScoped<IProxyService, ProxyService>();
 builder.AddServiceTelemetry("gateway-api");
 // gRPC Location Tracking Client for GatewayApi
 builder.Services.AddScoped<ILocationTrackingClient>(sp => 
-    new LocationTrackingClientImpl(
+    new LocationTrackingClient(
         sp.GetRequiredService<IConfiguration>(),
         sp.GetRequiredService<IHostEnvironment>(),
-        sp.GetRequiredService<ILogger<LocationTrackingClientImpl>>()));
+        sp.GetRequiredService<ILogger<LocationTrackingClient>>()));
 
 // Auth
-var jwtKey = ConfigurationGuard.GetRequired(builder.Configuration, builder.Environment, "Jwt:Key");
-var jwtIssuer = ConfigurationGuard.GetRequired(builder.Configuration, builder.Environment, "Jwt:Issuer");
-var jwtAudience = ConfigurationGuard.GetRequired(builder.Configuration, builder.Environment, "Jwt:Audience");
-
-builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-    .AddJwtBearer(options =>
-    {
-        options.TokenValidationParameters = new TokenValidationParameters
-        {
-            ValidateIssuer = true,
-            ValidateAudience = true,
-            ValidateLifetime = true,
-            ValidateIssuerSigningKey = true,
-
-            ValidIssuer = jwtIssuer,
-            ValidAudience = jwtAudience,
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
-        };
-
-        options.Events = new JwtBearerEvents
-        {
-            OnMessageReceived = context =>
-            {
-                var accessToken = context.Request.Headers["authorization"];
-                if (!string.IsNullOrEmpty(accessToken))
-                {
-                    context.Token = accessToken.ToString().Replace("Bearer ", "");
-                }
-                return Task.CompletedTask;
-            }
-        };
-    });
-
+builder.AddExtededAuthentication();
 builder.Services.AddAuthorization();
-
-// CORS для всех источников (Development mode)
-builder.Services.AddCors(options =>
-{
-    options.AddDefaultPolicy(policy =>
-    {
-        if (builder.Environment.IsDevelopment())
-        {
-            policy.AllowAnyOrigin()
-                .AllowAnyMethod()
-                .AllowAnyHeader();
-            return;
-        }
-
-        var gatewayCorsOrigins = ConfigurationGuard.GetRequiredArray(builder.Configuration, builder.Environment, "Cors:AllowedOrigins");
-        policy.WithOrigins(gatewayCorsOrigins)
-            .AllowAnyMethod()
-            .AllowAnyHeader();
-    });
-});
+builder.AddExtededCors();
 
 builder.Services.AddRateLimiter(options =>
 {
@@ -138,33 +82,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-app.Use(async (context, next) =>
-{
-    var correlationId = context.Request.Headers.TryGetValue("X-Correlation-Id", out var headerValue)
-        ? headerValue.ToString()
-        : null;
-
-    if (string.IsNullOrWhiteSpace(correlationId))
-    {
-        correlationId = context.TraceIdentifier;
-        context.Request.Headers["X-Correlation-Id"] = correlationId;
-    }
-
-    if (Activity.Current != null)
-    {
-        Activity.Current.SetTag("correlation.id", correlationId);
-    }
-
-    Baggage.SetBaggage("correlation.id", correlationId);
-
-    context.Response.OnStarting(() =>
-    {
-        context.Response.Headers["X-Correlation-Id"] = correlationId;
-        return Task.CompletedTask;
-    });
-
-    await next();
-});
+app.UseCorrelationId();
 app.UseCors();
 app.UseAuthentication();
 app.UseAuthorization();
