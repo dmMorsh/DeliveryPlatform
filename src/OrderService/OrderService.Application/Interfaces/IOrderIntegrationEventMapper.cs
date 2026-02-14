@@ -7,7 +7,7 @@ namespace OrderService.Application.Interfaces;
 public interface IOrderIntegrationEventMapper
 {
     OrderAssignedEvent MapOrderAssignedEvent(Order order, Guid courierId, string courierName, string? courierPhone = null);
-    OrderStatusChangedEvent MapOrderStatusChangedEvent(Order order, int oldStatus, int newStatus);
+    OrderStatusChangedEvent MapOrderStatusChangedEvent(Order order, OrderStatus oldStatus, OrderStatus newStatus);
     OrderDeliveredEvent MapOrderDeliveredEvent(Order order, Guid courierId);
     IntegrationEvent? MapFromDomainEvent(Domain.SeedWork.DomainEvent domainEvent);
     IntegrationEvent? MapFromOrderCreatedDomainEvent(OrderCreatedDomainEvent domainEvent,

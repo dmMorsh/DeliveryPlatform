@@ -22,6 +22,14 @@
     <ProjectReference Include="..\PaymentService\PaymentService.Domain\PaymentService.Domain.csproj" />
     <ProjectReference Include="..\PaymentService\PaymentService.Application\PaymentService.Application.csproj" />
     <ProjectReference Include="..\PaymentService\PaymentService.Infrastructure\PaymentService.Infrastructure.csproj" />
+    <ProjectReference Include="..\CatalogService\CatalogService.Domain\CatalogService.Domain.csproj" />
+    <ProjectReference Include="..\CatalogService\CatalogService.Application\CatalogService.Application.csproj" />
+    <ProjectReference Include="..\OrderService\OrderService.Domain\OrderService.Domain.csproj" />
+    <ProjectReference Include="..\OrderService\OrderService.Application\OrderService.Application.csproj" />
+    <ProjectReference Include="..\CourierService\CourierService.Domain\CourierService.Domain.csproj" />
+    <ProjectReference Include="..\CourierService\CourierService.Application\CourierService.Application.csproj" />
+    <ProjectReference Include="..\InventoryService\InventoryService.Domain\InventoryService.Domain.csproj" />
+    <ProjectReference Include="..\InventoryService\InventoryService.Application\InventoryService.Application.csproj" />
   </ItemGroup>
 
   <ItemGroup>

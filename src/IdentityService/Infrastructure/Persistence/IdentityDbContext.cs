@@ -19,7 +19,9 @@ public class IdentityDbContext
 
         builder.Entity<ApplicationUser>(b =>
         {
-            b.Property(x => x.Role).IsRequired();
+            b.Property(x => x.Role)
+                .IsRequired()
+                .HasMaxLength(50);
             b.Property(x => x.TenantId).IsRequired();
         });
     }

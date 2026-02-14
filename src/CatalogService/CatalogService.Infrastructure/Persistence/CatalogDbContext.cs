@@ -23,8 +23,18 @@ public class CatalogDbContext : DbContext
         {
             entity.HasKey(x => x.Id);
             entity.Ignore(e => e.DomainEvents);
-            entity.OwnsOne(e => e.PriceCents);
+            entity.OwnsOne(e => e.PriceCents, price =>
+            {
+                price.Property(p => p.Currency)
+                    .IsRequired()
+                    .HasMaxLength(4);
+            });
             entity.OwnsOne(e => e.WeightGrams);
+            entity.Property(x => x.Name)
+                .IsRequired()
+                .HasMaxLength(200);
+            entity.Property(x => x.Description)
+                .HasMaxLength(1000);
             entity.Property(x => x.RowVersion)
                 .IsRowVersion();
         });

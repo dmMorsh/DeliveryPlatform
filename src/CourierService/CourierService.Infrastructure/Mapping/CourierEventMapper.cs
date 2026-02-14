@@ -7,28 +7,6 @@ namespace CourierService.Infrastructure.Mapping;
 
 public class CourierEventMapper : ICourierEventMapper
 {
-    public CourierStatusChangedEvent MapCourierStatusChangedEvent(Guid courierId, int oldStatus, int newStatus)
-    {
-        return new CourierStatusChangedEvent
-        {
-            CourierId = courierId,
-            PreviousStatus = oldStatus,
-            NewStatus = newStatus,
-            ChangedAt = DateTime.UtcNow
-        };
-    }
-
-    public CourierLocationUpdatedEvent MapLocationUpdatedEvent(Guid courierId, double latitude, double longitude)
-    {
-        return new CourierLocationUpdatedEvent
-        {
-            CourierId = courierId,
-            Latitude = latitude,
-            Longitude = longitude,
-            UpdatedAt = DateTime.UtcNow
-        };
-    }
-
     public IntegrationEvent? MapFromDomainEvent(DomainEvent domainEvent)
     {
         return domainEvent switch

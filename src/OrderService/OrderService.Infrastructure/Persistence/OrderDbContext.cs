@@ -26,7 +26,12 @@ public class OrderDbContext : DbContext
             entity.OwnsMany(e => e.Items);
             entity.OwnsOne(e => e.From);
             entity.OwnsOne(e => e.To);
-            entity.OwnsOne(e => e.CostCents);
+            entity.OwnsOne(e => e.CostCents, cost =>
+            {
+                cost.Property(c => c.Currency)
+                    .IsRequired()
+                    .HasMaxLength(6);
+            });
             
             entity.Property(e => e.OrderNumber)
                 .IsRequired()

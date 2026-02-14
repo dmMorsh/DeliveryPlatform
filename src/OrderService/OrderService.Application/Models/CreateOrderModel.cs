@@ -36,8 +36,9 @@ public record CreateOrderModel
     [Range(1, long.MaxValue, ErrorMessage = "CostCents must be greater than 0")]
     public long CostCents { get; set; }
 
-    [StringLength(5, ErrorMessage = "Currency must not exceed 5 characters")]
-    public string? Currency { get; set; }
+    [Required(ErrorMessage = "Currency is required")]
+    [StringLength(6, MinimumLength = 3, ErrorMessage = "Currency code must be 3-6 characters (ISO 4217 or crypto)")]
+    public string Currency { get; set; } = string.Empty;
     
     [StringLength(500, ErrorMessage = "CourierNote must not exceed 500 characters")]
     public string? CourierNote { get; set; }

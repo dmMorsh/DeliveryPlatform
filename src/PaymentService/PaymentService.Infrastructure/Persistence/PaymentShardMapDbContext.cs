@@ -19,8 +19,12 @@ public sealed class PaymentShardMapDbContext : DbContext
             entity.HasKey(x => x.Id);
             entity.HasIndex(x => x.ExternalPaymentId).IsUnique();
             entity.HasIndex(x => x.OrderId);
-            entity.Property(x => x.ExternalPaymentId).IsRequired();
-            entity.Property(x => x.Provider).IsRequired();
+            entity.Property(x => x.ExternalPaymentId)
+                .IsRequired()
+                .HasMaxLength(255);
+            entity.Property(x => x.Provider)
+                .IsRequired()
+                .HasMaxLength(50);
         });
     }
 }

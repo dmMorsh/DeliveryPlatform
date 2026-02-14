@@ -42,7 +42,7 @@ public class KafkaEventProducer : IEventProducer, IAsyncDisposable
         var producerConfig = new ProducerConfig
         {
             BootstrapServers = brokers,
-            Acks = Acks.All, // Wait for leader and all replicas
+            Acks = Acks.Leader, // Wait for leader and all replicas
             CompressionType = CompressionType.Snappy,
             MessageMaxBytes = 1000000, // 1MB
             LingerMs = 100, // Batch messages for 100ms for better throughput

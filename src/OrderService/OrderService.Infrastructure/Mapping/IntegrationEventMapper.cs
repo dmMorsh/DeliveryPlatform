@@ -18,13 +18,13 @@ public class IntegrationEventMapper : IOrderIntegrationEventMapper
         };
     }
 
-    public OrderStatusChangedEvent MapOrderStatusChangedEvent(Order order, int oldStatus, int newStatus)
+    public OrderStatusChangedEvent MapOrderStatusChangedEvent(Order order, OrderStatus oldStatus, OrderStatus newStatus)
     {
         return new OrderStatusChangedEvent
         {
             OrderId = order.Id,
-            OldStatus = oldStatus,
-            NewStatus = newStatus,
+            OldStatus = (int)oldStatus,
+            NewStatus = (int)newStatus,
             ChangedAt = DateTime.UtcNow
         };
     }

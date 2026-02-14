@@ -32,9 +32,15 @@ public class CartDbContext : DbContext
         {
             entity.HasKey(x => x.Id);
             entity.HasIndex(x => x.EventId).IsUnique();
-            entity.Property(x => x.EventId).IsRequired();
-            entity.Property(x => x.EventType).IsRequired();
-            entity.Property(x => x.Topic).IsRequired();
+            entity.Property(x => x.EventId)
+                .IsRequired()
+                .HasMaxLength(255);
+            entity.Property(x => x.EventType)
+                .IsRequired()
+                .HasMaxLength(255);
+            entity.Property(x => x.Topic)
+                .IsRequired()
+                .HasMaxLength(255);
             entity.Property(x => x.Status).IsRequired();
         });
     }

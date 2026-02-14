@@ -47,6 +47,8 @@ services:
     depends_on:
       - zookeeper
     environment:
+      KAFKA_LOG_RETENTION_HOURS: 1
+      
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
 

@@ -54,7 +54,7 @@ public class UpdateOrderCommandHandler
         // Add status changed event if status was modified
         if (dto.Status.HasValue && oldStatus != order.Status)
         {
-            var statusChangeEvent = _eventMapper.MapOrderStatusChangedEvent(order, (int)oldStatus, (int)order.Status);
+            var statusChangeEvent = _eventMapper.MapOrderStatusChangedEvent(order, oldStatus, order.Status);
             outboxMessages.Add(OutboxMessage.From(statusChangeEvent));
         }
 
