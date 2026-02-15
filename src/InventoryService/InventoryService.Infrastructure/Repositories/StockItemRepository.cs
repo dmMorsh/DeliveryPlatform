@@ -29,6 +29,7 @@ public class StockItemRepository : IStockItemRepository
     public async Task<List<StockItem>> GetAllProductAsync(CancellationToken ct)
     {
         return await _context.StockItems
+            .AsNoTracking()
             .ToListAsync(ct);
     }
 

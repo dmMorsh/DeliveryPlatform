@@ -8,4 +8,4 @@ public record AddItemToCartCommand(
     Guid ProductId,
     string Name,
     int PriceCents,
-    int Quantity) : IRequest<ApiResponse<string>>;
+    int Quantity) : IRequest<ApiResponse<Guid>>;

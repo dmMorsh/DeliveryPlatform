@@ -6,7 +6,7 @@ using Shared.Utilities;
 
 namespace CartService.Application.Commands.AddItem;
 
-public class AddItemToCartCommandHandler : IRequestHandler<AddItemToCartCommand, ApiResponse<string>>
+public class AddItemToCartCommandHandler : IRequestHandler<AddItemToCartCommand, ApiResponse<Guid>>
 {
     private readonly ICartRepository _repo;
     private readonly IUnitOfWork _uow;
@@ -19,7 +19,7 @@ public class AddItemToCartCommandHandler : IRequestHandler<AddItemToCartCommand,
         _eventMapper = eventMapper;
     }
 
-    public async Task<ApiResponse<string>> Handle(AddItemToCartCommand request, CancellationToken ct)
+    public async Task<ApiResponse<Guid>> Handle(AddItemToCartCommand request, CancellationToken ct)
     {
         var cart = await _repo.GetCartByCustomerIdAsync(request.CustomerId, ct);
         if (cart == null)
@@ -39,6 +39,6 @@ public class AddItemToCartCommandHandler : IRequestHandler<AddItemToCartCommand,
         await _uow.SaveChangesAsync(outboxMessages, ct);
         cart.ClearDomainEvents();
 
-        return ApiResponse<string>.SuccessResponse(cart.Id.ToString(), "Item added to cart");
+        return ApiResponse<Guid>.SuccessResponse(cart.Id, "Item added to cart");
     }
 }

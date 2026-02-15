@@ -2,11 +2,11 @@ namespace Shared.Contracts.Events;
 
 public sealed class ProcessedEvent
 {
-    public Guid Id { get; set; }
-    public string EventId { get; set; } = string.Empty;
-    public string EventType { get; set; } = string.Empty;
+    public required Guid Id { get; set; }
+    public required string EventId { get; set; }
+    public required string EventType { get; set; }
     public Guid AggregateId { get; set; }
-    public string Topic { get; set; } = string.Empty;
+    public required string Topic { get; set; }
     public int Partition { get; set; }
     public long Offset { get; set; }
     public int Attempts { get; set; }
