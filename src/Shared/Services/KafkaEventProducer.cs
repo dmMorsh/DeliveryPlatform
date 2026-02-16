@@ -47,7 +47,7 @@ public class KafkaEventProducer : IEventProducer, IAsyncDisposable
             MessageMaxBytes = 1000000, // 1MB
             LingerMs = 100, // Batch messages for 100ms for better throughput
             
-            EnableIdempotence = true,  // Предотвращение дублирования сообщений
+            //EnableIdempotence = true,  // Предотвращение дублирования сообщений // Acks = Acks.All
             MessageSendMaxRetries = 3,  // Число повторных попыток
             RetryBackoffMs = 1000
         };

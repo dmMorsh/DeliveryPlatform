@@ -40,6 +40,9 @@ services:
       ZOOKEEPER_TICK_TIME: 2000
     ports:
       - "2181:2181"
+    volumes:
+      - zookeeper_data:/var/lib/zookeeper/data
+      - zookeeper_data:/var/lib/zookeeper/log
 
   kafka:
     image: confluentinc/cp-kafka:7.5.0
@@ -61,7 +64,6 @@ services:
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
       KAFKA_JMX_PORT: 9101
       KAFKA_JMX_HOSTNAME: kafka
-
     ports:
       - "29092:29092" # внешний адресс: localhost:29092
       - "9101:9101"
@@ -76,6 +78,8 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    volumes:
+      - kafka_data:/var/lib/kafka/data
 
   kafka-jmx-exporter:
     image: bitnami/jmx-exporter:0.20.0
@@ -469,6 +473,8 @@ services:
 volumes:
   postgres_data:
   redis_data:
+  zookeeper_data:
+  kafka_data:
 
 networks:
   default:

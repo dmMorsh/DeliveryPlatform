@@ -161,11 +161,13 @@ namespace CourierService.Infrastructure.Persistence.Migrations
 
                     b.Property<string>("EventId")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
 
                     b.Property<string>("EventType")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
 
                     b.Property<long>("Offset")
                         .HasColumnType("bigint");
@@ -185,7 +187,8 @@ namespace CourierService.Infrastructure.Persistence.Migrations
 
                     b.Property<string>("Topic")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
 
                     b.HasKey("Id");
 

@@ -74,14 +74,16 @@ namespace CatalogService.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<string>("Description")
-                        .HasColumnType("text");
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean");
 
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
 
                     b.Property<byte[]>("RowVersion")
                         .IsConcurrencyToken()
@@ -157,7 +159,8 @@ namespace CatalogService.Infrastructure.Persistence.Migrations
 
                             b1.Property<string>("Currency")
                                 .IsRequired()
-                                .HasColumnType("text");
+                                .HasMaxLength(4)
+                                .HasColumnType("character varying(4)");
 
                             b1.HasKey("ProductId");
 

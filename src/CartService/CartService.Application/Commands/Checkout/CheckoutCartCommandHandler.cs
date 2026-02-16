@@ -31,8 +31,6 @@ public class CheckoutCartCommandHandler : IRequestHandler<CheckoutCartCommand, A
         
         cart.Checkout(orderId);
         
-        await _repo.AddAsync(cart, ct);
-        
         var outboxMessages = cart.DomainEvents
             .Select(_eventMapper.MapFromDomainEvent)
             .Where(ie => ie != null)
