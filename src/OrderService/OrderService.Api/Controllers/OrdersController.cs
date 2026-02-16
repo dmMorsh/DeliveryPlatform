@@ -1,9 +1,10 @@
+using Mapster;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using OrderService.Api.Contracts;
 using OrderService.Application.Commands.CreateOrder;
 using OrderService.Application.Commands.UpdateOrder;
-using OrderService.Application.Models;
 using OrderService.Application.Queries.GetClientOrders;
 using OrderService.Application.Queries.GetOrder;
 
@@ -40,12 +41,12 @@ public class OrdersController : ControllerBase
     /// Создать новый заказ
     /// </summary>
     [HttpPost]
-    public async Task<IActionResult> CreateOrder([FromBody] CreateOrderModel createModel, CancellationToken ct)
+    public async Task<IActionResult> CreateOrder([FromBody] CreateOrderRequest createRequest, CancellationToken ct)
     {
         if (!ModelState.IsValid)
             return BadRequest(ModelState);
         
-        var cmd = new CreateOrderCommand(createModel);
+        var cmd = createRequest.Adapt<CreateOrderCommand>();
 
         var result = await _mediator.Send(cmd, ct);
         if (!result.Success)
@@ -58,9 +59,15 @@ public class OrdersController : ControllerBase
     /// Обновить заказ
     /// </summary>
     [HttpPut("{id}")]
-    public async Task<IActionResult> UpdateOrder(Guid id, [FromBody] UpdateOrderModel updateOrderModel, CancellationToken ct)
+    public async Task<IActionResult> UpdateOrder(Guid id, [FromBody] UpdateOrderRequest updateOrderRequest, CancellationToken ct)
     {
-        var cmd = new UpdateOrderCommand(id, updateOrderModel);
+        var cmd = new UpdateOrderCommand(
+            id,
+            updateOrderRequest.CourierId,
+            updateOrderRequest.CourierName,
+            updateOrderRequest.Status,
+            updateOrderRequest.CourierNote
+        );
         var result = await _mediator.Send(cmd, ct);
         if (!result.Success)
             return BadRequest(result);

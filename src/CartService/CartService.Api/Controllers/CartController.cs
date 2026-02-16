@@ -2,7 +2,6 @@ using CartService.Api.Contracts;
 using CartService.Application.Commands.AddItem;
 using CartService.Application.Commands.Checkout;
 using CartService.Application.Commands.RemoveItem;
-using CartService.Application.Models;
 using CartService.Application.Queries.GetCart;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -79,13 +78,25 @@ public class CartController : ControllerBase
     }
     
     [HttpPost("checkout")]
-    public async Task<IActionResult> Checkout([FromBody] CheckoutCartModel model, CancellationToken ct)
+    public async Task<IActionResult> Checkout([FromBody] CheckoutCartRequest request, CancellationToken ct)
     {
         var customerId = GetCustomerIdFromContext();
         if (customerId == Guid.Empty)
             return Unauthorized(new { error = "Customer ID not found in context" });
 
-        var cmd = new CheckoutCartCommand(customerId, model);
+        var cmd = new CheckoutCartCommand(
+            customerId,
+            request.FromAddress,
+            request.ToAddress,
+            request.FromLatitude,
+            request.FromLongitude,
+            request.ToLatitude,
+            request.ToLongitude,
+            request.WeightGrams,
+            request.CostCents,
+            request.Currency,
+            request.CourierNote
+        );
         var result = await _mediator.Send(cmd, ct);
 
         if (!result.Success)

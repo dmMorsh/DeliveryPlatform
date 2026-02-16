@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using PaymentService.Api.Contracts;
 using PaymentService.Application.Commands.CancelPayment;
 using PaymentService.Application.Commands.CapturePayment;
 using PaymentService.Application.Commands.CreatePayment;
@@ -27,9 +28,9 @@ public class PaymentController : ControllerBase
     }
 
     [HttpPost]
-    public async Task<IActionResult> Create([FromBody] CreatePaymentModel model)
+    public async Task<IActionResult> Create([FromBody] CreatePaymentRequest request)
     {
-        var cmd = new CreatePaymentCommand(model);
+        var cmd = new CreatePaymentCommand(request.OrderId, request.Amount, request.Currency);
         var result = await _mediator.Send(cmd);
         return CreatedAtAction(nameof(GetById), new { id = result.Message }, result);
     }

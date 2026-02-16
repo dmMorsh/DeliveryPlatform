@@ -47,7 +47,7 @@ public class UpdateReservedStockCommandHandler : IRequestHandler<UpdateReservedS
 
         var items = order.Items
             .Join(
-                request.OrderItemsModel.Items,
+                request.Items,
                 oi => oi.ProductId,
                 ri => ri.ProductId,
                 (oi, ri) => (OrderItem: oi, RequestItem: ri)
@@ -78,7 +78,7 @@ public class UpdateReservedStockCommandHandler : IRequestHandler<UpdateReservedS
     private async Task<ApiResponse> HandleForCanceledOrder(UpdateReservedStockCommand request, CancellationToken ct, Order order,
         IUnitOfWork uow)
     {
-        var productIds = request.OrderItemsModel.Items
+        var productIds = request.Items
             .Select(i => i.ProductId)
             .ToHashSet();
 
@@ -110,7 +110,7 @@ public class UpdateReservedStockCommandHandler : IRequestHandler<UpdateReservedS
             outboxMessages.Add(OutboxMessage.From(new StockReservationReleaseRequestedEvent
             {
                 OrderId = request.OrderId,
-                Items = request.OrderItemsModel.Items.Select(i => new IntegrationOrderItemSnapshot
+                Items = request.Items.Select(i => new IntegrationOrderItemSnapshot
                 {
                     ProductId = i.ProductId,
                     Quantity = i.Quantity
@@ -135,7 +135,7 @@ public class UpdateReservedStockCommandHandler : IRequestHandler<UpdateReservedS
         Order order, OrderItem[] items,
         UpdateReservedStockCommand request, CancellationToken ct)
     {
-        if (items.Length == request.OrderItemsModel.Items.Count)
+        if (items.Length == request.Items.Count)
         {
             var error = $"No matching items in order {order.Id}";
             order.MarkAsInconsistent(error);
@@ -156,10 +156,10 @@ public class UpdateReservedStockCommandHandler : IRequestHandler<UpdateReservedS
     }
 
     private async Task<bool> HasErrors(IUnitOfWork uow, Order order, 
-        (OrderItem OrderItem, UpdateOrderItemModel RequestItem)[] items,
+        (OrderItem OrderItem, UpdateOrderItemDto RequestItem)[] items,
         UpdateReservedStockCommand request, CancellationToken ct)
     {
-        if (items.Length != request.OrderItemsModel.Items.Count)
+        if (items.Length != request.Items.Count)
         {
             var error = $"Stock reservation invariant violation. OrderId={order.Id}. Details=Items mismatch";
             order.MarkAsInconsistent(error);

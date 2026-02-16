@@ -5,7 +5,7 @@ using Shared.Utilities;
 
 namespace CartService.Application.Commands.Checkout;
 
-public class CheckoutCartCommandHandler : IRequestHandler<CheckoutCartCommand, ApiResponse<string>>
+public class CheckoutCartCommandHandler : IRequestHandler<CheckoutCartCommand, ApiResponse<Guid>>
 {
     private readonly ICartRepository _repo;
     private readonly IUnitOfWork _uow;
@@ -20,14 +20,14 @@ public class CheckoutCartCommandHandler : IRequestHandler<CheckoutCartCommand, A
         _orderService = orderService;
     }
 
-    public async Task<ApiResponse<string>> Handle(CheckoutCartCommand request, CancellationToken ct)
+    public async Task<ApiResponse<Guid>> Handle(CheckoutCartCommand request, CancellationToken ct)
     {
         var cart = await _repo.GetCartByCustomerIdAsync(request.CustomerId, ct);
 
         if (cart == null || cart.Items.Count == 0)
-            return ApiResponse<string>.ErrorResponse("Cart is empty or not found");
+            return ApiResponse<Guid>.ErrorResponse("Cart is empty or not found");
 
-        var orderId = await _orderService.CreateOrderFromCartAsync(cart, request.Model, ct);
+        var orderId = await _orderService.CreateOrderFromCartAsync(cart, request, ct);
         
         cart.Checkout(orderId);
         
@@ -42,6 +42,6 @@ public class CheckoutCartCommandHandler : IRequestHandler<CheckoutCartCommand, A
         await _uow.SaveChangesAsync(outboxMessages, ct);
         cart.ClearDomainEvents();
 
-        return ApiResponse<string>.SuccessResponse(orderId.ToString(), "Cart checked out successfully");
+        return ApiResponse<Guid>.SuccessResponse(orderId, "Cart checked out successfully");
     }
 }

@@ -9,7 +9,6 @@ using OrderService.Application.Commands.MarkStockReservationFailed;
 using OrderService.Application.Commands.UpdateOrderStatusFromPayment;
 using OrderService.Application.Commands.UpdateReservedStock;
 using OrderService.Application.Commands.UpdateOrder;
-using OrderService.Application.Models;
 using OrderService.Domain.Aggregates;
 using Shared.Contracts.Events;
 using Shared.Services;
@@ -208,13 +207,14 @@ public class OrderEventConsumer : KafkaEventConsumerBase
             _logger.LogInformation("📦 OrderService: Reserve failed. OrderId={OrderId}, Items={Items}.", 
                 @event.OrderId, @event.Items);
             
-            var cmd = new MarkStockReservationFailedCommand(@event.OrderId,
-                new UpdateOrderItemsModel(ItemModeStatus.ReservationFailed, @event.Items.Select(i =>
-                    new UpdateOrderItemModel(
-                        i.ProductId,
-                        i.Quantity,
-                        i.Reason
-                    )).ToArray()));
+            var cmd = new MarkStockReservationFailedCommand(
+            @event.OrderId,
+            @event.Items.Select(i =>
+                new MarkStockFailedItemDto(
+                    i.ProductId,
+                    i.Quantity,
+                    i.Reason
+                )).ToArray());
             
             using var scope = _scopeFactory.CreateScope();
             var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
@@ -248,13 +248,14 @@ public class OrderEventConsumer : KafkaEventConsumerBase
             _logger.LogInformation("📦 OrderService: Stock reserved. OrderId={OrderId}, Items={Items}.", 
                 @event.OrderId, @event.Items);
 
-            var cmd = new UpdateReservedStockCommand(@event.OrderId,
-                new UpdateOrderItemsModel(ItemModeStatus.Reserved, @event.Items.Select(i =>
-                    new UpdateOrderItemModel(
+            var cmd = new UpdateReservedStockCommand(
+                @event.OrderId,
+                @event.Items.Select(i =>
+                    new UpdateOrderItemDto(
                         i.ProductId,
                         i.Quantity,
                         null
-                    )).ToArray()));
+                    )).ToArray());
             
             using var scope = _scopeFactory.CreateScope();
             var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
@@ -401,12 +402,12 @@ public class OrderEventConsumer : KafkaEventConsumerBase
         using var scope = _scopeFactory.CreateScope();
         var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
 
-        var model = new UpdateOrderModel
-        {
-            CourierId = courierId,
-            Status = status
-        };
-
-        await mediator.Send(new UpdateOrderCommand(orderId, model));
+        await mediator.Send(new UpdateOrderCommand(
+            orderId,
+            courierId,
+            null,
+            status,
+            null
+        ));
     }
 }

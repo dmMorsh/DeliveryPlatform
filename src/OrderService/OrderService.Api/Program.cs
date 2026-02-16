@@ -3,7 +3,6 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using OrderService.Api.Grpc;
 using OrderService.Api.Mappings;
-using OrderService.Application;
 using OrderService.Application.Interfaces;
 using OrderService.Application.MediatR;
 using OrderService.Application.Services;
@@ -78,8 +77,8 @@ if (!useInMemory)
 // Register MediatR handlers from Application assembly
 builder.Services
     .AddMediatR(typeof(ApplicationMarker).Assembly)
-    .AddTransient(typeof(IPipelineBehavior<,>), typeof(ExceptionBehavior<,>));;
-
+    .AddTransient(typeof(IPipelineBehavior<,>), typeof(ExceptionBehavior<,>))
+    .AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
 // Auth
 builder.AddExtededAuthentication();
 builder.Services.AddAuthorization();

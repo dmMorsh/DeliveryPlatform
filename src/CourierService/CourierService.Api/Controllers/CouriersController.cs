@@ -34,7 +34,12 @@ public class CouriersController : ControllerBase
         if (!ModelState.IsValid)
             return BadRequest(ModelState);
 
-        var result = await _mediator.Send(new RegisterCourierCommand(model), ct);
+        var result = await _mediator.Send(new RegisterCourierCommand(
+            model.FullName,
+            model.Phone,
+            model.Email,
+            model.DocumentNumber
+        ), ct);
         if (!result.Success)
             return BadRequest(result);
 
@@ -44,7 +49,13 @@ public class CouriersController : ControllerBase
     [HttpPut("{id}")]
     public async Task<IActionResult> UpdateCourier(Guid id, [FromBody] UpdateCourierModel model, CancellationToken ct)
     {
-        var result = await _mediator.Send(new UpdateCourierStatusCommand(id, model), ct);
+        var result = await _mediator.Send(new UpdateCourierStatusCommand(
+            id,
+            model.Status,
+            model.CurrentLatitude,
+            model.CurrentLongitude,
+            model.IsActive
+        ), ct);
         if (!result.Success)
             return BadRequest(result);
         return Ok(result);

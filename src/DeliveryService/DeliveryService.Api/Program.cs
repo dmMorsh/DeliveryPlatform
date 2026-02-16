@@ -1,6 +1,5 @@
 using Confluent.Kafka;
 using DeliveryService.Application.Interfaces;
-using DeliveryService.Application.Mapping;
 using DeliveryService.Application.MediatR;
 using DeliveryService.Application.Services;
 using DeliveryService.Infrastructure.Inbox;

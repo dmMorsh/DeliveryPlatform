@@ -1,5 +1,4 @@
 using Confluent.Kafka;
-using CourierService.Application;
 using CourierService.Application.Interfaces;
 using CourierService.Application.MediatR;
 using CourierService.Application.Services;
@@ -22,6 +21,7 @@ builder.UseExtededSerilog();
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
 builder.Services.AddMediatR(typeof(ApplicationMarker).Assembly);
+builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
 
 // Allow using an in-memory DB for local quick tests by setting USE_INMEMORY_DB=true
 var useInMemory = Environment.GetEnvironmentVariable("USE_INMEMORY_DB") == "true"

@@ -1,6 +1,6 @@
-﻿namespace CartService.Application.Models;
+﻿namespace CartService.Api.Contracts;
 
-public record CheckoutCartModel(
+public record CheckoutCartRequest(
     string FromAddress,
     string ToAddress,
     double FromLatitude,

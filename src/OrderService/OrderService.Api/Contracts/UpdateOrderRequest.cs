@@ -1,8 +1,8 @@
 ﻿using OrderService.Domain.Aggregates;
 
-namespace OrderService.Application.Models;
+namespace OrderService.Api.Contracts;
 
-public record UpdateOrderModel
+public record UpdateOrderRequest
 {
     public Guid? CourierId { get; set; }
     public string? CourierName { get; set; }

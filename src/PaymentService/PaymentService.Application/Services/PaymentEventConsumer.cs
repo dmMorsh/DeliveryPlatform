@@ -7,7 +7,6 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using PaymentService.Application.Commands.CreatePayment;
 using PaymentService.Application.Commands.ProcessOrderCanceled;
-using PaymentService.Application.Models;
 using Shared.Contracts.Events;
 using Shared.Services;
 
@@ -71,7 +70,7 @@ public class PaymentEventConsumer : KafkaEventConsumerBase
             using var scope = _scopeFactory.CreateScope();
             var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
             var currency = string.IsNullOrWhiteSpace(@event.Currency) ? "RUB" : @event.Currency;
-            var cmd = new CreatePaymentCommand(new CreatePaymentModel(@event.OrderId, @event.CostCents, currency));
+            var cmd = new CreatePaymentCommand(@event.OrderId, @event.CostCents, currency);
             await mediator.Send(cmd);
         }
         catch (Exception ex)

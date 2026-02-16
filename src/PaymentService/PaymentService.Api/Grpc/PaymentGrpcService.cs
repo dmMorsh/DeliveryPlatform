@@ -7,7 +7,6 @@ using PaymentService.Application.Commands.CreatePayment;
 using PaymentService.Application.Commands.RefundPayment;
 using PaymentService.Application.Commands.StartPayment;
 using PaymentService.Application.Interfaces;
-using PaymentService.Application.Models;
 using Shared.Proto;
 using Shared.Utilities;
 
@@ -30,7 +29,7 @@ public sealed class PaymentGrpcService : PaymentGrpc.PaymentGrpcBase
         if (!Guid.TryParse(request.OrderId, out var orderId))
             return Fail("Invalid orderId");
 
-        var cmd = new CreatePaymentCommand(new CreatePaymentModel(orderId, request.AmountCents, request.Currency));
+        var cmd = new CreatePaymentCommand(orderId, request.AmountCents, request.Currency);
         var result = await _mediator.Send(cmd, context.CancellationToken);
         return Map(result);
     }

@@ -38,6 +38,7 @@ else
 
 builder.Services.AddControllers();
 builder.Services.AddMediatR(typeof(ApplicationMarker).Assembly);
+builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
 builder.Services.AddScoped<IProductRepository, ProductRepository>();
 builder.Services.AddScoped<IProductReadRepository, ProductReadRepository>();
 

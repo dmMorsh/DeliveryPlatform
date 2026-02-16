@@ -1,7 +1,6 @@
 using MediatR;
-using PaymentService.Application.Models;
 using Shared.Utilities;
 
 namespace PaymentService.Application.Commands.CreatePayment;
 
-public record CreatePaymentCommand(CreatePaymentModel Model) : IRequest<ApiResponse>;
+public record CreatePaymentCommand(Guid OrderId, long Amount, string Currency) : IRequest<ApiResponse>;

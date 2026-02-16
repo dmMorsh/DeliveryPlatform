@@ -28,7 +28,7 @@ public class PaymentWebhookController : ControllerBase
         if (!_validator.IsValid(HttpContext))
             return Unauthorized();
 
-        var result = await _mediator.Send(new ProcessYooMoneyWebhookCommand(model));
+        var result = await _mediator.Send(new ProcessYooMoneyWebhookCommand(model.Event, model.Object));
         return Ok(result);
     }
 
@@ -38,7 +38,7 @@ public class PaymentWebhookController : ControllerBase
         if (!_validator.IsValid(HttpContext))
             return Unauthorized();
 
-        var result = await _mediator.Send(new ProcessSberbankWebhookCommand(model));
+        var result = await _mediator.Send(new ProcessSberbankWebhookCommand(model.OrderId, model.OrderStatus));
         return Ok(result);
     }
 }

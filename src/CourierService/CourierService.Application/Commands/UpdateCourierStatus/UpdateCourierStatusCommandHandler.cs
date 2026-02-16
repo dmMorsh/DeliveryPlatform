@@ -35,19 +35,18 @@ public class UpdateCourierStatusCommandHandler : IRequestHandler<UpdateCourierSt
             if (courier == null)
                 return ApiResponse<CourierView>.ErrorResponse($"Courier {request.CourierId} not found");
 
-            var model = request.Model;
             var oldStatus = courier.Status;
 
-            if (model.Status.HasValue && Enum.IsDefined(typeof(CourierStatus), model.Status.Value))
-                courier.ChangeStatus((CourierStatus)model.Status.Value);
+            if (request.Status.HasValue && Enum.IsDefined(typeof(CourierStatus), request.Status.Value))
+                courier.ChangeStatus((CourierStatus)request.Status.Value);
 
-            if (model.CurrentLatitude.HasValue && model.CurrentLongitude.HasValue)
+            if (request.CurrentLatitude.HasValue && request.CurrentLongitude.HasValue)
             {
-                courier.UpdateLocation(model.CurrentLatitude.Value, model.CurrentLongitude.Value);
+                courier.UpdateLocation(request.CurrentLatitude.Value, request.CurrentLongitude.Value);
             }
 
-            if (model.IsActive.HasValue)
-                if (!model.IsActive.Value)
+            if (request.IsActive.HasValue)
+                if (!request.IsActive.Value)
                     courier.Deactivate();
             
             _logger.LogInformation("Courier {CourierId} updated: {OldStatus} -> {NewStatus}", request.CourierId, oldStatus, courier.Status);

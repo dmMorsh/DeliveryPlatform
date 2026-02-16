@@ -1,8 +1,8 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace OrderService.Application.Models;
+namespace OrderService.Api.Contracts;
 
-public record CreateOrderModel
+public record CreateOrderRequest
 {
     [Required(ErrorMessage = "ClientId is required")]
     public Guid ClientId { get; set; }
@@ -43,7 +43,7 @@ public record CreateOrderModel
     [StringLength(500, ErrorMessage = "CourierNote must not exceed 500 characters")]
     public string? CourierNote { get; set; }
 
-    public IReadOnlyCollection<CreateOrderItemModel>? Items { get; set; }
+    public IReadOnlyCollection<CreateOrderItemDto>? Items { get; set; }
 }
 
-public record CreateOrderItemModel(Guid ProductId,  string Name, int PriceCents, int Quantity);
+public record CreateOrderItemDto(Guid ProductId,  string Name, int PriceCents, int Quantity);

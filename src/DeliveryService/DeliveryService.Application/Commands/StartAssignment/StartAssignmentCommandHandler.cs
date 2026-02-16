@@ -1,6 +1,5 @@
 using System.Diagnostics.Metrics;
 using DeliveryService.Application.Interfaces;
-using DeliveryService.Application.Mapping;
 using DeliveryService.Application.Models;
 using DeliveryService.Domain.Aggregates;
 using MediatR;

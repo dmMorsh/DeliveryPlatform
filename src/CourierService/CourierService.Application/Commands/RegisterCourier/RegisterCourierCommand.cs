@@ -4,4 +4,9 @@ using Shared.Utilities;
 
 namespace CourierService.Application.Commands.RegisterCourier;
 
-public record RegisterCourierCommand(CreateCourierModel Model) : IRequest<ApiResponse<CourierView>>;
+public record RegisterCourierCommand(
+    string FullName,
+    string Phone,
+    string Email,
+    string DocumentNumber
+) : IRequest<ApiResponse<CourierView>>;

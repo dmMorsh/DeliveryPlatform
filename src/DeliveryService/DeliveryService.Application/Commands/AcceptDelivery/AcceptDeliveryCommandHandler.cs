@@ -1,5 +1,4 @@
 using DeliveryService.Application.Interfaces;
-using DeliveryService.Application.Mapping;
 using DeliveryService.Application.Models;
 using MediatR;
 using Microsoft.Extensions.Logging;

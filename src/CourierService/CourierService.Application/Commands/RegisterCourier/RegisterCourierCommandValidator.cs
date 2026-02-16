@@ -6,11 +6,11 @@ public class RegisterCourierCommandValidator : AbstractValidator<RegisterCourier
 {
     public RegisterCourierCommandValidator()
     {
-        RuleFor(x => x.Model).SetValidator(new CreateCourierModelValidator());
+        RuleFor(x => x).SetValidator(new CreateCourierModelValidator());
     }
 }
 
-public class CreateCourierModelValidator : AbstractValidator<Models.CreateCourierModel>
+public class CreateCourierModelValidator : AbstractValidator<RegisterCourierCommand>
 {
     public CreateCourierModelValidator()
     {

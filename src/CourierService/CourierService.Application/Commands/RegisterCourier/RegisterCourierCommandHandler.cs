@@ -31,16 +31,14 @@ public class RegisterCourierCommandHandler : IRequestHandler<RegisterCourierComm
     {
         try
         {
-            var model = request.Model;
-
-            if (string.IsNullOrWhiteSpace(model.FullName) || string.IsNullOrWhiteSpace(model.Phone))
+            if (string.IsNullOrWhiteSpace(request.FullName) || string.IsNullOrWhiteSpace(request.Phone))
                 return ApiResponse<CourierView>.ErrorResponse("Name and phone are required");
 
-            var existingCourier = await _repository.GetCourierByPhoneAsync(model.Phone);
+            var existingCourier = await _repository.GetCourierByPhoneAsync(request.Phone);
             if (existingCourier != null)
                 return ApiResponse<CourierView>.ErrorResponse("Courier with this phone already exists");
 
-            var courier = Courier.Register(model.FullName, model.Phone, model.Email, model.DocumentNumber);
+            var courier = Courier.Register(request.FullName, request.Phone, request.Email, request.DocumentNumber);
 
             var created = await _repository.CreateCourierAsync(courier);
             _logger.LogInformation("Courier created: {CourierName} (ID: {CourierId})", created.FullName, created.Id);

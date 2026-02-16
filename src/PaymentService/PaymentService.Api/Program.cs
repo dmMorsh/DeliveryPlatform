@@ -2,7 +2,6 @@ using System.Threading.RateLimiting;
 using Confluent.Kafka;
 using MediatR;
 using PaymentService.Api.Grpc;
-using PaymentService.Application;
 using PaymentService.Application.Interfaces;
 using PaymentService.Application.Services;
 using PaymentService.Api.Security;

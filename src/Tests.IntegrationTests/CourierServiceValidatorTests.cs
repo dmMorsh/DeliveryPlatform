@@ -1,6 +1,5 @@
 using CourierService.Application.Commands.RegisterCourier;
 using CourierService.Application.Commands.UpdateCourierStatus;
-using CourierService.Application.Models;
 using FluentAssertions;
 
 namespace Tests.IntegrationTests;
@@ -14,13 +13,13 @@ public class CourierServiceValidatorTests
     public void RegisterCourierCommandValidator_WithValidData_ShouldPass()
     {
         // Arrange
-        var command = new RegisterCourierCommand(new CreateCourierModel
-        {
-            FullName = "John Doe",
-            Phone = "+1234567890",
-            Email = "john@example.com",
-            DocumentNumber = "12345"
-        });
+        var command = new RegisterCourierCommand
+        (
+            "John Doe",
+            "+1234567890",
+            "john@example.com",
+            "12345"
+        );
 
         // Act
         var result = _registerValidator.Validate(command);
@@ -33,13 +32,12 @@ public class CourierServiceValidatorTests
     public void RegisterCourierCommandValidator_WithEmptyName_ShouldFail()
     {
         // Arrange
-        var command = new RegisterCourierCommand(new CreateCourierModel
-        {
-            FullName = "",
-            Phone = "+1234567890",
-            Email = "john@example.com",
-            DocumentNumber = "12345"
-        });
+        var command = new RegisterCourierCommand(
+            "",
+            "+1234567890",
+            "john@example.com",
+            "12345"
+        );
 
         // Act
         var result = _registerValidator.Validate(command);
@@ -53,13 +51,12 @@ public class CourierServiceValidatorTests
     public void RegisterCourierCommandValidator_WithLongName_ShouldFail()
     {
         // Arrange
-        var command = new RegisterCourierCommand(new CreateCourierModel
-        {
-            FullName = new string('a', 201),
-            Phone = "+1234567890",
-            Email = "john@example.com",
-            DocumentNumber = "12345"
-        });
+        var command = new RegisterCourierCommand(
+            new string('a', 201),
+            "+1234567890",
+            "john@example.com",
+            "12345"
+        );
 
         // Act
         var result = _registerValidator.Validate(command);
@@ -73,13 +70,12 @@ public class CourierServiceValidatorTests
     public void RegisterCourierCommandValidator_WithInvalidEmail_ShouldFail()
     {
         // Arrange
-        var command = new RegisterCourierCommand(new CreateCourierModel
-        {
-            FullName = "John Doe",
-            Phone = "+1234567890",
-            Email = "invalid-email",
-            DocumentNumber = "12345"
-        });
+        var command = new RegisterCourierCommand(
+            "John Doe",
+            "+1234567890",
+            "invalid-email",
+            "12345"
+        );
 
         // Act
         var result = _registerValidator.Validate(command);
@@ -93,13 +89,12 @@ public class CourierServiceValidatorTests
     public void RegisterCourierCommandValidator_WithEmptyPhone_ShouldFail()
     {
         // Arrange
-        var command = new RegisterCourierCommand(new CreateCourierModel
-        {
-            FullName = "John Doe",
-            Phone = "",
-            Email = "john@example.com",
-            DocumentNumber = "12345"
-        });
+        var command = new RegisterCourierCommand(
+            "John Doe",
+            "",
+            "john@example.com",
+            "12345"
+        );
 
         // Act
         var result = _registerValidator.Validate(command);
@@ -115,7 +110,10 @@ public class CourierServiceValidatorTests
         // Arrange
         var command = new UpdateCourierStatusCommand(
             Guid.NewGuid(),
-            new UpdateCourierModel { Status = 1 }
+            1, 
+            null,
+            null, 
+            null
         );
 
         // Act
@@ -131,7 +129,10 @@ public class CourierServiceValidatorTests
         // Arrange
         var command = new UpdateCourierStatusCommand(
             Guid.Empty,
-            new UpdateCourierModel { Status = 1 }
+            1, 
+            null,
+            null, 
+            null
         );
 
         // Act
@@ -147,8 +148,11 @@ public class CourierServiceValidatorTests
     {
         // Arrange
         var command = new UpdateCourierStatusCommand(
-            Guid.NewGuid(),
-            new UpdateCourierModel { Status = null }
+            Guid.NewGuid(), 
+            null, 
+            null, 
+            null, 
+            null 
         );
 
         // Act
@@ -165,7 +169,10 @@ public class CourierServiceValidatorTests
         // Arrange
         var command = new UpdateCourierStatusCommand(
             Guid.NewGuid(),
-            new UpdateCourierModel { Status = 999 } // Invalid status code
+            999, // Invalid status code
+            null,
+            null, 
+            null
         );
 
         // Act

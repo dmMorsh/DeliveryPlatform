@@ -25,15 +25,13 @@ public class CreateOrderCommandHandler : IRequestHandler<CreateOrderCommand, Api
 
     public async Task<ApiResponse<OrderView>> Handle(CreateOrderCommand request, CancellationToken ct)
     {
-        var createModel = request.CreateModel;
-
-        if (string.IsNullOrWhiteSpace(createModel.FromAddress) || string.IsNullOrWhiteSpace(createModel.ToAddress))
+        if (string.IsNullOrWhiteSpace(request.FromAddress) || string.IsNullOrWhiteSpace(request.ToAddress))
             return ApiResponse<OrderView>.ErrorResponse("From and To addresses are required");
 
-        if (createModel.CostCents <= 0)
+        if (request.CostCents <= 0)
             return ApiResponse<OrderView>.ErrorResponse("Cost must be greater than 0");
         
-        var order = Mapping.OrderFactory.CreateNew(createModel);
+        var order = Mapping.OrderFactory.CreateNew(request);
 
         await using var uow = _factory.Create(order.Id);
         

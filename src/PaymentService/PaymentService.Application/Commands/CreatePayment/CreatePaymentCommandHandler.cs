@@ -23,19 +23,19 @@ public class CreatePaymentCommandHandler : IRequestHandler<CreatePaymentCommand,
 
     public async Task<ApiResponse> Handle(CreatePaymentCommand request, CancellationToken ct)
     {
-        var payment = Payment.Create(request.Model.OrderId, request.Model.Amount, request.Model.Currency);
+        var payment = Payment.Create(request.OrderId, request.Amount, request.Currency);
         var outbox = new List<OutboxMessage>();
         try
         {
-            await using var uow = _factory.Create(request.Model.OrderId);
+            await using var uow = _factory.Create(request.OrderId);
             await uow.Payments.AddAsync(payment, ct);
             outbox.Add(OutboxMessage.From(_eventMapper.MapCreated(payment)));
             await uow.SaveChangesAsync(outbox, ct);
         }
         catch (DbUpdateException ex) when (IsUniqueViolation(ex))
         {
-            await using var uow = _factory.Create(request.Model.OrderId);
-            payment = await uow.Payments.GetByOrderId(request.Model.OrderId, ct);
+            await using var uow = _factory.Create(request.OrderId);
+            payment = await uow.Payments.GetByOrderId(request.OrderId, ct);
         }
 
         return ApiResponse.SuccessResponse();

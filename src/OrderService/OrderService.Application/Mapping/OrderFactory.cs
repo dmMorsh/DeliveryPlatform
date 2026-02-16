@@ -1,4 +1,4 @@
-using OrderService.Application.Models;
+using OrderService.Application.Commands.CreateOrder;
 using OrderService.Domain.Aggregates;
 using OrderService.Domain.Entities;
 
@@ -6,22 +6,22 @@ namespace OrderService.Application.Mapping;
 
 public static class OrderFactory
 { 
-    public static Order CreateNew(CreateOrderModel createModel)
+    public static Order CreateNew(CreateOrderCommand command)
     {
         return Order.Create(
-            clientId: createModel.ClientId,
-            fromAddress: createModel.FromAddress,
-            toAddress: createModel.ToAddress,
-            fromLatitude: createModel.FromLatitude,
-            fromLongitude: createModel.FromLongitude,
-            toLatitude: createModel.ToLatitude,
-            toLongitude: createModel.ToLongitude,
-            description: createModel.Description,
-            weightGrams: createModel.WeightGrams,
-            costCents: createModel.CostCents,
-            currency: createModel.Currency,
-            courierNote: createModel.CourierNote,
-            items: createModel.Items?.Select(i => new OrderItem(
+            clientId: command.ClientId,
+            fromAddress: command.FromAddress,
+            toAddress: command.ToAddress,
+            fromLatitude: command.FromLatitude,
+            fromLongitude: command.FromLongitude,
+            toLatitude: command.ToLatitude,
+            toLongitude: command.ToLongitude,
+            description: command.Description,
+            weightGrams: command.WeightGrams,
+            costCents: command.CostCents,
+            currency: command.Currency,
+            courierNote: command.CourierNote,
+            items: command.Items?.Select(i => new OrderItem(
                     i.ProductId, i.Name, i.PriceCents, i.Quantity))
                 .ToList()
         );

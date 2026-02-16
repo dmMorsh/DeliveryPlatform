@@ -33,17 +33,16 @@ public class UpdateOrderCommandHandler
         if (order == null)
             return ApiResponse<OrderView>.ErrorResponse("Order not found");
 
-        var dto = request.Model;
         var oldStatus = order.Status;
 
-        if (dto.Status.HasValue)
-            order.ChangeStatus(dto.Status.Value);
+        if (request.Status.HasValue)
+            order.ChangeStatus(request.Status.Value);
 
-        if (dto.CourierId.HasValue)
-            order.AssignCourier(dto.CourierId.Value);
+        if (request.CourierId.HasValue)
+            order.AssignCourier(request.CourierId.Value);
 
-        if (!string.IsNullOrWhiteSpace(dto.CourierNote))
-            order.AddCourierNote(dto.CourierNote);
+        if (!string.IsNullOrWhiteSpace(request.CourierNote))
+            order.AddCourierNote(request.CourierNote);
         
         var outboxMessages = order.DomainEvents
             .Select(_eventMapper.MapFromDomainEvent)
@@ -52,16 +51,16 @@ public class UpdateOrderCommandHandler
             .ToList();
 
         // Add status changed event if status was modified
-        if (dto.Status.HasValue && oldStatus != order.Status)
+        if (request.Status.HasValue && oldStatus != order.Status)
         {
             var statusChangeEvent = _eventMapper.MapOrderStatusChangedEvent(order, oldStatus, order.Status);
             outboxMessages.Add(OutboxMessage.From(statusChangeEvent));
         }
 
         // Add order assigned event if courier was assigned
-        if (dto.CourierId.HasValue && order.CourierId == dto.CourierId.Value)
+        if (request.CourierId.HasValue && order.CourierId == request.CourierId.Value)
         {
-            var assignedEvent = _eventMapper.MapOrderAssignedEvent(order, dto.CourierId.Value, dto.CourierName ?? "Unknown");
+            var assignedEvent = _eventMapper.MapOrderAssignedEvent(order, request.CourierId.Value, request.CourierName ?? "Unknown");
             outboxMessages.Add(OutboxMessage.From(assignedEvent));
         }
 

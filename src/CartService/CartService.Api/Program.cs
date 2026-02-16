@@ -72,6 +72,7 @@ builder.Services.AddScoped<IEventInbox, CartEventInbox>();
 
 // Cart DDD services
 builder.Services.AddMediatR(typeof(ApplicationMarker).Assembly);
+builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
 builder.Services.AddScoped<ICartRepository, CartRepository>();
 builder.Services.AddScoped<ICartReadRepository, CartReadRepository>();
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();

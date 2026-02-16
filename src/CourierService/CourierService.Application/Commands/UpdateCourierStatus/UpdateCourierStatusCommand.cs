@@ -4,4 +4,10 @@ using Shared.Utilities;
 
 namespace CourierService.Application.Commands.UpdateCourierStatus;
 
-public record UpdateCourierStatusCommand(Guid CourierId, UpdateCourierModel Model) : IRequest<ApiResponse<CourierView>>;
+public record UpdateCourierStatusCommand(
+    Guid CourierId,
+    int? Status,
+    double? CurrentLatitude,
+    double? CurrentLongitude,
+    bool? IsActive
+) : IRequest<ApiResponse<CourierView>>;

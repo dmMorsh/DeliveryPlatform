@@ -1,5 +1,5 @@
-﻿using CartService.Application.Interfaces;
-using CartService.Application.Models;
+﻿using CartService.Application.Commands.Checkout;
+using CartService.Application.Interfaces;
 using CartService.Domain.Aggregates;
 using Shared.Proto;
 
@@ -14,22 +14,21 @@ public class OrderGrpcService : IOrderService
         _client = client;
     }
     
-    public async Task<Guid> CreateOrderFromCartAsync(Cart cart, CheckoutCartModel model, CancellationToken ct)
+    public async Task<Guid> CreateOrderFromCartAsync(Cart cart, CheckoutCartCommand command, CancellationToken ct)
     {
         var request = new CreateOrderRequest
         {
             CustomerId = cart.CustomerId.ToString(),
-            // CostCents = cart.Items.Select(it => it.PriceCents * it.Quantity).Sum(),
-            CostCents = model.CostCents,
-            Currency = model.Currency ?? string.Empty,
-            FromAddress =  model.FromAddress,
-            FromLatitude = model.FromLatitude,
-            FromLongitude = model.FromLongitude,
-            ToAddress = model.ToAddress,
-            ToLatitude = model.ToLatitude,
-            ToLongitude = model.ToLongitude,
-            WeightGrams = model.WeightGrams,
-            CourierNote = model.CourierNote ?? string.Empty,
+            CostCents = command.CostCents,
+            Currency = command.Currency ?? string.Empty,
+            FromAddress = command.FromAddress,
+            FromLatitude = command.FromLatitude,
+            FromLongitude = command.FromLongitude,
+            ToAddress = command.ToAddress,
+            ToLatitude = command.ToLatitude,
+            ToLongitude = command.ToLongitude,
+            WeightGrams = command.WeightGrams,
+            CourierNote = command.CourierNote ?? string.Empty,
         };
 
         request.Items.AddRange(

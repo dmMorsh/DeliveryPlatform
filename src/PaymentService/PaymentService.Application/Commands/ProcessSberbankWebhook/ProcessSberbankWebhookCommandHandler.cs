@@ -25,10 +25,10 @@ public class ProcessSberbankWebhookCommandHandler : IRequestHandler<ProcessSberb
 
     public async Task<ApiResponse> Handle(ProcessSberbankWebhookCommand request, CancellationToken ct)
     {
-        if (string.IsNullOrWhiteSpace(request.Model.OrderId))
+        if (string.IsNullOrWhiteSpace(request.OrderId))
             return ApiResponse.ErrorResponse("OrderId is required");
 
-        var orderId = await _factory.ResolveOrderIdByExternalPaymentId(request.Model.OrderId, ct);
+        var orderId = await _factory.ResolveOrderIdByExternalPaymentId(request.OrderId, ct);
         if (orderId is null)
             return ApiResponse.SuccessResponse();
 
@@ -38,16 +38,16 @@ public class ProcessSberbankWebhookCommandHandler : IRequestHandler<ProcessSberb
             return ApiResponse.SuccessResponse();
 
         var provider = _providers.Get(payment.Provider);
-        var providerStatus = await provider.CheckStatus(request.Model.OrderId, ct);
+        var providerStatus = await provider.CheckStatus(request.OrderId, ct);
 
         var prev = payment.Status;
         switch (providerStatus)
         {
             case PaymentProviderStatus.Authorized:
-                payment.MarkAuthorized(request.Model.OrderId);
+                payment.MarkAuthorized(request.OrderId);
                 break;
             case PaymentProviderStatus.Succeeded:
-                payment.MarkCaptured(request.Model.OrderId);
+                payment.MarkCaptured(request.OrderId);
                 break;
             case PaymentProviderStatus.Cancelled:
                 payment.MarkCancelled();
@@ -61,7 +61,7 @@ public class ProcessSberbankWebhookCommandHandler : IRequestHandler<ProcessSberb
         }
 
         var outbox = BuildOutboxIfChanged(prev, payment, "Provider status failed");
-        await uow.Payments.UpsertExternalPaymentIdMap(payment.OrderId, payment.Id, request.Model.OrderId, payment.Provider, ct);
+        await uow.Payments.UpsertExternalPaymentIdMap(payment.OrderId, payment.Id, request.OrderId, payment.Provider, ct);
         await uow.SaveChangesAsync(outbox, ct);
         return ApiResponse.SuccessResponse();
     }

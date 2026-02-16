@@ -1,7 +1,6 @@
 using Confluent.Kafka;
 using Hangfire;
 using Hangfire.PostgreSql;
-using InventoryService.Application;
 using InventoryService.Application.Interfaces;
 using InventoryService.Application.MediatR;
 using InventoryService.Application.Services;
@@ -68,6 +67,7 @@ else
 builder.Services.AddControllers();
 builder.Services
     .AddMediatR(typeof(ApplicationMarker).Assembly)
+    .AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>))
     .AddTransient(typeof(IPipelineBehavior<,>), typeof(HangfireRetryBehavior<,>));
 
 var kafkaBrokers = ConfigurationGuard.GetRequired(builder.Configuration, builder.Environment, "Kafka:Brokers", "localhost:29092");

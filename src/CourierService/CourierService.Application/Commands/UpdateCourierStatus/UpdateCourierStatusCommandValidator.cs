@@ -1,5 +1,4 @@
 using FluentValidation;
-using System.Linq;
 
 namespace CourierService.Application.Commands.UpdateCourierStatus;
 
@@ -10,11 +9,11 @@ public class UpdateCourierStatusCommandValidator : AbstractValidator<UpdateCouri
         RuleFor(x => x.CourierId)
             .NotEmpty().WithMessage("Courier ID is required");
 
-        RuleFor(x => x.Model).SetValidator(new UpdateCourierModelValidator());
+        RuleFor(x => x).SetValidator(new UpdateCourierModelValidator());
     }
 }
 
-public class UpdateCourierModelValidator : AbstractValidator<Models.UpdateCourierModel>
+public class UpdateCourierModelValidator : AbstractValidator<UpdateCourierStatusCommand>
 {
     private static readonly List<int> ValidStatuses = new() { 0, 1, 2, 3 }; // Active, OnDuty, OffDuty, Inactive
 

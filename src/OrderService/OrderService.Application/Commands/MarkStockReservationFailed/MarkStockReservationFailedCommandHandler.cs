@@ -42,8 +42,8 @@ public class MarkStockReservationFailedCommandHandler : IRequestHandler<MarkStoc
         }
 
         var items = order.Items
-            .Join<OrderItem, UpdateOrderItemModel, Guid, (OrderItem OrderItem, UpdateOrderItemModel RequestItem)>(
-                request.OrderItemsModel.Items,
+            .Join<OrderItem, MarkStockFailedItemDto, Guid, (OrderItem OrderItem, MarkStockFailedItemDto RequestItem)>(
+                request.Items,
                 oi => oi.ProductId,
                 ri => ri.ProductId,
                 (oi, ri) => (OrderItem: oi, RequestItem: ri)
@@ -72,10 +72,10 @@ public class MarkStockReservationFailedCommandHandler : IRequestHandler<MarkStoc
     }
 
     private async Task<bool> HasErrors(IUnitOfWork uow, Order order, 
-        (OrderItem OrderItem, UpdateOrderItemModel RequestItem)[] items,
+        (OrderItem OrderItem, MarkStockFailedItemDto RequestItem)[] items,
         MarkStockReservationFailedCommand request, CancellationToken ct)
     {
-        if (items.Length != request.OrderItemsModel.Items.Count)
+        if (items.Length != request.Items.Count)
         {
             var error = $"Stock reservation invariant violation. OrderId={order.Id}. Details=Items mismatch";
             order.MarkAsInconsistent(error);

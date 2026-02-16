@@ -25,27 +25,26 @@ public class ProcessYooMoneyWebhookCommandHandler : IRequestHandler<ProcessYooMo
 
     public async Task<ApiResponse> Handle(ProcessYooMoneyWebhookCommand request, CancellationToken ct)
     {
-        var model = request.Model;
-        var evt = (model.Event ?? string.Empty).Trim().ToLowerInvariant();
+        var evt = (request.Event ?? string.Empty).Trim().ToLowerInvariant();
 
         if (evt.StartsWith("payment."))
-            return await HandlePaymentEvent(model, ct);
+            return await HandlePaymentEvent(request.Object, ct);
 
         if (evt.StartsWith("refund."))
-            return await HandleRefundEvent(model, ct);
+            return await HandleRefundEvent(request.Object, ct);
 
         return ApiResponse.SuccessResponse();
     }
 
-    private async Task<ApiResponse> HandlePaymentEvent(YooMoneyWebhookModel model, CancellationToken ct)
+    private async Task<ApiResponse> HandlePaymentEvent(System.Text.Json.JsonElement model, CancellationToken ct)
     {
-        var externalId = GetString(model.Object, "id");
+        var externalId = GetString(model, "id");
         if (string.IsNullOrWhiteSpace(externalId))
             return ApiResponse.ErrorResponse("Payment id is required");
 
         var orderId = await _factory.ResolveOrderIdByExternalPaymentId(externalId, ct);
         if (orderId is null)
-            orderId = GetGuidFromMetadata(model.Object, "order_id");
+            orderId = GetGuidFromMetadata(model, "order_id");
 
         if (orderId is null)
             return ApiResponse.SuccessResponse();
@@ -84,13 +83,13 @@ public class ProcessYooMoneyWebhookCommandHandler : IRequestHandler<ProcessYooMo
         return ApiResponse.SuccessResponse();
     }
 
-    private async Task<ApiResponse> HandleRefundEvent(YooMoneyWebhookModel model, CancellationToken ct)
+    private async Task<ApiResponse> HandleRefundEvent(System.Text.Json.JsonElement model, CancellationToken ct)
     {
-        var paymentId = GetString(model.Object, "payment_id");
+        var paymentId = GetString(model, "payment_id");
         if (string.IsNullOrWhiteSpace(paymentId))
             return ApiResponse.SuccessResponse();
 
-        var status = GetString(model.Object, "status")?.Trim().ToLowerInvariant();
+        var status = GetString(model, "status")?.Trim().ToLowerInvariant();
         if (status != "succeeded")
             return ApiResponse.SuccessResponse();
 
