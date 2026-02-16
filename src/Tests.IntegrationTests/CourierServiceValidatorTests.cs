@@ -44,7 +44,7 @@ public class CourierServiceValidatorTests
 
         // Assert
         result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain(x => x.PropertyName == "Model.FullName");
+        result.Errors.Should().Contain(x => x.PropertyName == "FullName");
     }
 
     [Fact]
@@ -63,7 +63,7 @@ public class CourierServiceValidatorTests
 
         // Assert
         result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain(x => x.PropertyName == "Model.FullName");
+        result.Errors.Should().Contain(x => x.PropertyName == "FullName");
     }
 
     [Fact]
@@ -82,7 +82,7 @@ public class CourierServiceValidatorTests
 
         // Assert
         result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain(x => x.PropertyName == "Model.Email");
+        result.Errors.Should().Contain(x => x.PropertyName == "Email");
     }
 
     [Fact]
@@ -101,7 +101,7 @@ public class CourierServiceValidatorTests
 
         // Assert
         result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain(x => x.PropertyName == "Model.Phone");
+        result.Errors.Should().Contain(x => x.PropertyName == "Phone");
     }
 
     [Fact]
@@ -160,7 +160,7 @@ public class CourierServiceValidatorTests
 
         // Assert
         result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain(x => x.PropertyName == "Model.Status");
+        result.Errors.Should().Contain(x => x.PropertyName == "Status");
     }
 
     [Fact]
@@ -180,6 +180,6 @@ public class CourierServiceValidatorTests
 
         // Assert
         result.IsValid.Should().BeFalse();
-        result.Errors.Should().Contain(x => x.PropertyName == "Model.Status");
+        result.Errors.Should().Contain(x => x.PropertyName == "Status");
     }
 }
