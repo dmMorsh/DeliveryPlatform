@@ -6,6 +6,8 @@ public sealed class OrderReadModel
     public string OrderNumber { get; set; } = string.Empty;
     public Guid ClientId { get; set; }
     public Guid? CourierId { get; set; }
+    public string? CourierName { get; set; }
+    public string? CourierPhone { get; set; }
     public string FromAddress { get; set; } = string.Empty;
     public string ToAddress { get; set; } = string.Empty;
     public double FromLatitude { get; set; }
@@ -24,6 +26,8 @@ public sealed class OrderReadModel
     public DateTime? DeliveredAt { get; set; }
     public DateTime? ReadyAt { get; set; }
     public bool IsReadyForDelivery { get; set; }
+    public DateTime? EstimatedDeliveryAt { get; set; }
+    public int? EstimatedArrivalMinutes { get; set; }
     public DateTime? AcceptedAt { get; set; }
     public DateTime? RejectedAt { get; set; }
     public string? RejectionReason { get; set; }

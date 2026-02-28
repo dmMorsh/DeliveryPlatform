@@ -6,81 +6,72 @@ using CatalogService.Application.Queries;
 using CatalogService.Application.Queries.SearchProducts;
 using CatalogService.Domain.Aggregates;
 using CatalogService.Infrastructure.Persistence;
+using CatalogService.Infrastructure.ReadStore;
 using Microsoft.EntityFrameworkCore;
+using Elastic.Clients.Elasticsearch;
+using Elastic.Clients.Elasticsearch.QueryDsl;
+using StackExchange.Redis;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text.Json;
 
 namespace CatalogService.Infrastructure.Repositories;
 
 public class ProductReadRepository : IProductReadRepository
 {
     private readonly CatalogDbContext _db;
+    private readonly ElasticsearchClient _es;
+    private readonly IDatabase _cache;
 
-    public ProductReadRepository(CatalogDbContext db)
+    public ProductReadRepository(CatalogDbContext db, ElasticsearchClient es, IConnectionMultiplexer redis)
     {
         _db = db;
+        _es = es;
+        _cache = redis.GetDatabase();
     }
 
     public async Task<PagedResult<ProductView>> SearchAsync(SearchProductsQuery request, CancellationToken ct)
     {
-        IQueryable<Product> query = _db.Products;
+        var from = (request.Page - 1) * request.PageSize;
 
-        // 🔍 Text search
-        if (!string.IsNullOrWhiteSpace(request.Text))
+        // build a simple query object; avoid complex lambdas to keep overload resolution happy
+        Query queryObj = string.IsNullOrWhiteSpace(request.Text)
+            ? (Query)new MatchAllQuery()
+            : new MultiMatchQuery
+            {
+                Fields = new[] { "name", "description" },
+                Query = request.Text!,
+                Type = TextQueryType.BestFields
+            };
+
+        var searchRequest = new SearchRequest("products")
         {
-            var text = request.Text.ToLower();
-            query = query.Where(p =>
-                p.Name.ToLower().Contains(text) ||
-                (p.Description != null && p.Description.ToLower().Contains(text))
-                );
-        }
-
-        // 📦 Category
-        // if (request.CategoryId.HasValue)
-        // {
-        //     query = query.Where(p => p.CategoryId == request.CategoryId);
-        // }
-
-        // 💰 Price
-        if (request.MinPrice.HasValue)
-            query = query.Where(p => p.PriceCents.AmountCents >= request.MinPrice);
-
-        if (request.MaxPrice.HasValue)
-            query = query.Where(p => p.PriceCents.AmountCents <= request.MaxPrice);
-
-        // 📊 Sorting
-        query = request.SortBy switch
-        {
-            ProductSortBy.Price => request.SortDirection == SortDirection.Asc
-                ? query.OrderBy(p => p.PriceCents.AmountCents)
-                : query.OrderByDescending(p => p.PriceCents.AmountCents),
-
-            ProductSortBy.CreatedAt => request.SortDirection == SortDirection.Asc
-                ? query.OrderBy(p => p.CreatedAt)
-                : query.OrderByDescending(p => p.CreatedAt),
-
-            _ => request.SortDirection == SortDirection.Asc
-                ? query.OrderBy(p => p.Name)
-                : query.OrderByDescending(p => p.Name)
+            Query = queryObj,
+            From = from,
+            Size = request.PageSize
         };
 
-        var total = await query.CountAsync(ct);
+        var resp = await _es.SearchAsync<ProductReadModel>(searchRequest, ct);
 
-        var items = await query
-            .AsNoTracking()
-            .Skip((request.Page - 1) * request.PageSize)
-            .Take(request.PageSize)
-            .Select(p => new ProductView(
-                p.Id,
-                p.Name,
-                p.Description,
-                p.PriceCents.AmountCents,
-                p.PriceCents.Currency,
-                p.WeightGrams.Value))
-            .ToListAsync(ct);
+        var items = resp.Hits.Select(h => new ProductView(
+            Guid.Parse(h.Id),
+            h.Source.Name,
+            h.Source.Description,
+            h.Source.PriceCents,
+            "USD",
+            0,
+            h.Source.QuantityAvailable,
+            h.Source.Category,
+            h.Source.Colors,
+            h.Source.Brand,
+            h.Source.Rating
+        )).ToList();
 
         return new PagedResult<ProductView>
         {
             Items = items,
-            TotalCount = total,
+            TotalCount = (int)resp.Total,
             Page = request.Page,
             PageSize = request.PageSize
         };
@@ -88,12 +79,31 @@ public class ProductReadRepository : IProductReadRepository
 
     public async Task<ProductView?> GetByIdAsync(Guid id, CancellationToken ct)
     {
-        return await _db.Products
-            .AsNoTracking()
-            .Where(p => p.Id == id)
-            .Select(p => 
-                new ProductView(p.Id, p.Name, p.Description, p.PriceCents.AmountCents, p.PriceCents.Currency, p.WeightGrams.Value)
-            )
-            .FirstOrDefaultAsync(ct);
+        var cacheKey = $"product:{id}";
+        var cached = await _cache.StringGetAsync(cacheKey);
+        if (cached.HasValue)
+        {
+            return JsonSerializer.Deserialize<ProductView>(cached.ToString()!)!;
+        }
+
+        var resp = await _es.GetAsync<ProductReadModel>(id.ToString(), g => g.Index("products"), ct);
+        if (!resp.Found) return null;
+
+        var view = new ProductView(
+            resp.Source.Id,
+            resp.Source.Name,
+            resp.Source.Description,
+            resp.Source.PriceCents,
+            "USD",
+            0,
+            resp.Source.QuantityAvailable,
+            resp.Source.Category,
+            resp.Source.Colors,
+            resp.Source.Brand,
+            resp.Source.Rating
+        );
+
+        await _cache.StringSetAsync(cacheKey, JsonSerializer.Serialize(view), TimeSpan.FromMinutes(10));
+        return view;
     }
 }

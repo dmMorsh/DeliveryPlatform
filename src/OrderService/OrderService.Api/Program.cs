@@ -17,6 +17,8 @@ using OrderService.Infrastructure.Repositories;
 using OrderService.Infrastructure.Inbox;
 using OrderService.Infrastructure.Jobs;
 using OrderService.Infrastructure.ReadStore;
+using StackExchange.Redis;
+using OrderService.Infrastructure.Caching;
 using Serilog;
 using Shared.Services;
 
@@ -103,6 +105,15 @@ builder.Services.Configure<DeliveryZoneOptions>(
 builder.Services.AddSingleton<IDeliveryZoneMatcher, DeliveryZoneMatcher>();
 builder.Services.AddScoped<IKitchenSlotReadRepository, KitchenSlotReadRepository>();
 
+// Register kitchen slot cache: Noop by default, Redis if configured
+builder.Services.AddSingleton<OrderService.Application.Interfaces.IKitchenSlotCache, NoopKitchenSlotCache>();
+var redisConn = builder.Configuration.GetValue<string>("Redis:Connection");
+if (!string.IsNullOrWhiteSpace(redisConn))
+{
+    builder.Services.AddSingleton<IConnectionMultiplexer>(_ => ConnectionMultiplexer.Connect(redisConn));
+    builder.Services.AddSingleton<OrderService.Application.Interfaces.IKitchenSlotCache, RedisKitchenSlotCache>();
+}
+
 if (!useInMemory)
 {
     var readServices = new ServiceCollection();
@@ -122,6 +133,15 @@ if (!useInMemory)
             sp.GetRequiredService<ReadStoreScopeFactory>().ScopeFactory,
             sp.GetRequiredService<IEventProducer>()));
     builder.Services.AddHostedService<KafkaEventConsumerHostedService<OrderReadProjectionConsumer>>();
+
+    builder.Services.AddSingleton<DeliveryEventsConsumer>(sp =>
+        new DeliveryEventsConsumer(
+            builder.Configuration,
+            builder.Environment,
+            sp.GetRequiredService<ILogger<DeliveryEventsConsumer>>(),
+            sp.GetRequiredService<ReadStoreScopeFactory>().ScopeFactory,
+            sp.GetRequiredService<IEventProducer>()));
+    builder.Services.AddHostedService<KafkaEventConsumerHostedService<DeliveryEventsConsumer>>();
 }
 
 // Only run OutboxProcessor when using a real relational DB

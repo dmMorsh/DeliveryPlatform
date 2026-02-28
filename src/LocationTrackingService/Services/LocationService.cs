@@ -30,7 +30,6 @@ public class CourierLocationDto
 /// </summary>
 public class LocationService : ILocationService
 {
-    private const string LocationChannel = "courier.location.updated";
     private static readonly TimeSpan LocationTtl = TimeSpan.FromHours(24);
     private static readonly TimeSpan HistoryTtl = TimeSpan.FromDays(7);
     private static readonly TimeSpan HistorySampleInterval = TimeSpan.FromMinutes(1);
@@ -51,13 +50,11 @@ public class LocationService : ILocationService
 
     private readonly ILogger<LocationService> _logger;
     private readonly IDatabase _db;
-    private readonly ISubscriber _subscriber;
 
     public LocationService(ILogger<LocationService> logger, IConnectionMultiplexer mux)
     {
         _logger = logger;
         _db = mux.GetDatabase();
-        _subscriber = mux.GetSubscriber();
     }
 
     public async Task UpdateCourierLocationAsync(Guid courierId, double latitude, double longitude, int accuracy, DateTimeOffset timestamp)
@@ -78,8 +75,6 @@ public class LocationService : ILocationService
             await _db.StringSetAsync(locationKey, json, LocationTtl);
 
             await TryAppendHistoryAsync(courierId, payload, json);
-
-            await _subscriber.PublishAsync(LocationChannel, json);
 
             _logger.LogInformation(
                 "Location updated for courier {CourierId}: ({Latitude}, {Longitude})",

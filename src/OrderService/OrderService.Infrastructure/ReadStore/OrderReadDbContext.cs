@@ -23,16 +23,21 @@ public sealed class OrderReadDbContext : DbContext
         {
             entity.HasKey(e => e.Id);
             entity.HasIndex(e => e.ClientId);
+            entity.HasIndex(e => e.CourierId);
+            entity.HasIndex(e => e.CourierName);
             entity.HasIndex(e => e.Status);
             entity.HasIndex(e => e.CreatedAt);
             entity.HasIndex(e => e.KitchenSlotStart);
             entity.HasIndex(e => e.ExpectedReadyAt);
+            entity.HasIndex(e => e.EstimatedDeliveryAt);
             entity.HasIndex(e => e.DeliveryZoneId);
 
             entity.Property(e => e.OrderNumber).HasMaxLength(50);
             entity.Property(e => e.Description).HasMaxLength(1000);
             entity.Property(e => e.CourierNote).HasMaxLength(500);
             entity.Property(e => e.Currency).HasMaxLength(6);
+            entity.Property(e => e.CourierName).HasMaxLength(200);
+            entity.Property(e => e.CourierPhone).HasMaxLength(20);
 
             entity.HasMany(e => e.Items)
                 .WithOne()

@@ -52,6 +52,8 @@ public class IntegrationEventMapper : IOrderIntegrationEventMapper
             { 
                 OrderId = e.OrderId, 
                 CourierId = e.CourierId, 
+                CourierName = e.CourierName ?? string.Empty,
+                CourierPhone = e.CourierPhone,
                 Timestamp = e.OccurredAt 
             },
             OrderStatusChangedDomainEvent e => new OrderStatusChangedEvent 

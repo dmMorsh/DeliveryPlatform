@@ -1,5 +1,5 @@
-﻿using InventoryService.Application.Interfaces;
-using InventoryService.Application.Models;
+﻿using InventoryService.Application.Models;
+using InventoryService.Application.Read;
 using MediatR;
 using Shared.Utilities;
 
@@ -7,26 +7,16 @@ namespace InventoryService.Application.Queries.GetStocks;
 
 public class GetStocksQueryHandler : IRequestHandler<GetStocksQuery, ApiResponse<List<StockItemView>>>
 {
-    private readonly IUnitOfWorkFactory _factory;
+    private readonly IInventoryReadRepository _readRepo;
 
-    public GetStocksQueryHandler(IUnitOfWorkFactory factory)
+    public GetStocksQueryHandler(IInventoryReadRepository readRepo)
     {
-        _factory = factory;
+        _readRepo = readRepo;
     }
 
     public async Task<ApiResponse<List<StockItemView>>> Handle(GetStocksQuery request, CancellationToken ct)
     {
-        await using var uow = _factory.Create(0);
-        var items = await uow.Stock.GetAllProductAsync(ct);
-        var itemViews = items
-            .Select(s => new StockItemView
-            {
-                ProductId = s.Id,
-                TotalQuantity = s.TotalQuantity,
-                ReservedQuantity = s.ReservedQuantity,
-                AvailableQuantity = s.AvailableQuantity,
-            }).ToList();
-        
+        var itemViews = await _readRepo.GetAllAsync(ct);
         return ApiResponse<List<StockItemView>>.SuccessResponse(itemViews);
     }
 }

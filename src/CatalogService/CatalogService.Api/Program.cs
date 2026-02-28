@@ -14,6 +14,7 @@ using Microsoft.EntityFrameworkCore;
 using Serilog;
 using Shared.Services;
 using StackExchange.Redis;
+using CatalogService.Infrastructure.ReadStore;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -44,6 +45,22 @@ builder.Services.AddMediatR(typeof(ApplicationMarker).Assembly);
 builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
 builder.Services.AddScoped<IProductRepository, ProductRepository>();
 builder.Services.AddScoped<IProductReadRepository, ProductReadRepository>();
+
+// Elasticsearch client
+var esUrl = builder.Configuration.GetValue<string>("Elasticsearch:Url", "http://localhost:9200");
+var esSettings = new Elastic.Clients.Elasticsearch.ElasticsearchClientSettings(new Uri(esUrl));
+builder.Services.AddSingleton(new Elastic.Clients.Elasticsearch.ElasticsearchClient(esSettings));
+
+// Read-store projector and consumer
+builder.Services.AddScoped<ProductReadProjector>();
+builder.Services.AddSingleton<ProductReadProjectionConsumer>(sp =>
+    new ProductReadProjectionConsumer(
+        builder.Configuration,
+        builder.Environment,
+        sp.GetRequiredService<ILogger<ProductReadProjectionConsumer>>(),
+        sp.GetRequiredService<IServiceScopeFactory>(),
+        sp.GetRequiredService<IEventProducer>()));
+builder.Services.AddHostedService<KafkaEventConsumerHostedService<ProductReadProjectionConsumer>>();
 
 var kafkaBrokers = ConfigurationGuard.GetRequired(builder.Configuration, builder.Environment, "Kafka:Brokers", "localhost:29092");
 var catalogHealthChecks = builder.Services.AddHealthChecks()

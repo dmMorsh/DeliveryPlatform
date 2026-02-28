@@ -177,7 +177,10 @@ public class Delivery : AggregateRoot
         {
             DeliveryId = Id,
             OrderId = OrderId,
-            CourierId = courierId
+            CourierId = courierId,
+            EstimatedPickupAt = EstimatedPickupAt,
+            EstimatedDeliveryAt = EstimatedDeliveryAt,
+            EstimatedTravelMinutes = EstimatedTravelMinutes
         });
 
         AddDomainEvent(new DeliveryAcceptedDomainEvent

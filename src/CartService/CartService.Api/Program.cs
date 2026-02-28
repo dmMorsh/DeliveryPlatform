@@ -9,12 +9,14 @@ using CartService.Infrastructure.Mapping;
 using CartService.Infrastructure.Outbox;
 using CartService.Infrastructure.Persistence;
 using CartService.Infrastructure.Repositories;
+using CartService.Infrastructure.ReadStore;
 using Confluent.Kafka;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
 using Shared.Proto;
 using Shared.Services;
+using StackExchange.Redis;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -48,6 +50,21 @@ var httpTimeoutSeconds = int.TryParse(builder.Configuration["Http:TimeoutSeconds
     ? httpTimeout
     : 10;
 
+// Redis for cart caching
+var redisConnection = ConfigurationGuard.GetRequired(builder.Configuration, builder.Environment, "Redis:Connection", "redis:6379");
+try
+{
+    var redisOptions = ConfigurationOptions.Parse(redisConnection);
+    redisOptions.AbortOnConnectFail = false;
+    var mux = ConnectionMultiplexer.Connect(redisOptions);
+    builder.Services.AddSingleton<IConnectionMultiplexer>(mux);
+}
+catch (Exception ex)
+{
+    builder.Services.AddSingleton<IConnectionMultiplexer>(_ =>
+        throw new InvalidOperationException($"Failed to connect to Redis at {redisConnection}", ex));
+}
+
 var kafkaBrokers = ConfigurationGuard.GetRequired(builder.Configuration, builder.Environment, "Kafka:Brokers", "localhost:29092");
 var cartHealthChecks = builder.Services.AddHealthChecks()
     .AddKafka(new ProducerConfig { BootstrapServers = kafkaBrokers }, name: "kafka");
@@ -55,6 +72,7 @@ if (!useInMemory)
 {
     var pg = builder.Configuration.GetConnectionString("PostgreSQL") ?? string.Empty;
     cartHealthChecks.AddNpgSql(pg, name: "db", tags: new[] { "ready" });
+    cartHealthChecks.AddRedis(redisConnection, name: "redis", tags: new[] { "ready" });
 }
 
 builder.Services.AddGrpcClient<OrderGrpc.OrderGrpcClient>(o =>
@@ -83,7 +101,11 @@ builder.Services.AddScoped<ICartRepository, CartRepository>();
 builder.Services.AddScoped<ICartReadRepository, CartReadRepository>();
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddSingleton<ICartIntegrationEventMapper, CartIntegrationEventMapper>();
-// Event Consumer from OrderService
+
+// Cart read projector for cache invalidation
+builder.Services.AddScoped<CartReadProjector>();
+
+// Event Consumers
 builder.Services.AddSingleton<CartEventConsumer>();
 builder.Services.AddHostedService<KafkaEventConsumerHostedService<CartEventConsumer>>();
 // Outbox processor

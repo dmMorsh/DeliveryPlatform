@@ -40,7 +40,7 @@ public class UpdateOrderCommandHandler
             order.ChangeStatus(request.Status.Value);
 
         if (request.CourierId.HasValue)
-            order.AssignCourier(request.CourierId.Value);
+            order.AssignCourier(request.CourierId.Value, request.CourierName);
 
         if (!string.IsNullOrWhiteSpace(request.CourierNote))
             order.AddCourierNote(request.CourierNote);

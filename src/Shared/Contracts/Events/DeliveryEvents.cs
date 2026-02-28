@@ -25,6 +25,9 @@ public record DeliveryAssignedEvent : IntegrationEvent
     public required Guid DeliveryId { get; init; }
     public required Guid OrderId { get; init; }
     public required Guid CourierId { get; init; }
+    public DateTime? EstimatedPickupAt { get; init; }
+    public DateTime? EstimatedDeliveryAt { get; init; }
+    public int? EstimatedTravelMinutes { get; init; }
 }
 
 /// <summary>

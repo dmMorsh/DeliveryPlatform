@@ -13,6 +13,9 @@ public record DeliveryAssignedDomainEvent : DomainEvent
     public Guid DeliveryId { get; init; }
     public Guid OrderId { get; init; }
     public Guid CourierId { get; init; }
+    public DateTime? EstimatedPickupAt { get; init; }
+    public DateTime? EstimatedDeliveryAt { get; init; }
+    public int? EstimatedTravelMinutes { get; init; }
 }
 
 public record DeliveryAcceptedDomainEvent : DomainEvent

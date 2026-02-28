@@ -22,6 +22,9 @@ public class DeliveryEventMapper : IDeliveryEventMapper
                 DeliveryId = e.DeliveryId,
                 OrderId = e.OrderId,
                 CourierId = e.CourierId,
+                EstimatedPickupAt = e.EstimatedPickupAt,
+                EstimatedDeliveryAt = e.EstimatedDeliveryAt,
+                EstimatedTravelMinutes = e.EstimatedTravelMinutes,
                 Timestamp = e.OccurredAt
             },
             DeliveryAcceptedDomainEvent e => new DeliveryAcceptedEvent

@@ -1,22 +1,24 @@
 using Confluent.Kafka;
 using Hangfire;
-using Hangfire;
 using Hangfire.PostgreSql;
 using InventoryService.Application.Interfaces;
 using InventoryService.Application.MediatR;
 using InventoryService.Application.Services;
 using InventoryService.Application.Utils;
 using InventoryService.Application.Models;
+using InventoryService.Application.Read;
 using InventoryService.Infrastructure.Hangfire;
 using InventoryService.Infrastructure.Inbox;
 using InventoryService.Infrastructure.Mapping;
 using InventoryService.Infrastructure.Outbox;
 using InventoryService.Infrastructure.Persistence;
 using InventoryService.Infrastructure.Jobs;
+using InventoryService.Infrastructure.ReadStore;
 using MediatR;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
+using StackExchange.Redis;
 using Shared.Services;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -99,6 +101,38 @@ builder.Services.AddHostedService<KafkaTopicBootstrapper>();
 builder.Services.AddSingleton<InventoryEventConsumer>();
 builder.Services.AddHostedService<KafkaEventConsumerHostedService<InventoryEventConsumer>>();
 builder.Services.AddScoped<IEventInbox, InventoryEventInbox>();
+
+// read‑store context for inventory
+var redisConnection = ConfigurationGuard.GetRequired(builder.Configuration, builder.Environment, "Redis:Connection", "redis:6379");
+try
+{
+    var redisOptions = ConfigurationOptions.Parse(redisConnection);
+    redisOptions.AbortOnConnectFail = false;
+    var mux = ConnectionMultiplexer.Connect(redisOptions);
+    builder.Services.AddSingleton<IConnectionMultiplexer>(mux);
+    inventoryHealthChecks.AddRedis(redisConnection, name: "redis", tags: new[] { "ready" });
+}
+catch (Exception ex)
+{
+    builder.Services.AddSingleton<IConnectionMultiplexer>(_ =>
+        throw new InvalidOperationException($"Failed to connect to Redis at {redisConnection}", ex));
+}
+
+builder.Services.AddScoped<IInventoryReadCache, InventoryReadRedisCache>();
+builder.Services.AddDbContext<InventoryReadDbContext>(options =>
+    options.UseNpgsql(builder.Configuration.GetConnectionString("PostgreSQL")));
+builder.Services.AddScoped<IInventoryReadRepository, InventoryReadRepository>();
+builder.Services.AddScoped<InventoryReadProjector>();
+
+builder.Services.AddSingleton<InventoryReadProjectionConsumer>(sp =>
+    new InventoryReadProjectionConsumer(
+        sp.GetRequiredService<IConfiguration>(),
+        sp.GetRequiredService<IHostEnvironment>(),
+        sp.GetRequiredService<ILogger<InventoryReadProjectionConsumer>>(),
+        sp.GetRequiredService<IServiceScopeFactory>(),
+        sp.GetRequiredService<IEventProducer>()
+    ));
+builder.Services.AddHostedService<KafkaEventConsumerHostedService<InventoryReadProjectionConsumer>>();
 
 builder.Services.AddSingleton<IStockIntegrationEventMapper, StockIntegrationEventMapper>();
 

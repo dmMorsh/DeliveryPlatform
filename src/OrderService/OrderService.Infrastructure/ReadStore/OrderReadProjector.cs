@@ -177,7 +177,20 @@ public sealed class OrderReadProjector : IOrderReadProjector
             return;
 
         order.CourierId = evt.CourierId;
+        order.CourierName = evt.CourierName;
+        order.CourierPhone = evt.CourierPhone;
         order.AssignedAt = evt.Timestamp == default ? DateTime.UtcNow : evt.Timestamp;
+        order.UpdatedAt = DateTime.UtcNow;
+    }
+
+    public async Task HandleAsync(DeliveryAssignedEvent evt, CancellationToken ct)
+    {
+        var order = await _db.Orders.FirstOrDefaultAsync(o => o.Id == evt.OrderId, ct);
+        if (order == null)
+            return;
+
+        order.EstimatedDeliveryAt = evt.EstimatedDeliveryAt;
+        order.EstimatedArrivalMinutes = evt.EstimatedTravelMinutes;
         order.UpdatedAt = DateTime.UtcNow;
     }
 

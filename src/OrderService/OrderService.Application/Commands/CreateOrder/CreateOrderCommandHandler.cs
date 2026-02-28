@@ -19,6 +19,7 @@ public class CreateOrderCommandHandler : IRequestHandler<CreateOrderCommand, Api
     private readonly IDeliveryZoneMatcher _zoneMatcher;
     private readonly DeliveryZoneOptions _zoneOptions;
     private readonly IKitchenSlotReadRepository _kitchenSlots;
+    private readonly OrderService.Application.Interfaces.IKitchenSlotCache _kitchenCache;
 
     public CreateOrderCommandHandler(
         IUnitOfWorkFactory factory,
@@ -27,7 +28,8 @@ public class CreateOrderCommandHandler : IRequestHandler<CreateOrderCommand, Api
         IOptions<KitchenCapacityOptions> kitchenOptions,
         IDeliveryZoneMatcher zoneMatcher,
         IOptions<DeliveryZoneOptions> zoneOptions,
-        IKitchenSlotReadRepository kitchenSlots)
+        IKitchenSlotReadRepository kitchenSlots,
+        OrderService.Application.Interfaces.IKitchenSlotCache kitchenCache)
     {
         _factory = factory;
         _eventMapper = eventMapper;
@@ -36,6 +38,7 @@ public class CreateOrderCommandHandler : IRequestHandler<CreateOrderCommand, Api
         _zoneMatcher = zoneMatcher;
         _zoneOptions = zoneOptions.Value ?? new DeliveryZoneOptions();
         _kitchenSlots = kitchenSlots;
+        _kitchenCache = kitchenCache;
     }
 
     public async Task<ApiResponse<OrderView>> Handle(CreateOrderCommand request, CancellationToken ct)
@@ -88,28 +91,45 @@ public class CreateOrderCommandHandler : IRequestHandler<CreateOrderCommand, Api
                 : now.AddMinutes(prepMinutes);
             var slotStart = AlignToSlotStart(expectedReadyAt, slotMinutes);
 
-            var slotCount = await _kitchenSlots.CountSlotAsync(slotStart, ct);
-            if (slotCount >= capacity)
+            // Try quick reservation via short-term cache first to avoid over-admits
+            var reserved = false;
+            var cacheTtl = TimeSpan.FromMinutes(Math.Max(slotMinutes, 1) + 5);
+            try
             {
-                var nextSlot = await _kitchenSlots.FindNextAvailableSlotAsync(
-                    slotStart,
-                    slotMinutes,
-                    capacity,
-                    lookaheadSlots,
-                    ct);
+                reserved = await _kitchenCache.TryReserveAsync(slotStart, capacity, cacheTtl, ct);
+            }
+            catch
+            {
+                reserved = false;
+            }
 
-                if (!nextSlot.HasValue)
+            if (!reserved)
+            {
+                var slotCount = await _kitchenSlots.CountSlotAsync(slotStart, ct);
+                if (slotCount >= capacity)
                 {
-                    if (_kitchenOptions.PauseMinutesOnOverload > 0)
-                        KitchenPauseState.PauseUntil(now.AddMinutes(_kitchenOptions.PauseMinutesOnOverload));
+                    var nextSlot = await _kitchenSlots.FindNextAvailableSlotAsync(
+                        slotStart,
+                        slotMinutes,
+                        capacity,
+                        lookaheadSlots,
+                        ct);
 
-                    return ApiResponse<OrderView>.ErrorResponse(
-                        ErrorCodes.Conflict,
-                        "Kitchen capacity reached. Please try again later.");
+                    if (!nextSlot.HasValue)
+                    {
+                        if (_kitchenOptions.PauseMinutesOnOverload > 0)
+                            KitchenPauseState.PauseUntil(now.AddMinutes(_kitchenOptions.PauseMinutesOnOverload));
+
+                        return ApiResponse<OrderView>.ErrorResponse(
+                            ErrorCodes.Conflict,
+                            "Kitchen capacity reached. Please try again later.");
+                    }
+
+                    expectedReadyAt = nextSlot.Value;
+                    slotStart = nextSlot.Value;
+                    // attempt to reserve the next slot in cache (best-effort)
+                    try { await _kitchenCache.TryReserveAsync(slotStart, capacity, cacheTtl, ct); } catch { }
                 }
-
-                expectedReadyAt = nextSlot.Value;
-                slotStart = nextSlot.Value;
             }
 
             order.ScheduleKitchen(expectedReadyAt, slotStart);

@@ -42,6 +42,8 @@ public record OrderAssignedDomainEvent : DomainEvent
 {
     public Guid OrderId { get; init; }
     public Guid CourierId { get; init; }
+    public string? CourierName { get; init; }
+    public string? CourierPhone { get; init; }
 }
 
 public record OrderStatusChangedDomainEvent : DomainEvent

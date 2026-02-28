@@ -23,6 +23,8 @@ public class Order : AggregateRoot
     public string OrderNumber { get; private set; } = string.Empty;
     public Guid ClientId { get; private set; }
     public Guid? CourierId { get; private set; }
+    public string? CourierName { get; private set; }
+    public string? CourierPhone { get; private set; }
     public Address From { get; private set; }
     public Address To { get; private set; }
     public string Description { get; private set; } = string.Empty;
@@ -52,14 +54,16 @@ public class Order : AggregateRoot
     private List<OrderItem> _items = new();
     public IReadOnlyCollection<OrderItem> Items => _items.AsReadOnly();
 
-    public void AssignCourier(Guid courierId)
+    public void AssignCourier(Guid courierId, string? courierName = null, string? courierPhone = null)
     {
         if (CourierId.HasValue) return;
         if (Status is not (OrderStatus.Confirmed or OrderStatus.Assigning or OrderStatus.Assigned))
             return;
         CourierId = courierId;
+        CourierName = courierName;
+        CourierPhone = courierPhone;
         AssignedAt = DateTime.UtcNow;
-        AddDomainEvent(new OrderAssignedDomainEvent { OrderId = Id, CourierId = courierId });
+        AddDomainEvent(new OrderAssignedDomainEvent { OrderId = Id, CourierId = courierId, CourierName = courierName, CourierPhone = courierPhone });
         if (Status is OrderStatus.Confirmed or OrderStatus.Assigning)
             Status = OrderStatus.Assigned;
     }
