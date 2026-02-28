@@ -77,3 +77,11 @@ public record DeliveryReturnedDomainEvent : DomainEvent
     public Guid? CourierId { get; init; }
     public string? Reason { get; init; }
 }
+
+public record DeliveryReassignRequestedDomainEvent : DomainEvent
+{
+    public Guid DeliveryId { get; init; }
+    public Guid OrderId { get; init; }
+    public Guid? PreviousCourierId { get; init; }
+    public string? Reason { get; init; }
+}

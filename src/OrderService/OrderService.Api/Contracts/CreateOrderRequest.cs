@@ -43,7 +43,11 @@ public record CreateOrderRequest
     [StringLength(500, ErrorMessage = "CourierNote must not exceed 500 characters")]
     public string? CourierNote { get; set; }
 
+    public Guid? CheckoutId { get; set; }
+
     public IReadOnlyCollection<CreateOrderItemDto>? Items { get; set; }
+
+    public DateTime? DesiredReadyAt { get; set; }
 }
 
 public record CreateOrderItemDto(Guid ProductId,  string Name, int PriceCents, int Quantity);

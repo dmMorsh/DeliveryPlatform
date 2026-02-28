@@ -40,7 +40,7 @@ public class ProcessYooMoneyWebhookCommandHandler : IRequestHandler<ProcessYooMo
     {
         var externalId = GetString(model, "id");
         if (string.IsNullOrWhiteSpace(externalId))
-            return ApiResponse.ErrorResponse("Payment id is required");
+            return ApiResponse.ErrorResponse(ErrorCodes.Validation, "Payment id is required");
 
         var orderId = await _factory.ResolveOrderIdByExternalPaymentId(externalId, ct);
         if (orderId is null)

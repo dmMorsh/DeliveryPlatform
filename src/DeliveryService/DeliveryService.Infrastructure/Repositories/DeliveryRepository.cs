@@ -38,6 +38,32 @@ public class DeliveryRepository : IDeliveryRepository
             .ToListAsync(ct);
     }
 
+    public async Task<Delivery?> GetActiveOfferByCourierIdAsync(Guid courierId, DateTime now, CancellationToken ct = default)
+    {
+        return await _db.Deliveries
+            .AsNoTracking()
+            .Where(d => d.Status == DeliveryStatus.Assigning
+                        && d.CurrentOfferCourierId == courierId
+                        && d.CurrentOfferExpiresAt != null
+                        && d.CurrentOfferExpiresAt > now)
+            .FirstOrDefaultAsync(ct);
+    }
+
+    public async Task<List<Delivery>> GetActiveDeliveriesByCourierIdsAsync(IReadOnlyCollection<Guid> courierIds, CancellationToken ct = default)
+    {
+        if (courierIds.Count == 0)
+            return [];
+
+        return await _db.Deliveries
+            .AsNoTracking()
+            .Where(d => d.CourierId != null
+                        && courierIds.Contains(d.CourierId.Value)
+                        && (d.Status == DeliveryStatus.Assigned
+                            || d.Status == DeliveryStatus.PickedUp
+                            || d.Status == DeliveryStatus.InDelivery))
+            .ToListAsync(ct);
+    }
+
     public Task<List<Guid>> GetTriedCourierIdsAsync(Guid deliveryId, CancellationToken ct = default)
     {
         return _db.Deliveries

@@ -28,12 +28,16 @@ public class StartPaymentCommandHandler : IRequestHandler<StartPaymentCommand, A
         var payment = await uow.Payments.GetByOrderId(request.OrderId, cancellationToken);
 
         if (payment is null)
-            return ApiResponse<StartPaymentResult>.ErrorResponse("Payment not found");
+            return ApiResponse<StartPaymentResult>.ErrorResponse(ErrorCodes.NotFound, "Payment not found");
 
-        if (payment.Status != PaymentStatus.Created)
-            return ApiResponse<StartPaymentResult>.ErrorResponse("Payment status is not valid");
+        if (payment.Status != PaymentStatus.Ready)
+            return ApiResponse<StartPaymentResult>.ErrorResponse(ErrorCodes.Invariant, "Payment status is not valid");
 
         var provider = _providers.Get(request.Provider);
+
+        var locked = await uow.Payments.TryMarkStartingAsync(payment.OrderId, cancellationToken);
+        if (!locked)
+            return ApiResponse<StartPaymentResult>.ErrorResponse(ErrorCodes.Conflict, "Payment is already being processed");
 
         var requestModel = new StartPaymentRequest(
             payment.Id,
@@ -43,14 +47,31 @@ public class StartPaymentCommandHandler : IRequestHandler<StartPaymentCommand, A
             $"Order {payment.OrderId}",
             request.Capture);
 
-        var result = await provider.StartPayment(requestModel, cancellationToken);
+        try
+        {
+            var result = await provider.StartPayment(requestModel, cancellationToken);
 
-        payment.Start(provider.Name, result.ExternalPaymentId, result.PaymentUrl);
-        await uow.Payments.UpsertExternalPaymentIdMap(payment.OrderId, payment.Id, result.ExternalPaymentId, provider.Name, cancellationToken);
-        await uow.SaveChangesAsync(cancellationToken);
+            payment = await uow.Payments.GetByOrderId(request.OrderId, cancellationToken);
+            if (payment is null)
+                return ApiResponse<StartPaymentResult>.ErrorResponse(ErrorCodes.NotFound, "Payment not found");
 
-        _statusScheduler.ScheduleStatusCheck(payment.OrderId);
-        
-        return ApiResponse<StartPaymentResult>.SuccessResponse(result);
+            payment.Start(provider.Name, result.ExternalPaymentId, result.PaymentUrl);
+            await uow.Payments.UpsertExternalPaymentIdMap(payment.OrderId, payment.Id, result.ExternalPaymentId, provider.Name, cancellationToken);
+            await uow.SaveChangesAsync(cancellationToken);
+
+            _statusScheduler.ScheduleStatusCheck(payment.OrderId);
+            
+            return ApiResponse<StartPaymentResult>.SuccessResponse(result);
+        }
+        catch (Exception)
+        {
+            var current = await uow.Payments.GetByOrderId(request.OrderId, cancellationToken);
+            if (current is not null && current.Status == PaymentStatus.Starting)
+            {
+                current.MarkReady();
+                await uow.SaveChangesAsync(cancellationToken);
+            }
+            throw;
+        }
     }
 }

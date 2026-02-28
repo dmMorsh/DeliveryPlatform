@@ -12,12 +12,13 @@ using OrderService.Application.Commands.UpdateOrder;
 using OrderService.Domain.Aggregates;
 using Shared.Contracts.Events;
 using Shared.Services;
+using Shared.Utilities;
 
 namespace OrderService.Application.Services;
 
 /// <summary>
 /// Обработчик событий из других сервисов для OrderService
-/// Слушает: cart.checked_out, courier.status.changed, payment.*
+/// Слушает: payment.*, stock.*, delivery.*
 /// </summary>
 public class OrderEventConsumer : KafkaEventConsumerBase
 {
@@ -45,12 +46,6 @@ public class OrderEventConsumer : KafkaEventConsumerBase
 
             switch (eventType)
             {
-                case "cart.checked_out":
-                    await _HandleCartCheckedOut(json);
-                    break;
-                case "courier.status.changed":
-                    await HandleCourierStatusChanged(json);
-                    break;
                 case "stock.reserved":
                     await HandleStockReserved(json);
                     break;
@@ -101,6 +96,10 @@ public class OrderEventConsumer : KafkaEventConsumerBase
                     break;
             }
         }
+        catch (NonRetryableException)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error handling event {EventType}", eventType);
@@ -112,102 +111,72 @@ public class OrderEventConsumer : KafkaEventConsumerBase
 
     private async Task HandlePaymentAuthorized(string json)
     {
-        try
-        {
-            var @event = JsonSerializer.Deserialize<PaymentAuthorizedEvent>(json,
-                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-            if (@event == null) return;
+        var @event = JsonSerializer.Deserialize<PaymentAuthorizedEvent>(json,
+            new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        if (@event == null) throw new NonRetryableException("Invalid PaymentAuthorizedEvent payload");
 
-            await UpdateOrderStatusFromPayment(@event.OrderId, OrderStatus.Confirmed, "payment.authorized");
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error processing PaymentAuthorizedEvent");
-        }
+        await UpdateOrderStatusFromPayment(@event.OrderId, OrderStatus.Confirmed, "payment.authorized");
     }
 
     private async Task HandlePaymentCaptured(string json)
     {
-        try
-        {
-            var @event = JsonSerializer.Deserialize<PaymentCapturedEvent>(json,
-                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-            if (@event == null) return;
+        var @event = JsonSerializer.Deserialize<PaymentCapturedEvent>(json,
+            new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        if (@event == null) throw new NonRetryableException("Invalid PaymentCapturedEvent payload");
 
-            await UpdateOrderStatusFromPayment(@event.OrderId, OrderStatus.Confirmed, "payment.captured");
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error processing PaymentCapturedEvent");
-        }
+        await UpdateOrderStatusFromPayment(@event.OrderId, OrderStatus.Confirmed, "payment.captured");
     }
 
     private async Task HandlePaymentFailed(string json)
     {
-        try
-        {
-            var @event = JsonSerializer.Deserialize<PaymentFailedEvent>(json,
-                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-            if (@event == null) return;
+        var @event = JsonSerializer.Deserialize<PaymentFailedEvent>(json,
+            new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        if (@event == null) throw new NonRetryableException("Invalid PaymentFailedEvent payload");
 
-            await UpdateOrderStatusFromPayment(@event.OrderId, OrderStatus.Failed, "payment.failed");
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error processing PaymentFailedEvent");
-        }
+        await UpdateOrderStatusFromPayment(@event.OrderId, OrderStatus.Failed, "payment.failed");
     }
 
     private async Task HandlePaymentCancelled(string json)
     {
-        try
-        {
-            var @event = JsonSerializer.Deserialize<PaymentCancelledEvent>(json,
-                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-            if (@event == null) return;
+        var @event = JsonSerializer.Deserialize<PaymentCancelledEvent>(json,
+            new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        if (@event == null) throw new NonRetryableException("Invalid PaymentCancelledEvent payload");
 
-            await UpdateOrderStatusFromPayment(@event.OrderId, OrderStatus.Cancelled, "payment.cancelled");
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error processing PaymentCancelledEvent");
-        }
+        await UpdateOrderStatusFromPayment(@event.OrderId, OrderStatus.Cancelled, "payment.cancelled");
     }
 
     private async Task HandlePaymentRefunded(string json)
     {
-        try
-        {
-            var @event = JsonSerializer.Deserialize<PaymentRefundedEvent>(json,
-                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-            if (@event == null) return;
+        var @event = JsonSerializer.Deserialize<PaymentRefundedEvent>(json,
+            new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        if (@event == null) throw new NonRetryableException("Invalid PaymentRefundedEvent payload");
 
-            await UpdateOrderStatusFromPayment(@event.OrderId, OrderStatus.Cancelled, "payment.refunded");
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error processing PaymentRefundedEvent");
-        }
+        await UpdateOrderStatusFromPayment(@event.OrderId, OrderStatus.Cancelled, "payment.refunded");
     }
 
     private async Task UpdateOrderStatusFromPayment(Guid orderId, OrderStatus newStatus, string reason)
     {
         using var scope = _scopeFactory.CreateScope();
         var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
-        await mediator.Send(new UpdateOrderStatusFromPaymentCommand(orderId, newStatus, reason));
+        var result = await mediator.Send(new UpdateOrderStatusFromPaymentCommand(orderId, newStatus, reason));
+        if (!result.Success)
+        {
+            var message = result.Message ?? string.Join("; ", result.Errors ?? []);
+            if (result.ErrorCode == ErrorCodes.NotFound)
+                throw new Exception(message);
+            throw new NonRetryableException(message);
+        }
     }
     private async Task HandleStockReserveFailed(string json)
     {
-        try
-        {
-            var @event = JsonSerializer.Deserialize<StockReserveFailedEvent>(json, 
-                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-            if (@event == null) return;
+        var @event = JsonSerializer.Deserialize<StockReserveFailedEvent>(json,
+            new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        if (@event == null) throw new NonRetryableException("Invalid StockReserveFailedEvent payload");
 
-            _logger.LogInformation("📦 OrderService: Reserve failed. OrderId={OrderId}, Items={Items}.", 
-                @event.OrderId, @event.Items);
-            
-            var cmd = new MarkStockReservationFailedCommand(
+        _logger.LogInformation("📦 OrderService: Reserve failed. OrderId={OrderId}, Items={Items}.",
+            @event.OrderId, @event.Items);
+
+        var cmd = new MarkStockReservationFailedCommand(
             @event.OrderId,
             @event.Items.Select(i =>
                 new MarkStockFailedItemDto(
@@ -215,121 +184,71 @@ public class OrderEventConsumer : KafkaEventConsumerBase
                     i.Quantity,
                     i.Reason
                 )).ToArray());
-            
-            using var scope = _scopeFactory.CreateScope();
-            var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
-            var result = await mediator.Send(cmd);
-                    
-            if (result.Success)
-            {
-                _logger.LogInformation(
-                    "✅ Status changed to Failed : OrderId={OrderId}", @event.OrderId);
-            }
-            else
-            {
-                _logger.LogWarning(
-                    "⚠️ Failed to change status: OrderId={OrderId}. Error: {Error}", @event.OrderId, result.Errors);
-            }
-        }
-        catch (Exception ex)
+
+        using var scope = _scopeFactory.CreateScope();
+        var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
+        var result = await mediator.Send(cmd);
+
+        if (result.Success)
         {
-            _logger.LogError(ex, "Error processing StockReserveFailedEvent");
+            _logger.LogInformation(
+                "✅ Status changed to Failed : OrderId={OrderId}", @event.OrderId);
+        }
+        else
+        {
+            var msg = result.Message ?? string.Join("; ", result.Errors ?? []);
+            _logger.LogWarning(
+                "⚠️ Failed to change status: OrderId={OrderId}. Error: {Error}", @event.OrderId, msg);
+            if (result.ErrorCode == ErrorCodes.NotFound)
+                throw new Exception(msg);
+            throw new NonRetryableException(msg);
         }
     }
 
     private async Task HandleStockReserved(string json)
     {
-        try
+        var @event = JsonSerializer.Deserialize<StockReservedEvent>(json,
+            new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        if (@event == null) throw new NonRetryableException("Invalid StockReservedEvent payload");
+
+        _logger.LogInformation("📦 OrderService: Stock reserved. OrderId={OrderId}, Items={Items}.",
+            @event.OrderId, @event.Items);
+
+        var cmd = new UpdateReservedStockCommand(
+            @event.OrderId,
+            @event.Items.Select(i =>
+                new UpdateOrderItemDto(
+                    i.ProductId,
+                    i.Quantity,
+                    null
+                )).ToArray());
+
+        using var scope = _scopeFactory.CreateScope();
+        var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
+        var result = await mediator.Send(cmd);
+
+        if (result.Success)
         {
-            var @event = JsonSerializer.Deserialize<StockReservedEvent>(json, 
-                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-            if (@event == null) return;
-
-            _logger.LogInformation("📦 OrderService: Stock reserved. OrderId={OrderId}, Items={Items}.", 
-                @event.OrderId, @event.Items);
-
-            var cmd = new UpdateReservedStockCommand(
-                @event.OrderId,
-                @event.Items.Select(i =>
-                    new UpdateOrderItemDto(
-                        i.ProductId,
-                        i.Quantity,
-                        null
-                    )).ToArray());
-            
-            using var scope = _scopeFactory.CreateScope();
-            var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
-            var result = await mediator.Send(cmd);
-                    
-            if (result.Success)
-            {
-                _logger.LogInformation(
-                    "✅ Status changed to Reserved : OrderId={OrderId}", @event.OrderId);
-            }
-            else
-            {
-                _logger.LogWarning(
-                    "⚠️ Failed to change status: OrderId={OrderId}. Error: {Error}", @event.OrderId, result.Errors);
-            }
+            _logger.LogInformation(
+                "✅ Status changed to Reserved : OrderId={OrderId}", @event.OrderId);
         }
-        catch (Exception ex)
+        else
         {
-            _logger.LogError(ex, "Error processing StockReservedEvent");
+            var msg = result.Message ?? string.Join("; ", result.Errors ?? []);
+            _logger.LogWarning(
+                "⚠️ Failed to change status: OrderId={OrderId}. Error: {Error}", @event.OrderId, msg);
+            if (result.ErrorCode == ErrorCodes.NotFound)
+                throw new Exception(msg);
+            throw new NonRetryableException(msg);
         }
     }
 
-    private Task _HandleCartCheckedOut(string json)
-    {
-        try
-        {
-            var @event = JsonSerializer.Deserialize<CartCheckedOutEvent>(json, 
-                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-            if (@event == null) return Task.CompletedTask;
-
-            _logger.LogInformation("📦 OrderService: Cart checked out. CartId={CartId}, CustomerId={CustomerId}. " +
-                "🔔 TODO: Create order from cart items", 
-                @event.CartId, @event.CustomerId);
-            
-            // TODO: Implement order creation from cart event
-            // This would typically:
-            // 1. Query CartService via gRPC to get cart items
-            // 2. Validate inventory
-            // 3. Create order in OrderService
-            // 4. Reserve inventory from InventoryService
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error processing CartCheckedOutEvent");
-        }
-
-        return Task.CompletedTask;
-    }
-
-    private async Task HandleCourierStatusChanged(string json)
-    {
-        try
-        {
-            var @event = JsonSerializer.Deserialize<dynamic>(json,
-                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-            if (@event == null) return;
-
-            _logger.LogInformation("🚚 OrderService: Courier status changed. Event: {Event}",
-                json.Substring(0, Math.Min(100, json.Length)));
-            
-            // TODO: Handle courier status change
-            // Update order status based on courier status
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error processing CourierStatusChangedEvent");
-        }
-    }
 
     private async Task HandleDeliveryAssigned(string json)
     {
         var @event = JsonSerializer.Deserialize<DeliveryAssignedEvent>(json,
             new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-        if (@event == null) return;
+        if (@event == null) throw new NonRetryableException("Invalid DeliveryAssignedEvent payload");
 
         await UpdateOrderFromDelivery(@event.OrderId, @event.CourierId, OrderStatus.Assigned);
     }
@@ -338,7 +257,7 @@ public class OrderEventConsumer : KafkaEventConsumerBase
     {
         var @event = JsonSerializer.Deserialize<DeliveryAcceptedEvent>(json,
             new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-        if (@event == null) return;
+        if (@event == null) throw new NonRetryableException("Invalid DeliveryAcceptedEvent payload");
 
         await UpdateOrderFromDelivery(@event.OrderId, @event.CourierId, OrderStatus.Assigned);
     }
@@ -347,7 +266,7 @@ public class OrderEventConsumer : KafkaEventConsumerBase
     {
         var @event = JsonSerializer.Deserialize<DeliveryPickedUpEvent>(json,
             new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-        if (@event == null) return;
+        if (@event == null) throw new NonRetryableException("Invalid DeliveryPickedUpEvent payload");
 
         await UpdateOrderFromDelivery(@event.OrderId, @event.CourierId, OrderStatus.InDelivery);
     }
@@ -356,7 +275,7 @@ public class OrderEventConsumer : KafkaEventConsumerBase
     {
         var @event = JsonSerializer.Deserialize<DeliveryInTransitEvent>(json,
             new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-        if (@event == null) return;
+        if (@event == null) throw new NonRetryableException("Invalid DeliveryInTransitEvent payload");
 
         await UpdateOrderFromDelivery(@event.OrderId, @event.CourierId, OrderStatus.InDelivery);
     }
@@ -365,7 +284,7 @@ public class OrderEventConsumer : KafkaEventConsumerBase
     {
         var @event = JsonSerializer.Deserialize<DeliveryDeliveredEvent>(json,
             new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-        if (@event == null) return;
+        if (@event == null) throw new NonRetryableException("Invalid DeliveryDeliveredEvent payload");
 
         await UpdateOrderFromDelivery(@event.OrderId, @event.CourierId, OrderStatus.Delivered);
     }
@@ -374,7 +293,7 @@ public class OrderEventConsumer : KafkaEventConsumerBase
     {
         var @event = JsonSerializer.Deserialize<DeliveryCancelledEvent>(json,
             new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-        if (@event == null) return;
+        if (@event == null) throw new NonRetryableException("Invalid DeliveryCancelledEvent payload");
 
         await UpdateOrderFromDelivery(@event.OrderId, @event.CourierId, OrderStatus.Cancelled);
     }
@@ -383,7 +302,7 @@ public class OrderEventConsumer : KafkaEventConsumerBase
     {
         var @event = JsonSerializer.Deserialize<DeliveryFailedEvent>(json,
             new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-        if (@event == null) return;
+        if (@event == null) throw new NonRetryableException("Invalid DeliveryFailedEvent payload");
 
         await UpdateOrderFromDelivery(@event.OrderId, @event.CourierId, OrderStatus.Failed);
     }
@@ -392,7 +311,7 @@ public class OrderEventConsumer : KafkaEventConsumerBase
     {
         var @event = JsonSerializer.Deserialize<DeliveryReturnedEvent>(json,
             new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-        if (@event == null) return;
+        if (@event == null) throw new NonRetryableException("Invalid DeliveryReturnedEvent payload");
 
         await UpdateOrderFromDelivery(@event.OrderId, @event.CourierId, OrderStatus.Failed);
     }
@@ -402,12 +321,19 @@ public class OrderEventConsumer : KafkaEventConsumerBase
         using var scope = _scopeFactory.CreateScope();
         var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
 
-        await mediator.Send(new UpdateOrderCommand(
+        var result = await mediator.Send(new UpdateOrderCommand(
             orderId,
             courierId,
             null,
             status,
             null
         ));
+        if (!result.Success)
+        {
+            var message = result.Message ?? string.Join("; ", result.Errors ?? []);
+            if (result.ErrorCode == ErrorCodes.NotFound)
+                throw new Exception(message);
+            throw new NonRetryableException(message);
+        }
     }
 }

@@ -1,4 +1,6 @@
 using Confluent.Kafka;
+using Hangfire;
+using Hangfire.PostgreSql;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using OrderService.Api.Grpc;
@@ -7,11 +9,14 @@ using OrderService.Application.Interfaces;
 using OrderService.Application.MediatR;
 using OrderService.Application.Services;
 using OrderService.Application.Utils;
+using OrderService.Application.Models;
 using OrderService.Infrastructure.Mapping;
 using OrderService.Infrastructure.Outbox;
 using OrderService.Infrastructure.Persistence;
 using OrderService.Infrastructure.Repositories;
 using OrderService.Infrastructure.Inbox;
+using OrderService.Infrastructure.Jobs;
+using OrderService.Infrastructure.ReadStore;
 using Serilog;
 using Shared.Services;
 
@@ -34,16 +39,39 @@ if (useInMemory && builder.Environment.IsProduction())
     throw new InvalidOperationException("In-memory database is not allowed in production.");
 
 string? postgresConnectionString = null;
+string? readStoreConnectionString = null;
 if (useInMemory)
 {
     builder.Services.AddDbContext<OrderDbContext>(options =>
         options.UseInMemoryDatabase("orders_inmem"));
+    builder.Services.AddDbContext<OrderReadDbContext>(options =>
+        options.UseInMemoryDatabase("orders_read_inmem"));
 }
 else
 {
     postgresConnectionString = ConfigurationGuard.GetRequiredConnectionString(builder.Configuration, builder.Environment, "PostgreSQL");
     builder.Services.AddDbContext<OrderDbContext>(options =>
         options.UseNpgsql(postgresConnectionString));
+
+    readStoreConnectionString = builder.Configuration.GetConnectionString("OrderReadStore");
+    if (string.IsNullOrWhiteSpace(readStoreConnectionString))
+        readStoreConnectionString = postgresConnectionString;
+
+    builder.Services.AddDbContext<OrderReadDbContext>(options =>
+        options.UseNpgsql(readStoreConnectionString));
+
+    builder.Services.AddHangfire(config =>
+    {
+        config.UseSimpleAssemblyNameTypeSerializer()
+            .UseRecommendedSerializerSettings();
+
+        var connectionString = builder.Configuration.GetConnectionString("Hangfire");
+        if (!string.IsNullOrWhiteSpace(connectionString))
+            config.UsePostgreSqlStorage(connectionString);
+        else
+            config.UsePostgreSqlStorage(postgresConnectionString);
+    });
+    builder.Services.AddHangfireServer();
     
     // Sharding
     builder.Services.AddSingleton<IShardResolver>(sp =>
@@ -68,11 +96,45 @@ builder.Services.AddScoped<IEventInbox, OrderEventInbox>();
 builder.Services.AddScoped<IOrderRepository, OrderRepository>();
 builder.Services.AddScoped<IOrderReadRepository, OrderReadRepository>();
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+builder.Services.Configure<KitchenCapacityOptions>(
+    builder.Configuration.GetSection("Kitchen"));
+builder.Services.Configure<DeliveryZoneOptions>(
+    builder.Configuration.GetSection("DeliveryZones"));
+builder.Services.AddSingleton<IDeliveryZoneMatcher, DeliveryZoneMatcher>();
+builder.Services.AddScoped<IKitchenSlotReadRepository, KitchenSlotReadRepository>();
 
-builder.Services.AddSingleton<KafkaEventProducer>();
+if (!useInMemory)
+{
+    var readServices = new ServiceCollection();
+    readServices.AddDbContext<OrderReadDbContext>(options => options.UseNpgsql(readStoreConnectionString!));
+    readServices.AddScoped<IEventInbox, OrderReadEventInbox>();
+    readServices.AddScoped<IOrderReadProjector, OrderReadProjector>();
+
+    var readProvider = readServices.BuildServiceProvider();
+    builder.Services.AddSingleton(new ReadStoreScopeFactory(readProvider.GetRequiredService<IServiceScopeFactory>()));
+    builder.Services.AddSingleton(readProvider);
+
+    builder.Services.AddSingleton<OrderReadProjectionConsumer>(sp =>
+        new OrderReadProjectionConsumer(
+            builder.Configuration,
+            builder.Environment,
+            sp.GetRequiredService<ILogger<OrderReadProjectionConsumer>>(),
+            sp.GetRequiredService<ReadStoreScopeFactory>().ScopeFactory,
+            sp.GetRequiredService<IEventProducer>()));
+    builder.Services.AddHostedService<KafkaEventConsumerHostedService<OrderReadProjectionConsumer>>();
+}
+
 // Only run OutboxProcessor when using a real relational DB
-if (!useInMemory) 
+if (!useInMemory)
+{
     builder.Services.AddHostedService<OutboxProcessor>();
+    builder.Services.AddHostedService<OutboxCleanupHostedService<OrderDbContext, OutboxMessage>>();
+    builder.Services.AddHostedService<ProcessedEventCleanupHostedService<OrderDbContext>>();
+    builder.Services.AddSingleton<IOrderPaymentTtlJob, OrderPaymentTtlJob>();
+    builder.Services.AddSingleton<IOrderAssigningTtlJob, OrderAssigningTtlJob>();
+    builder.Services.AddSingleton<IOrderKitchenAcceptanceTtlJob, OrderKitchenAcceptanceTtlJob>();
+    builder.Services.AddSingleton<IOrderKitchenDelayJob, OrderKitchenDelayJob>();
+}
 
 // Register MediatR handlers from Application assembly
 builder.Services
@@ -129,6 +191,66 @@ if (!useInMemory)
     var dbContext = scope.ServiceProvider.GetRequiredService<OrderDbContext>();
     dbContext.Database.Migrate();
     Log.Information("Database migration completed for OrderService");
+
+    var enabled = bool.TryParse(builder.Configuration["Order:PaymentTtlEnabled"], out var ttlEnabled)
+        ? ttlEnabled
+        : true;
+    if (enabled)
+    {
+        var cron = builder.Configuration["Order:PaymentTtlCron"];
+        if (string.IsNullOrWhiteSpace(cron))
+            cron = "0 3 * * *";
+
+        RecurringJob.AddOrUpdate<IOrderPaymentTtlJob>(
+            "order-payment-ttl",
+            job => job.ExecuteAsync(CancellationToken.None),
+            cron);
+    }
+
+    var assigningEnabled = bool.TryParse(builder.Configuration["Order:AssigningTtlEnabled"], out var assignEnabled)
+        ? assignEnabled
+        : true;
+    if (assigningEnabled)
+    {
+        var cron = builder.Configuration["Order:AssigningTtlCron"];
+        if (string.IsNullOrWhiteSpace(cron))
+            cron = "0 5 * * *";
+
+        RecurringJob.AddOrUpdate<IOrderAssigningTtlJob>(
+            "order-assigning-ttl",
+            job => job.ExecuteAsync(CancellationToken.None),
+            cron);
+    }
+
+    var kitchenEnabled = bool.TryParse(builder.Configuration["Order:KitchenAcceptTtlEnabled"], out var kitchenAcceptEnabled)
+        ? kitchenAcceptEnabled
+        : true;
+    if (kitchenEnabled)
+    {
+        var cron = builder.Configuration["Order:KitchenAcceptTtlCron"];
+        if (string.IsNullOrWhiteSpace(cron))
+            cron = "0 6 * * *";
+
+        RecurringJob.AddOrUpdate<IOrderKitchenAcceptanceTtlJob>(
+            "order-kitchen-accept-ttl",
+            job => job.ExecuteAsync(CancellationToken.None),
+            cron);
+    }
+
+    var kitchenDelayEnabled = bool.TryParse(builder.Configuration["Order:KitchenDelayEnabled"], out var kitchenDelayValue)
+        ? kitchenDelayValue
+        : true;
+    if (kitchenDelayEnabled)
+    {
+        var cron = builder.Configuration["Order:KitchenDelayCron"];
+        if (string.IsNullOrWhiteSpace(cron))
+            cron = "0 12 * * *";
+
+        RecurringJob.AddOrUpdate<IOrderKitchenDelayJob>(
+            "order-kitchen-delay",
+            job => job.ExecuteAsync(CancellationToken.None),
+            cron);
+    }
 }
 else
 {

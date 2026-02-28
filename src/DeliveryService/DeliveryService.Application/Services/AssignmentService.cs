@@ -14,17 +14,26 @@ public class DeliveryAssignmentOptions
 public class AssignmentService : IAssignmentService
 {
     private readonly ICourierDirectory _courierDirectory;
+    private readonly IDeliveryRepository _deliveryRepository;
+    private readonly ICourierActivityStore _activityStore;
     private readonly ILogger<AssignmentService> _logger;
     private readonly DeliveryAssignmentOptions _options;
+    private readonly CourierAvailabilityOptions _availabilityOptions;
 
     public AssignmentService(
         ICourierDirectory courierDirectory,
+        IDeliveryRepository deliveryRepository,
+        ICourierActivityStore activityStore,
         IOptions<DeliveryAssignmentOptions> options,
+        IOptions<CourierAvailabilityOptions> availabilityOptions,
         ILogger<AssignmentService> logger)
     {
         _courierDirectory = courierDirectory;
+        _deliveryRepository = deliveryRepository;
+        _activityStore = activityStore;
         _logger = logger;
         _options = options.Value;
+        _availabilityOptions = availabilityOptions.Value ?? new CourierAvailabilityOptions();
     }
 
     public async Task<bool> OfferNextCourierAsync(Delivery delivery, CancellationToken ct = default)
@@ -38,12 +47,26 @@ public class AssignmentService : IAssignmentService
         if (candidates.Count == 0)
             return false;
 
+        var now = DateTime.UtcNow;
+        var activeCourierIds = new HashSet<Guid>();
+        foreach (var candidate in candidates)
+        {
+            if (await _activityStore.IsActiveAsync(candidate.Id, now, ct))
+                activeCourierIds.Add(candidate.Id);
+        }
+        if (activeCourierIds.Count == 0)
+            return false;
+
+        var activeDeliveries = await _deliveryRepository.GetActiveDeliveriesByCourierIdsAsync(activeCourierIds.ToList(), ct);
+
         var tried = delivery.AssignmentAttempts
             .Select(a => a.CourierId)
             .ToHashSet();
 
         var ranked = candidates
+            .Where(c => activeCourierIds.Contains(c.Id))
             .Where(c => !tried.Contains(c.Id))
+            .Where(c => CanOfferToCourier(c.Id, activeDeliveries, now))
             .Select(c => new
             {
                 Courier = c,
@@ -64,6 +87,28 @@ public class AssignmentService : IAssignmentService
 
         _logger.LogInformation("Offered delivery {DeliveryId} to courier {CourierId}", delivery.Id, best.Courier.Id);
         return true;
+    }
+
+    private bool CanOfferToCourier(Guid courierId, List<Delivery> activeDeliveries, DateTime now)
+    {
+        var maxActive = Math.Max(_availabilityOptions.MaxActiveDeliveries, 1);
+        var allowExtraMinutes = Math.Max(_availabilityOptions.AllowExtraWhenMinutesLeft, 0);
+
+        var courierDeliveries = activeDeliveries.Where(d => d.CourierId == courierId).ToList();
+        if (courierDeliveries.Count < maxActive)
+            return true;
+
+        if (allowExtraMinutes == 0)
+            return false;
+
+        var inDelivery = courierDeliveries
+            .Where(d => d.Status == DeliveryStatus.InDelivery && d.EstimatedDeliveryAt.HasValue)
+            .OrderBy(d => d.EstimatedDeliveryAt)
+            .FirstOrDefault();
+        if (inDelivery == null)
+            return false;
+
+        return inDelivery.EstimatedDeliveryAt.Value <= now.AddMinutes(allowExtraMinutes);
     }
 
     private static double GetDistance(double lat1, double lon1, double? lat2, double? lon2)

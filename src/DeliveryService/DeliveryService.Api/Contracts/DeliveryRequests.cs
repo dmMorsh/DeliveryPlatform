@@ -11,6 +11,11 @@ public record DeclineDeliveryRequest
     public string? Reason { get; init; }
 }
 
+public record CourierOfferDeclineRequest
+{
+    public string? Reason { get; init; }
+}
+
 public record CourierActionRequest
 {
     public Guid CourierId { get; init; }

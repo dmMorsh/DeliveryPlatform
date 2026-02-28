@@ -8,6 +8,26 @@ var app = builder.Build();
 var encoder = HtmlEncoder.Create(UnicodeRanges.BasicLatin);
 var store = new ConcurrentDictionary<string, PaymentState>(StringComparer.OrdinalIgnoreCase);
 
+static bool TryUpdateStatus(
+    ConcurrentDictionary<string, PaymentState> store,
+    string externalPaymentId,
+    Func<PaymentState, string?> mapStatus)
+{
+    while (true)
+    {
+        if (!store.TryGetValue(externalPaymentId, out var current))
+            return false;
+
+        var newStatus = mapStatus(current);
+        if (string.IsNullOrWhiteSpace(newStatus) || newStatus == current.Status)
+            return true;
+
+        var updated = current with { Status = newStatus };
+        if (store.TryUpdate(externalPaymentId, updated, current))
+            return true;
+    }
+}
+
 app.MapPost("/api/fake-payments/start", (HttpContext ctx, FakeStartRequest request) =>
 {
     var externalPaymentId = Guid.NewGuid().ToString("N");
@@ -46,8 +66,8 @@ app.MapPost("/api/fake-payments/capture/{externalPaymentId}", (string externalPa
     if (!store.TryGetValue(externalPaymentId, out var state))
         return Results.NotFound();
 
-    if (state.Status is "authorized" or "pending")
-        state.Status = "succeeded";
+    TryUpdateStatus(store, externalPaymentId, current =>
+        current.Status is "authorized" or "pending" ? "succeeded" : null);
 
     return Results.Ok();
 });
@@ -57,8 +77,8 @@ app.MapPost("/api/fake-payments/cancel/{externalPaymentId}", (string externalPay
     if (!store.TryGetValue(externalPaymentId, out var state))
         return Results.NotFound();
 
-    if (state.Status is not "succeeded")
-        state.Status = "cancelled";
+    TryUpdateStatus(store, externalPaymentId, current =>
+        current.Status is not "succeeded" ? "cancelled" : null);
 
     return Results.Ok();
 });
@@ -68,8 +88,8 @@ app.MapPost("/api/fake-payments/refund/{externalPaymentId}", (string externalPay
     if (!store.TryGetValue(externalPaymentId, out var state))
         return Results.NotFound();
 
-    if (state.Status is "succeeded")
-        state.Status = "refunded";
+    TryUpdateStatus(store, externalPaymentId, current =>
+        current.Status is "succeeded" ? "refunded" : null);
 
     return Results.Ok();
 });
@@ -129,20 +149,16 @@ app.MapPost("/pay/{externalPaymentId}/action", async (HttpContext ctx, string ex
     var form = await ctx.Request.ReadFormAsync();
     var action = form["action"].ToString().Trim().ToLowerInvariant();
 
-    switch (action)
+    TryUpdateStatus(store, externalPaymentId, current =>
     {
-        case "pay":
-            state.Status = state.Capture ? "succeeded" : "authorized";
-            break;
-        case "fail":
-            state.Status = "failed";
-            break;
-        case "cancel":
-            state.Status = "cancelled";
-            break;
-        default:
-            break;
-    }
+        return action switch
+        {
+            "pay" => current.Capture ? "succeeded" : "authorized",
+            "fail" => "failed",
+            "cancel" => "cancelled",
+            _ => null
+        };
+    });
 
     var redirectUrl = action == "pay" ? state.ReturnUrl : state.FailUrl;
     if (!string.IsNullOrWhiteSpace(redirectUrl))
@@ -169,17 +185,17 @@ internal sealed record FakeStartResponse(string ExternalPaymentId, string Paymen
 
 internal sealed record FakeStatusResponse(string Status);
 
-internal sealed class PaymentState
+internal sealed record PaymentState
 {
-    public string ExternalPaymentId { get; set; } = string.Empty;
-    public Guid PaymentId { get; set; }
-    public Guid OrderId { get; set; }
-    public long AmountCents { get; set; }
-    public string Currency { get; set; } = string.Empty;
-    public string? Description { get; set; }
-    public bool Capture { get; set; }
-    public string Status { get; set; } = "pending";
-    public string? ReturnUrl { get; set; }
-    public string? FailUrl { get; set; }
-    public DateTime CreatedAt { get; set; }
+    public string ExternalPaymentId { get; init; } = string.Empty;
+    public Guid PaymentId { get; init; }
+    public Guid OrderId { get; init; }
+    public long AmountCents { get; init; }
+    public string Currency { get; init; } = string.Empty;
+    public string? Description { get; init; }
+    public bool Capture { get; init; }
+    public string Status { get; init; } = "pending";
+    public string? ReturnUrl { get; init; }
+    public string? FailUrl { get; init; }
+    public DateTime CreatedAt { get; init; }
 }

@@ -1,5 +1,6 @@
 using DeliveryService.Application.Interfaces;
 using DeliveryService.Application.Models;
+using DeliveryService.Application.Services;
 using DeliveryService.Domain.Aggregates;
 using MediatR;
 using Shared.Utilities;
@@ -31,6 +32,9 @@ public class CancelDeliveryByOrderCommandHandler : IRequestHandler<CancelDeliver
         if (delivery.Status == DeliveryStatus.Delivered)
             return ApiResponse.SuccessResponse();
 
+        if (delivery.Status is DeliveryStatus.Cancelled or DeliveryStatus.Failed or DeliveryStatus.Returned)
+            return ApiResponse.SuccessResponse();
+
         delivery.Cancel(request.Reason);
 
         var outbox = delivery.DomainEvents
@@ -41,6 +45,7 @@ public class CancelDeliveryByOrderCommandHandler : IRequestHandler<CancelDeliver
 
         await _uow.SaveChangesAsync(outbox, ct);
         delivery.ClearDomainEvents();
+        DeliveryReadCache.Invalidate(delivery.Id, delivery.OrderId);
 
         return ApiResponse.SuccessResponse();
     }

@@ -18,11 +18,11 @@ public class GetActiveCouriersQueryHandler : IRequestHandler<GetActiveCouriersQu
         _logger = logger;
     }
 
-    public async Task<ApiResponse<List<CourierView>>> Handle(GetActiveCouriersQuery request, CancellationToken cancellationToken)
+    public async Task<ApiResponse<List<CourierView>>> Handle(GetActiveCouriersQuery request, CancellationToken ct)
     {
         try
         {
-            var couriers = await _repository.GetActiveCouriersAsync();
+            var couriers = await _repository.GetActiveCouriersAsync(ct);
             var views = couriers.Select(c =>
             {
                 var dto = c.Adapt<CourierView>();

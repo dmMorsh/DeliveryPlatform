@@ -10,6 +10,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Shared.Contracts.Events;
 using Shared.Services;
+using Shared.Utilities;
 
 namespace InventoryService.Application.Services;
 
@@ -46,13 +47,17 @@ public class InventoryEventConsumer : KafkaEventConsumerBase
                 case "order.created":
                     await HandleOrderCreated(json);
                     break;
-                case "inventory.stock.release_requested\n":
+                case "inventory.stock.release_requested":
                     await HandleStockReservationReleaseRequested(json);
                     break;
                 default:
                     _logger.LogWarning("Unknown event type: {EventType}", eventType);
                     break;
             }
+        }
+        catch (NonRetryableException)
+        {
+            throw;
         }
         catch (Exception ex)
         {
@@ -65,102 +70,77 @@ public class InventoryEventConsumer : KafkaEventConsumerBase
 
     private async Task HandleStockReservationReleaseRequested(string json)
     {
-        try
+        var @event = JsonSerializer.Deserialize<StockReservationReleaseRequestedEvent>(json,
+            new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        if (@event == null) throw new NonRetryableException("Invalid StockReservationReleaseRequestedEvent payload");
+
+        _logger.LogInformation("📦 InventoryService: Order canceled. OrderId={OrderId}. ",
+            @event.AggregateId);
+
+        var cmd = new ReleaseStockCommand(@event.OrderId, @event.Items
+            .Select(i =>
+                new SimpleStockItemModel(
+                    i.ProductId,
+                    i.Quantity)
+            ).ToArray());
+
+        using var scope = _scopeFactory.CreateScope();
+        var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
+        var result = await mediator.Send(cmd);
+
+        if (result.Success)
         {
-            var @event = JsonSerializer.Deserialize<StockReservationReleaseRequestedEvent>(json, 
-                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-            if (@event == null) return;
-
-            _logger.LogInformation("📦 InventoryService: Order canceled. OrderId={OrderId}. ",
-                @event.AggregateId);
-            
-            // Отменяем резерв stock
-            try
-            {
-                var cmd = new ReleaseStockCommand(@event.OrderId, @event.Items
-                    .Select(i => 
-                        new SimpleStockItemModel(
-                            i.ProductId, 
-                            i.Quantity)
-                    ).ToArray());
-
-                using var scope = _scopeFactory.CreateScope();
-                var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
-                var result = await mediator.Send(cmd);
-                
-                if (result.Success)
-                {
-                    _logger.LogInformation(
-                        "✅ Stock released: OrderId={OrderId}", @event.AggregateId);
-                }
-                else
-                {
-                    _logger.LogWarning(
-                        "⚠️ Failed to release stock: OrderId={OrderId}. Error: {Error}", @event.AggregateId, result.Errors);
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, 
-                    "❌ Error releasing stock for OrderId={OrderId}", @event.AggregateId);
-            }
-            
+            _logger.LogInformation(
+                "✅ Stock released: OrderId={OrderId}", @event.AggregateId);
         }
-        catch (Exception ex)
+        else
         {
-            _logger.LogError(ex, "Error processing OrderCanceledEvent");
+            var msg = result.Message ?? string.Join("; ", result.Errors ?? []);
+            _logger.LogWarning(
+                "⚠️ Failed to release stock: OrderId={OrderId}. Error: {Error}", @event.AggregateId, msg);
+            if (result.ErrorCode == ErrorCodes.NotFound)
+                throw new Exception(msg);
+            throw new NonRetryableException(msg);
         }
     }
 
     private async Task HandleOrderCreated(string json)
     {
-        try
+        var @event = JsonSerializer.Deserialize<OrderCreatedEvent>(json,
+            new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        if (@event == null) throw new NonRetryableException("Invalid OrderCreatedEvent payload");
+
+        _logger.LogInformation("📦 InventoryService: Order created. OrderId={OrderId}. " +
+            "🔄 Reserving stock for {ItemCount} items",
+            @event.AggregateId, @event.Items?.Count ?? 0);
+
+        if (@event.Items == null)
+            return;
+
+        var cmd = new ReserveStockCommand(@event.OrderId, @event.Items
+            .Select(i =>
+                new SimpleStockItemModel(
+                    i.ProductId,
+                    i.Quantity)
+            ).ToArray());
+
+        using var scope = _scopeFactory.CreateScope();
+        var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
+        var result = await mediator.Send(cmd);
+
+        if (result.Success)
         {
-            var @event = JsonSerializer.Deserialize<OrderCreatedEvent>(json, 
-                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-            if (@event == null) return;
-
-            _logger.LogInformation("📦 InventoryService: Order created. OrderId={OrderId}. " +
-                "🔄 Reserving stock for {ItemCount} items",
-                @event.AggregateId, @event.Items?.Count ?? 0);
-            
-            // Резервируем stock
-            if (@event.Items != null)
-            {
-                try
-                {
-                    var cmd = new ReserveStockCommand(@event.OrderId ,@event.Items
-                        .Select(i => 
-                            new SimpleStockItemModel(
-                                i.ProductId, 
-                                i.Quantity)
-                        ).ToArray());
-
-                    using var scope = _scopeFactory.CreateScope();
-                    var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
-                    var result = await mediator.Send(cmd);
-                    
-                    if (result.Success)
-                    {
-                        _logger.LogInformation(
-                            "✅ Stock reserved: OrderId={OrderId}", @event.AggregateId);
-                    }
-                    else
-                    {
-                        _logger.LogWarning(
-                            "⚠️ Failed to reserve stock: OrderId={OrderId}. Error: {Error}", @event.AggregateId, result.Errors);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, 
-                        "❌ Error reserving stock for OrderId={OrderId}", @event.AggregateId);
-                }
-            }
+            _logger.LogInformation(
+                "✅ Stock reserved: OrderId={OrderId}", @event.AggregateId);
         }
-        catch (Exception ex)
+        else
         {
-            _logger.LogError(ex, "Error processing OrderCreatedEvent");
+            var msg = result.Message ?? string.Join("; ", result.Errors ?? []);
+            _logger.LogWarning(
+                "⚠️ Failed to reserve stock: OrderId={OrderId}. Error: {Error}", @event.AggregateId, msg);
+            if (result.ErrorCode == ErrorCodes.NotFound)
+                throw new Exception(msg);
+            throw new NonRetryableException(msg);
         }
     }
 }

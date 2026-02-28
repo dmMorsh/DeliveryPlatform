@@ -1,6 +1,7 @@
 using System.Diagnostics.Metrics;
 using DeliveryService.Application.Interfaces;
 using DeliveryService.Application.Models;
+using DeliveryService.Application.Services;
 using DeliveryService.Domain.Aggregates;
 using MediatR;
 using Microsoft.Extensions.Logging;
@@ -40,7 +41,7 @@ public class StartAssignmentCommandHandler : IRequestHandler<StartAssignmentComm
     {
         var delivery = await _repository.GetByOrderIdAsync(request.OrderId, ct);
         if (delivery == null)
-            return ApiResponse.ErrorResponse("Delivery not found");
+            return ApiResponse.ErrorResponse(ErrorCodes.NotFound, "Delivery not found");
 
         if (delivery.Status == DeliveryStatus.Assigned)
             return ApiResponse.SuccessResponse();
@@ -63,6 +64,7 @@ public class StartAssignmentCommandHandler : IRequestHandler<StartAssignmentComm
 
         await _uow.SaveChangesAsync(outbox, ct);
         delivery.ClearDomainEvents();
+        DeliveryReadCache.Invalidate(delivery.Id, delivery.OrderId);
 
         return ApiResponse.SuccessResponse();
     }

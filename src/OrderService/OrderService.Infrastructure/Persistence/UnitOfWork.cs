@@ -1,6 +1,7 @@
 using OrderService.Application.Interfaces;
 using OrderService.Application.Models;
 using OrderService.Infrastructure.Repositories;
+using Shared.Services;
 
 namespace OrderService.Infrastructure.Persistence;
 
@@ -23,7 +24,7 @@ public class UnitOfWork : IUnitOfWork
         if (outboxMessages.Count > 0)
             _db.OutboxMessages.AddRange(outboxMessages);
 
-        await _db.SaveChangesAsync(ct);
+        await _db.SaveChangesWithConcurrencyRetryAsync(maxRetries: 3, ct);
     }
 
     public void Dispose()

@@ -1,6 +1,7 @@
 using InventoryService.Application.Interfaces;
 using InventoryService.Application.Models;
 using InventoryService.Domain.Aggregates;
+using InventoryService.Domain.Entities;
 using InventoryService.Domain.Events;
 using MediatR;
 using Shared.Contracts.Events;
@@ -29,7 +30,7 @@ public class ReleaseStockCommandHandler
         CancellationToken ct)
     {
         if (request.ReleaseStockModels.Length == 0)
-            return ApiResponse.ErrorResponse("No item in request");
+            return ApiResponse.ErrorResponse(ErrorCodes.Validation, "No item in request");
 
         var shardGroups = request.ReleaseStockModels
             .GroupBy(i => _resolver.ResolveShard(i.ProductId));
@@ -38,7 +39,7 @@ public class ReleaseStockCommandHandler
             var shardId = shardGroup.Key;
             var success = await ProcessMessage(shardId, request.OrderId, shardGroup.ToArray(), ct);
             if (!success)
-                return ApiResponse.ErrorResponse("Release failed");
+                return ApiResponse.ErrorResponse(ErrorCodes.Invariant, "Release failed");
         }
         
         return ApiResponse.SuccessResponse("Stock released");
@@ -51,40 +52,56 @@ public class ReleaseStockCommandHandler
         var reservations = await uow.Reservations.GetActiveReservationsAsync(orderId, ct);
         if (!reservations.Any())
             return true;
-            
+
+        var reservationsByProduct = reservations
+            .GroupBy(r => r.ProductId)
+            .ToDictionary(g => g.Key, g => g.First());
+
         var outboxMessages = new List<OutboxMessage>();
         var failedItems = new List<FailedStockItemSnapshot>();
         var toRelease = new List<(StockItem stock, int qty)>();
+        var reservationsToRelease = new List<StockReservation>();
         
+        var productIds = releaseStockModels
+            .Where(m => reservationsByProduct.ContainsKey(m.ProductId))
+            .Select(m => m.ProductId)
+            .Distinct()
+            .ToList();
+        var stockItems = productIds.Count == 0
+            ? []
+            : await uow.Stock.GetByProductIdsAsync(productIds, ct);
+        var stockById = stockItems.ToDictionary(s => s.Id);
+
         foreach (var releaseStockModel in releaseStockModels)
         {
-            var stock = await uow.Stock
-                .GetByProductIdAsync(releaseStockModel.ProductId, ct);
-            if (stock == null)
+            if (!reservationsByProduct.TryGetValue(releaseStockModel.ProductId, out var reservation))
+                continue;
+
+            if (!stockById.TryGetValue(releaseStockModel.ProductId, out var stock))
             {
                 failedItems.Add(new FailedStockItemSnapshot
-                    {
-                        ProductId = releaseStockModel.ProductId,
-                        Reason = "Stock item not found",
-                        Quantity = releaseStockModel.Quantity
-                    }
-                );
+                {
+                    ProductId = releaseStockModel.ProductId,
+                    Reason = "Stock item not found",
+                    Quantity = releaseStockModel.Quantity
+                });
                 continue;
             }
             
-            var error = stock.CanRelease(releaseStockModel.Quantity);
+            var error = stock.CanRelease(reservation.Quantity);
             if (error != null)
             {
                 failedItems.Add(new FailedStockItemSnapshot
                 {
                     ProductId = releaseStockModel.ProductId,
                     Reason = error,
-                    Quantity = releaseStockModel.Quantity,
+                    Quantity = reservation.Quantity,
                 });
                 continue;
             }
                        
-            toRelease.Add((stock, releaseStockModel.Quantity));
+            toRelease.Add((stock, reservation.Quantity));
+            reservationsToRelease.Add(reservation);
         }
         
         if (failedItems.Count != 0)
@@ -94,12 +111,15 @@ public class ReleaseStockCommandHandler
             await uow.SaveChangesAsync(outboxMessages, ct);
             return false;
         }
+
+        if (toRelease.Count == 0)
+            return true;
         
         foreach (var (stock, quantity) in toRelease)
         {
             stock.Release(quantity, orderId, checkAvailability: false);
         }
-        foreach (var stockReservation in reservations)
+        foreach (var stockReservation in reservationsToRelease)
         {
             stockReservation.ReleasedAt = DateTime.UtcNow;
         }

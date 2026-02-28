@@ -7,9 +7,9 @@ namespace Shared.Services;
 
 public static class HttpResiliencePolicies
 {
-    public static IAsyncPolicy<HttpResponseMessage> CreatePolicyWrap(ILogger? logger = null)
+    public static IAsyncPolicy<HttpResponseMessage> CreatePolicyWrap(ILogger? logger = null, int timeoutSeconds = 10)
     {
-        var timeout = Policy.TimeoutAsync<HttpResponseMessage>(TimeSpan.FromSeconds(10));
+        var timeout = Policy.TimeoutAsync<HttpResponseMessage>(TimeSpan.FromSeconds(Math.Max(1, timeoutSeconds)));
 
         var retry = HttpPolicyExtensions
             .HandleTransientHttpError()
@@ -40,9 +40,9 @@ public static class HttpResiliencePolicies
         return Policy.WrapAsync(circuitBreaker, retry, timeout);
     }
 
-    public static IAsyncPolicy CreateGrpcPolicyWrap(ILogger? logger = null)
+    public static IAsyncPolicy CreateGrpcPolicyWrap(ILogger? logger = null, int timeoutSeconds = 10)
     {
-        var timeout = Policy.TimeoutAsync(TimeSpan.FromSeconds(10));
+        var timeout = Policy.TimeoutAsync(TimeSpan.FromSeconds(Math.Max(1, timeoutSeconds)));
 
         var retry = Policy
             .Handle<Exception>()

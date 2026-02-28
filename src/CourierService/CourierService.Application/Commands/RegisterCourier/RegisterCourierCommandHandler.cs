@@ -1,8 +1,10 @@
 using CourierService.Application.Interfaces;
 using CourierService.Application.Models;
+using CourierService.Application.Services;
 using CourierService.Domain.Aggregates;
 using Mapster;
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Shared.Utilities;
 
@@ -34,13 +36,13 @@ public class RegisterCourierCommandHandler : IRequestHandler<RegisterCourierComm
             if (string.IsNullOrWhiteSpace(request.FullName) || string.IsNullOrWhiteSpace(request.Phone))
                 return ApiResponse<CourierView>.ErrorResponse("Name and phone are required");
 
-            var existingCourier = await _repository.GetCourierByPhoneAsync(request.Phone);
+            var existingCourier = await _repository.GetCourierByPhoneAsync(request.Phone, cancellationToken);
             if (existingCourier != null)
                 return ApiResponse<CourierView>.ErrorResponse("Courier with this phone already exists");
 
             var courier = Courier.Register(request.FullName, request.Phone, request.Email, request.DocumentNumber);
 
-            var created = await _repository.CreateCourierAsync(courier);
+            var created = await _repository.CreateCourierAsync(courier, cancellationToken);
             _logger.LogInformation("Courier created: {CourierName} (ID: {CourierId})", created.FullName, created.Id);
 
             // Map domain events to integration events and stage to outbox
@@ -51,8 +53,19 @@ public class RegisterCourierCommandHandler : IRequestHandler<RegisterCourierComm
                 .ToList();
             
             // Commit aggregate atomically
-            await _uow.SaveChangesAsync(outboxMessages, cancellationToken);
+            try
+            {
+                await _uow.SaveChangesAsync(outboxMessages, cancellationToken);
+            }
+            catch (DbUpdateException)
+            {
+                var existing = await _repository.GetCourierByPhoneAsync(request.Phone, cancellationToken);
+                if (existing != null)
+                    return ApiResponse<CourierView>.ErrorResponse("Courier with this phone already exists");
+                throw;
+            }
             created.ClearDomainEvents();
+            CourierReadCache.Invalidate(created.Id);
 
             var result = created.Adapt<CourierView>();
             result.Status = (int)created.Status;

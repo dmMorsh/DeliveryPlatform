@@ -29,6 +29,7 @@ public class OrderGrpcService : IOrderService
             ToLongitude = command.ToLongitude,
             WeightGrams = command.WeightGrams,
             CourierNote = command.CourierNote ?? string.Empty,
+            CheckoutId = cart.CheckoutId.ToString(),
         };
 
         request.Items.AddRange(
@@ -42,7 +43,6 @@ public class OrderGrpcService : IOrderService
         );
 
         var response = await _client.CreateOrderAsync(request, cancellationToken: ct);
-
         return Guid.Parse(response.OrderId);
     }
 }

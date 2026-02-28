@@ -11,5 +11,5 @@ public interface IOrderRepository
     Task<List<Order>> GetOrdersByStatusAsync(OrderStatus status, CancellationToken ct);
     Task<Order> CreateOrderAsync(Order order, CancellationToken ct);
     void Remove(Order order);
-    Task<(List<Order> Items, int Total)> GetOrdersPagedAsync(int page = 1, int pageSize = 20);
+    Task<(List<Order> Items, int Total)> GetOrdersPagedAsync(int page = 1, int pageSize = 20, CancellationToken ct = default);
 }

@@ -35,6 +35,19 @@ public class LocationService : ILocationService
     private static readonly TimeSpan HistoryTtl = TimeSpan.FromDays(7);
     private static readonly TimeSpan HistorySampleInterval = TimeSpan.FromMinutes(1);
     private const int HistoryMaxItems = 2000;
+    private const string AppendHistoryScript = """
+        local last = redis.call('GET', KEYS[2])
+        local now = tonumber(ARGV[1])
+        local minInterval = tonumber(ARGV[2])
+        if last and (now - tonumber(last)) < minInterval then
+            return 0
+        end
+        redis.call('SET', KEYS[2], ARGV[1], 'PX', ARGV[3])
+        redis.call('LPUSH', KEYS[1], ARGV[4])
+        redis.call('LTRIM', KEYS[1], 0, tonumber(ARGV[5]) - 1)
+        redis.call('PEXPIRE', KEYS[1], tonumber(ARGV[3]))
+        return 1
+        """;
 
     private readonly ILogger<LocationService> _logger;
     private readonly IDatabase _db;
@@ -90,7 +103,6 @@ public class LocationService : ILocationService
                 _logger.LogWarning("Location not found for courier {CourierId}", courierId);
                 return null;
             }
-// TODO check value
             var location = JsonSerializer.Deserialize<CourierLocationDto>(value.ToString());
             if (location == null)
                 return null;
@@ -137,19 +149,18 @@ public class LocationService : ILocationService
     {
         var historyKey = GetHistoryKey(courierId);
         var historyTsKey = GetHistoryTsKey(courierId);
-        var lastTsValue = await _db.StringGetAsync(historyTsKey);
-        // TODO check val
-        if (lastTsValue.HasValue && long.TryParse(lastTsValue.ToString(), out var lastTs))
-        {
-            var last = DateTimeOffset.FromUnixTimeMilliseconds(lastTs);
-            if (payload.UpdatedAt - last < HistorySampleInterval)
-                return;
-        }
-
-        await _db.StringSetAsync(historyTsKey, payload.UpdatedAt.ToUnixTimeMilliseconds(), HistoryTtl);
-        await _db.ListLeftPushAsync(historyKey, json);
-        await _db.ListTrimAsync(historyKey, 0, HistoryMaxItems - 1);
-        await _db.KeyExpireAsync(historyKey, HistoryTtl);
+        var nowMs = payload.UpdatedAt.ToUnixTimeMilliseconds();
+        await _db.ScriptEvaluateAsync(
+            AppendHistoryScript,
+            new RedisKey[] { historyKey, historyTsKey },
+            new RedisValue[]
+            {
+                nowMs,
+                (long)HistorySampleInterval.TotalMilliseconds,
+                (long)HistoryTtl.TotalMilliseconds,
+                json,
+                HistoryMaxItems
+            });
     }
 
     private static string GetLocationKey(Guid courierId) => $"courier:{courierId}:location";

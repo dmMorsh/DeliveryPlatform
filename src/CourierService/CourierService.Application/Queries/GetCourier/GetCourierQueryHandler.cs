@@ -1,14 +1,18 @@
 using CourierService.Application.Interfaces;
 using CourierService.Application.Models;
+using CourierService.Application.Services;
+using CourierService.Domain.Aggregates;
 using Mapster;
 using MediatR;
 using Microsoft.Extensions.Logging;
+using Shared.Services;
 using Shared.Utilities;
 
 namespace CourierService.Application.Queries.GetCourier;
 
 public class GetCourierQueryHandler : IRequestHandler<GetCourierQuery, ApiResponse<CourierView>>
 {
+    private static readonly SingleFlight<Guid, Courier?> SingleFlight = new();
     private readonly ICourierRepository _repository;
     private readonly ILogger<GetCourierQueryHandler> _logger;
 
@@ -22,7 +26,15 @@ public class GetCourierQueryHandler : IRequestHandler<GetCourierQuery, ApiRespon
     {
         try
         {
-            var courier = await _repository.GetCourierByIdAsync(request.CourierId);
+            if (!CourierReadCache.TryGet(request.CourierId, out var courier))
+            {
+                var task = SingleFlight.RunAsync(
+                    request.CourierId,
+                    _ => CourierReadCache.LoadAsync(
+                        () => _repository.GetCourierByIdAsync(request.CourierId, cancellationToken)));
+                courier = await task.WaitAsync(cancellationToken);
+                CourierReadCache.Set(request.CourierId, courier);
+            }
             if (courier == null)
                 return ApiResponse<CourierView>.ErrorResponse($"Courier {request.CourierId} not found");
 

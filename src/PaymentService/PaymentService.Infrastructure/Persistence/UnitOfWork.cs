@@ -2,6 +2,7 @@
 using PaymentService.Application.Models;
 using PaymentService.Infrastructure.Repositories;
 using PaymentService.Infrastructure.Sharding;
+using Shared.Services;
 
 namespace PaymentService.Infrastructure.Persistence;
 
@@ -30,7 +31,7 @@ public sealed class UnitOfWork : IUnitOfWork
         if (outboxMessages.Count > 0)
             _db.OutboxMessages.AddRange(outboxMessages);
 
-        await _db.SaveChangesAsync(ct);
+        await _db.SaveChangesWithConcurrencyRetryAsync(maxRetries: 3, ct);
     }
 
     public void Dispose()

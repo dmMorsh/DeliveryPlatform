@@ -59,14 +59,14 @@ public class OrderRepository : IOrderRepository
         _context.Orders.Remove(order);
     }
 
-    public async Task<(List<Order> Items, int Total)> GetOrdersPagedAsync(int page = 1, int pageSize = 20)
+    public async Task<(List<Order> Items, int Total)> GetOrdersPagedAsync(int page = 1, int pageSize = 20, CancellationToken ct = default)
     {
         var query = _context.Orders.OrderByDescending(o => o.CreatedAt);
-        var total = await query.CountAsync();
+        var total = await query.CountAsync(ct);
         var items = await query
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
-            .ToListAsync();
+            .ToListAsync(ct);
 
         return (items, total);
     }

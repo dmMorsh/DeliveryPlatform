@@ -6,9 +6,11 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using PaymentService.Application.Commands.CreatePayment;
+using PaymentService.Application.Commands.MarkPaymentReady;
 using PaymentService.Application.Commands.ProcessOrderCanceled;
 using Shared.Contracts.Events;
 using Shared.Services;
+using Shared.Utilities;
 
 namespace PaymentService.Application.Services;
 
@@ -20,13 +22,20 @@ public class PaymentEventConsumer : KafkaEventConsumerBase
 {
     private new readonly ILogger<PaymentEventConsumer> _logger;
 
+    private static class OrderStatusIds
+    {
+        public const int Reserved = (int)OrderStatusCode.Reserved;
+        public const int Cancelled = (int)OrderStatusCode.Cancelled;
+        public const int Failed = (int)OrderStatusCode.Failed;
+    }
+
     public PaymentEventConsumer(
         IConfiguration config,
         IHostEnvironment env,
         ILogger<PaymentEventConsumer> logger,
         IServiceScopeFactory scopeFactory,
         IEventProducer producer)
-        : base(config, env, logger, scopeFactory, producer, null, "order.events")
+        : base(config, env, logger, scopeFactory, producer, null, null, "order.events")
     {
         _logger = logger;
     }
@@ -42,6 +51,9 @@ public class PaymentEventConsumer : KafkaEventConsumerBase
                 case "order.created":
                     await HandleOrderCreated(json);
                     return true;
+                case "order.status.changed":
+                    await HandleOrderStatusChanged(json);
+                    return true;
                 case "order.canceled":
                     await HandleOrderCanceled(json);
                     return true;
@@ -49,6 +61,10 @@ public class PaymentEventConsumer : KafkaEventConsumerBase
                     _logger.LogWarning("Unknown event type: {EventType}", eventType);
                     return true;
             }
+        }
+        catch (NonRetryableException)
+        {
+            throw;
         }
         catch (Exception ex)
         {
@@ -61,39 +77,68 @@ public class PaymentEventConsumer : KafkaEventConsumerBase
 
     private async Task HandleOrderCreated(string json)
     {
-        try
-        {
-            var @event = JsonSerializer.Deserialize<OrderCreatedEvent>(json,
-                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-            if (@event == null) return;
+        var @event = JsonSerializer.Deserialize<OrderCreatedEvent>(json,
+            new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        if (@event == null) throw new NonRetryableException("Invalid OrderCreatedEvent payload");
 
-            using var scope = _scopeFactory.CreateScope();
-            var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
-            var currency = string.IsNullOrWhiteSpace(@event.Currency) ? "RUB" : @event.Currency;
-            var cmd = new CreatePaymentCommand(@event.OrderId, @event.CostCents, currency);
-            await mediator.Send(cmd);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error processing OrderCreatedEvent");
-        }
+        using var scope = _scopeFactory.CreateScope();
+        var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
+        var currency = string.IsNullOrWhiteSpace(@event.Currency) ? "RUB" : @event.Currency;
+        var cmd = new CreatePaymentCommand(@event.OrderId, @event.CostCents, currency);
+        await mediator.Send(cmd);
     }
 
     private async Task HandleOrderCanceled(string json)
     {
-        try
-        {
-            var @event = JsonSerializer.Deserialize<OrderCanceledEvent>(json,
-                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-            if (@event == null) return;
+        var @event = JsonSerializer.Deserialize<OrderCanceledEvent>(json,
+            new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        if (@event == null) throw new NonRetryableException("Invalid OrderCanceledEvent payload");
 
-            using var scope = _scopeFactory.CreateScope();
-            var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
-            await mediator.Send(new ProcessOrderCanceledCommand(@event.OrderId));
-        }
-        catch (Exception ex)
+        using var scope = _scopeFactory.CreateScope();
+        var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
+        var result = await mediator.Send(new ProcessOrderCanceledCommand(@event.OrderId));
+        if (!result.Success)
         {
-            _logger.LogError(ex, "Error processing OrderCanceledEvent");
+            var message = result.Message ?? string.Join("; ", result.Errors ?? []);
+            if (result.ErrorCode == ErrorCodes.NotFound)
+                throw new Exception(message);
+            throw new NonRetryableException(message);
+        }
+    }
+
+    private async Task HandleOrderStatusChanged(string json)
+    {
+        var @event = JsonSerializer.Deserialize<OrderStatusChangedEvent>(json,
+            new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        if (@event == null) throw new NonRetryableException("Invalid OrderStatusChangedEvent payload");
+
+        if (@event.NewStatus == OrderStatusIds.Reserved)
+        {
+            using var serviceScope = _scopeFactory.CreateScope();
+            var scopeMediator = serviceScope.ServiceProvider.GetRequiredService<IMediator>();
+            var apiResponse = await scopeMediator.Send(new MarkPaymentReadyCommand(@event.OrderId));
+            if (!apiResponse.Success)
+            {
+                var message = apiResponse.Message ?? string.Join("; ", apiResponse.Errors ?? []);
+                if (apiResponse.ErrorCode == ErrorCodes.NotFound)
+                    throw new Exception(message);
+                throw new NonRetryableException(message);
+            }
+            return;
+        }
+
+        if (@event.NewStatus is not (OrderStatusIds.Cancelled or OrderStatusIds.Failed))
+            return;
+
+        using var scope = _scopeFactory.CreateScope();
+        var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
+        var result = await mediator.Send(new ProcessOrderCanceledCommand(@event.OrderId));
+        if (!result.Success)
+        {
+            var message = result.Message ?? string.Join("; ", result.Errors ?? []);
+            if (result.ErrorCode == ErrorCodes.NotFound)
+                throw new Exception(message);
+            throw new NonRetryableException(message);
         }
     }
 }

@@ -87,6 +87,14 @@ public class DeliveryEventMapper : IDeliveryEventMapper
                 Reason = e.Reason,
                 Timestamp = e.OccurredAt
             },
+            DeliveryReassignRequestedDomainEvent e => new DeliveryReassignRequestedEvent
+            {
+                DeliveryId = e.DeliveryId,
+                OrderId = e.OrderId,
+                PreviousCourierId = e.PreviousCourierId,
+                Reason = e.Reason,
+                Timestamp = e.OccurredAt
+            },
             _ => null
         };
     }

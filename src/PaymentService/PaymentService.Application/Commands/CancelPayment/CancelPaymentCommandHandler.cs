@@ -27,10 +27,10 @@ public class CancelPaymentCommandHandler : IRequestHandler<CancelPaymentCommand,
         await using var uow = _factory.Create(request.OrderId);
         var payment = await uow.Payments.GetByOrderId(request.OrderId, ct);
         if (payment is null)
-            return ApiResponse.ErrorResponse("Payment not found");
+            return ApiResponse.ErrorResponse(ErrorCodes.NotFound, "Payment not found");
 
         if (payment.Status is PaymentStatus.Captured or PaymentStatus.Refunded)
-            return ApiResponse.ErrorResponse("Payment status is not valid");
+            return ApiResponse.ErrorResponse(ErrorCodes.Invariant, "Payment status is not valid");
 
         var provider = _providers.Get(payment.Provider);
         await provider.CancelPayment(payment.ExternalPaymentId, ct);

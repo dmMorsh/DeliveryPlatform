@@ -1,15 +1,18 @@
 using Confluent.Kafka;
 using Hangfire;
+using Hangfire;
 using Hangfire.PostgreSql;
 using InventoryService.Application.Interfaces;
 using InventoryService.Application.MediatR;
 using InventoryService.Application.Services;
 using InventoryService.Application.Utils;
+using InventoryService.Application.Models;
 using InventoryService.Infrastructure.Hangfire;
 using InventoryService.Infrastructure.Inbox;
 using InventoryService.Infrastructure.Mapping;
 using InventoryService.Infrastructure.Outbox;
 using InventoryService.Infrastructure.Persistence;
+using InventoryService.Infrastructure.Jobs;
 using MediatR;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.EntityFrameworkCore;
@@ -44,6 +47,9 @@ else
         options.UseNpgsql(connectionString));
     // Outbox processor
     builder.Services.AddHostedService<OutboxProcessor>();
+    builder.Services.AddHostedService<OutboxCleanupHostedService<InventoryDbContext, OutboxMessage>>();
+    builder.Services.AddHostedService<ProcessedEventCleanupHostedService<InventoryDbContext>>();
+    builder.Services.AddHostedService<ProcessedCommandCleanupHostedService<InventoryDbContext, ProcessedCommand>>();
     
     // Hangfire
     builder.Services.AddHangfire(config =>
@@ -54,6 +60,7 @@ else
         );
     builder.Services.AddHangfireServer();
     builder.Services.AddScoped<IHangfireCommandExecutor, HangfireCommandExecutor>();
+    builder.Services.AddSingleton<IInventoryReservationAlertJob, InventoryReservationAlertJob>();
     
     // Sharding
     builder.Services.AddSingleton<IShardResolver>(sp =>
@@ -67,8 +74,12 @@ else
 builder.Services.AddControllers();
 builder.Services
     .AddMediatR(typeof(ApplicationMarker).Assembly)
-    .AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>))
-    .AddTransient(typeof(IPipelineBehavior<,>), typeof(HangfireRetryBehavior<,>));
+    .AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
+
+if (!useInMemory)
+{
+    builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(HangfireRetryBehavior<,>));
+}
 
 var kafkaBrokers = ConfigurationGuard.GetRequired(builder.Configuration, builder.Environment, "Kafka:Brokers", "localhost:29092");
 
@@ -129,6 +140,24 @@ else
 if (app.Environment.IsDevelopment())
 {
     app.UseHangfireDashboard("/hangfire");
+}
+
+if (!useInMemory)
+{
+    var enabled = bool.TryParse(builder.Configuration["Inventory:ReservationAlertEnabled"], out var alertEnabled)
+        ? alertEnabled
+        : true;
+    if (enabled)
+    {
+        var cron = builder.Configuration["Inventory:ReservationAlertCron"];
+        if (string.IsNullOrWhiteSpace(cron))
+            cron = "0 4 * * *";
+
+        RecurringJob.AddOrUpdate<IInventoryReservationAlertJob>(
+            "inventory-reservation-alert",
+            job => job.ExecuteAsync(CancellationToken.None),
+            cron);
+    }
 }
 
 app.Run();

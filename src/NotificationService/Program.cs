@@ -15,6 +15,9 @@ builder.Host.UseSerilog((ctx, cfg) =>
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
 builder.AddServiceTelemetry("notification-service");
+var httpTimeoutSeconds = int.TryParse(builder.Configuration["Http:TimeoutSeconds"], out var httpTimeout)
+    ? httpTimeout
+    : 10;
 
 var kafkaBrokers = ConfigurationGuard.GetRequired(builder.Configuration, builder.Environment, "Kafka:Brokers", "localhost:29092");
 
@@ -22,8 +25,23 @@ builder.Services.AddHealthChecks()
     .AddCheck("self", () => Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult.Healthy(), tags: new[] { "ready" })
     .AddKafka(new ProducerConfig { BootstrapServers = kafkaBrokers }, name: "kafka");
 
-// Register notification service and consumer
-builder.Services.AddSingleton<INotificationService, MockNotificationService>();
+builder.Services.AddHttpClient("notifications")
+    .AddPolicyHandler((sp, _) =>
+        HttpResiliencePolicies.CreatePolicyWrap(
+            sp.GetRequiredService<ILogger<WebhookNotificationService>>(),
+            httpTimeoutSeconds));
+builder.Services.Configure<NotificationOptions>(builder.Configuration.GetSection("Notifications"));
+builder.Services.AddSingleton<INotificationService>(sp =>
+{
+    var options = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<NotificationOptions>>().Value;
+    if (!string.IsNullOrWhiteSpace(options.WebhookUrl))
+        return new WebhookNotificationService(
+            sp.GetRequiredService<IHttpClientFactory>().CreateClient("notifications"),
+            sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<NotificationOptions>>(),
+            sp.GetRequiredService<ILogger<WebhookNotificationService>>());
+
+    return new MockNotificationService(sp.GetRequiredService<ILogger<MockNotificationService>>());
+});
 builder.Services.AddSingleton<NotificationEventConsumer>();
 builder.Services.AddHostedService<KafkaEventConsumerHostedService<NotificationEventConsumer>>();
 builder.Services.AddSingleton<IEventProducer, KafkaEventProducer>();

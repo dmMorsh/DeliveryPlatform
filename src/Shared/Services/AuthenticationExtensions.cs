@@ -14,6 +14,7 @@ public static class AuthenticationExtensions
         var jwtKey = ConfigurationGuard.GetRequired(builder.Configuration, builder.Environment, "Jwt:Key", "dev-key");
         var jwtIssuer = ConfigurationGuard.GetRequired(builder.Configuration, builder.Environment, "Jwt:Issuer", "identity-service");
         var jwtAudience = ConfigurationGuard.GetRequired(builder.Configuration, builder.Environment, "Jwt:Audience", "platform-api");
+        var clockSkewSeconds = int.TryParse(builder.Configuration["Jwt:ClockSkewSeconds"], out var skew) ? skew : 60;
 
         builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             .AddJwtBearer(options =>
@@ -27,7 +28,8 @@ public static class AuthenticationExtensions
 
                     ValidIssuer = jwtIssuer,
                     ValidAudience = jwtAudience,
-                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
+                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey)),
+                    ClockSkew = TimeSpan.FromSeconds(clockSkewSeconds)
                 };
 
                 options.Events = new JwtBearerEvents
@@ -59,8 +61,11 @@ public static class AuthenticationExtensions
                     return;
                 }
 
-                var paymentCorsOrigins = ConfigurationGuard.GetRequiredArray(builder.Configuration, builder.Environment, "Cors:AllowedOrigins");
-                policy.WithOrigins(paymentCorsOrigins)
+                var allowedOrigins = ConfigurationGuard.GetRequiredArray(builder.Configuration, builder.Environment, "Cors:AllowedOrigins");
+                if (allowedOrigins.Length == 0)
+                    throw new InvalidOperationException("Cors:AllowedOrigins is required in production.");
+
+                policy.WithOrigins(allowedOrigins)
                     .AllowAnyMethod()
                     .AllowAnyHeader();
             });

@@ -20,6 +20,7 @@ message CreateOrderRequest {
   string currency = 11;
   string courierNote = 12;
   repeated OrderItem items = 13;
+  string checkoutId = 14;
 }
 
 message OrderItem {

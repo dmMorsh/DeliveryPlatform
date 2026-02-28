@@ -1,5 +1,8 @@
 using Confluent.Kafka;
+using Hangfire;
+using Hangfire.PostgreSql;
 using DeliveryService.Application.Interfaces;
+using DeliveryService.Application.Models;
 using DeliveryService.Application.MediatR;
 using DeliveryService.Application.Services;
 using DeliveryService.Infrastructure.Inbox;
@@ -8,6 +11,7 @@ using DeliveryService.Infrastructure.Outbox;
 using DeliveryService.Infrastructure.Persistence;
 using DeliveryService.Infrastructure.Repositories;
 using DeliveryService.Infrastructure.Services;
+using DeliveryService.Infrastructure.Jobs;
 using MediatR;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.EntityFrameworkCore;
@@ -25,6 +29,9 @@ builder.UseExtededSerilog();
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
 builder.Services.AddMediatR(typeof(ApplicationMarker).Assembly);
+var httpTimeoutSeconds = int.TryParse(builder.Configuration["Http:TimeoutSeconds"], out var httpTimeout)
+    ? httpTimeout
+    : 10;
 
 var useInMemory = Environment.GetEnvironmentVariable("USE_INMEMORY_DB") == "true"
                   || string.Equals(builder.Configuration["UseInMemoryDb"], "true", StringComparison.OrdinalIgnoreCase);
@@ -42,24 +49,52 @@ else
     var connectionString = ConfigurationGuard.GetRequiredConnectionString(builder.Configuration, builder.Environment, "PostgreSQL");
     builder.Services.AddDbContext<DeliveryDbContext>(options =>
         options.UseNpgsql(connectionString));
+
+    builder.Services.AddHangfire(config =>
+    {
+        config.UseSimpleAssemblyNameTypeSerializer()
+            .UseRecommendedSerializerSettings();
+
+        var hangfireConnection = builder.Configuration.GetConnectionString("Hangfire");
+        if (!string.IsNullOrWhiteSpace(hangfireConnection))
+            config.UsePostgreSqlStorage(hangfireConnection);
+        else
+            config.UsePostgreSqlStorage(connectionString);
+    });
+    builder.Services.AddHangfireServer();
 }
 
 builder.Services.AddSingleton<IEventProducer, KafkaEventProducer>();
 builder.Services.AddHostedService<KafkaTopicBootstrapper>();
 builder.Services.AddScoped<IEventInbox, DeliveryEventInbox>();
 if (!useInMemory)
+{
     builder.Services.AddHostedService<OutboxProcessor>();
+    builder.Services.AddHostedService<OutboxCleanupHostedService<DeliveryDbContext, OutboxMessage>>();
+    builder.Services.AddHostedService<ProcessedEventCleanupHostedService<DeliveryDbContext>>();
+    builder.Services.AddSingleton<IDeliverySlaJob, DeliverySlaJob>();
+}
 
 builder.Services.AddScoped<IDeliveryRepository, DeliveryRepository>();
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddSingleton<IDeliveryEventMapper, DeliveryEventMapper>();
 builder.Services.AddSingleton<IAssignmentQueue, RedisAssignmentQueue>();
 
-builder.Services.AddHttpClient<ICourierDirectory, CourierDirectoryHttpClient>();
+builder.Services.AddHttpClient<ICourierDirectory, CourierDirectoryHttpClient>()
+    .AddPolicyHandler((sp, _) =>
+        HttpResiliencePolicies.CreatePolicyWrap(
+            sp.GetRequiredService<ILogger<CourierDirectoryHttpClient>>(),
+            httpTimeoutSeconds));
 
 builder.Services.AddScoped<IAssignmentService, AssignmentService>();
 builder.Services.Configure<DeliveryAssignmentOptions>(
     builder.Configuration.GetSection("Delivery:Assignment"));
+builder.Services.Configure<DeliveryEtaOptions>(
+    builder.Configuration.GetSection("Delivery:Eta"));
+builder.Services.AddSingleton<IDeliveryEtaCalculator, DeliveryEtaCalculator>();
+builder.Services.Configure<CourierAvailabilityOptions>(
+    builder.Configuration.GetSection("Delivery:Courier"));
+builder.Services.AddSingleton<ICourierActivityStore, CourierActivityRedisStore>();
 
 builder.Services.AddScoped<ILocationTrackingClient>(sp =>
     new LocationTrackingClient(
@@ -129,6 +164,21 @@ if (!useInMemory)
     var dbContext = scope.ServiceProvider.GetRequiredService<DeliveryDbContext>();
     dbContext.Database.Migrate();
     Log.Information("Database migration completed for DeliveryService");
+
+    var enabled = bool.TryParse(builder.Configuration["Delivery:SlaEnabled"], out var slaEnabled)
+        ? slaEnabled
+        : true;
+    if (enabled)
+    {
+        var cron = builder.Configuration["Delivery:SlaCron"];
+        if (string.IsNullOrWhiteSpace(cron))
+            cron = "0 8,20 * * *";
+
+        RecurringJob.AddOrUpdate<IDeliverySlaJob>(
+            "delivery-sla",
+            job => job.ExecuteAsync(CancellationToken.None),
+            cron);
+    }
 }
 else
 {

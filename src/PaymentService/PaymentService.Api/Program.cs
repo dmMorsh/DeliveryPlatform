@@ -12,6 +12,7 @@ using PaymentService.Infrastructure.Persistence;
 using PaymentService.Infrastructure.Outbox;
 using PaymentService.Infrastructure.Providers;
 using PaymentService.Infrastructure.Sharding;
+using PaymentService.Application.Models;
 using Hangfire;
 using Hangfire.MemoryStorage;
 using Hangfire.PostgreSql;
@@ -44,6 +45,9 @@ builder.Services.AddControllers();
 builder.Services.AddGrpc();
 builder.Services.AddOpenApi();
 var kafkaBrokers = ConfigurationGuard.GetRequired(builder.Configuration, builder.Environment, "Kafka:Brokers", "localhost:29092");
+var httpTimeoutSeconds = int.TryParse(builder.Configuration["Http:TimeoutSeconds"], out var httpTimeout)
+    ? httpTimeout
+    : 10;
 
 builder.Services.AddHealthChecks()
     .AddKafka(new ProducerConfig { BootstrapServers = kafkaBrokers }, name: "kafka");
@@ -62,13 +66,19 @@ builder.Services.Configure<PaymentStatusCheckOptions>(builder.Configuration.GetS
 builder.Services.Configure<WebhookOptions>(builder.Configuration.GetSection("Payments:Webhooks"));
 builder.Services.AddHttpClient<SberbankPaymentProvider>()
     .AddPolicyHandler((sp, _) =>
-        HttpResiliencePolicies.CreatePolicyWrap(sp.GetRequiredService<ILogger<SberbankPaymentProvider>>()));
+        HttpResiliencePolicies.CreatePolicyWrap(
+            sp.GetRequiredService<ILogger<SberbankPaymentProvider>>(),
+            httpTimeoutSeconds));
 builder.Services.AddHttpClient<YooMoneyPaymentProvider>()
     .AddPolicyHandler((sp, _) =>
-        HttpResiliencePolicies.CreatePolicyWrap(sp.GetRequiredService<ILogger<YooMoneyPaymentProvider>>()));
+        HttpResiliencePolicies.CreatePolicyWrap(
+            sp.GetRequiredService<ILogger<YooMoneyPaymentProvider>>(),
+            httpTimeoutSeconds));
 builder.Services.AddHttpClient<FakePaymentProvider>()
     .AddPolicyHandler((sp, _) =>
-        HttpResiliencePolicies.CreatePolicyWrap(sp.GetRequiredService<ILogger<FakePaymentProvider>>()));
+        HttpResiliencePolicies.CreatePolicyWrap(
+            sp.GetRequiredService<ILogger<FakePaymentProvider>>(),
+            httpTimeoutSeconds));
 builder.Services.AddScoped<IPaymentProvider, SberbankPaymentProvider>();
 builder.Services.AddScoped<IPaymentProvider, YooMoneyPaymentProvider>();
 builder.Services.AddScoped<IPaymentProvider, FakePaymentProvider>();
@@ -78,10 +88,12 @@ builder.Services.AddSingleton<IWebhookValidator, WebhookValidator>();
 builder.Services.AddSingleton<IEventProducer, KafkaEventProducer>();
 builder.Services.AddHostedService<KafkaTopicBootstrapper>();
 builder.Services.AddHostedService<OutboxProcessor>();
+builder.Services.AddHostedService<OutboxCleanupHostedService<PaymentDbContext, OutboxMessage>>();
 builder.Services.AddSingleton<IPaymentIntegrationEventMapper, PaymentIntegrationEventMapper>();
 builder.Services.AddSingleton<PaymentEventConsumer>();
 builder.Services.AddHostedService<KafkaEventConsumerHostedService<PaymentEventConsumer>>();
 builder.Services.AddScoped<IEventInbox, PaymentEventInbox>();
+builder.Services.AddHostedService<ProcessedEventCleanupHostedService<PaymentDbContext>>();
 
 // Auth
 builder.AddExtededAuthentication();

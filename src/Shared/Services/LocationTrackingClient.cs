@@ -12,13 +12,15 @@ public class LocationTrackingClient : ILocationTrackingClient
     private readonly ILogger<LocationTrackingClient> _logger;
     private readonly string _serviceUrl;
     private readonly IAsyncPolicy _policy;
+    private readonly int _timeoutSeconds;
     private LocationTrackingService.LocationTrackingServiceClient? _client;
 
     public LocationTrackingClient(IConfiguration config, IHostEnvironment env, ILogger<LocationTrackingClient> logger)
     {
         _logger = logger;
         _serviceUrl = ConfigurationGuard.GetRequired(config, env, "gRPC:LocationTrackingService:Url", "https://localhost:7070");
-        _policy = HttpResiliencePolicies.CreateGrpcPolicyWrap(_logger);
+        _timeoutSeconds = int.TryParse(config["gRPC:LocationTrackingService:TimeoutSeconds"], out var timeout) ? timeout : 10;
+        _policy = HttpResiliencePolicies.CreateGrpcPolicyWrap(_logger, _timeoutSeconds);
     }
 
     private LocationTrackingService.LocationTrackingServiceClient GetClient()
@@ -45,7 +47,8 @@ public class LocationTrackingClient : ILocationTrackingClient
                 TimestampMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
             };
 
-            var response = await _policy.ExecuteAsync(() => client.UpdateLocationAsync(request).ResponseAsync);
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(_timeoutSeconds));
+            var response = await _policy.ExecuteAsync(() => client.UpdateLocationAsync(request, cancellationToken: cts.Token).ResponseAsync);
 
             _logger.LogInformation(
                 "Updated location for courier {CourierId}: ({Latitude}, {Longitude})",
@@ -66,7 +69,8 @@ public class LocationTrackingClient : ILocationTrackingClient
         {
             var client = GetClient();
             var request = new GetLocationRequest { CourierId = courierId.ToString() };
-            var response = await _policy.ExecuteAsync(() => client.GetCourierLocationAsync(request).ResponseAsync);
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(_timeoutSeconds));
+            var response = await _policy.ExecuteAsync(() => client.GetCourierLocationAsync(request, cancellationToken: cts.Token).ResponseAsync);
 
             _logger.LogInformation(
                 "Retrieved location for courier {CourierId}: ({Latitude}, {Longitude})",
@@ -96,7 +100,8 @@ public class LocationTrackingClient : ILocationTrackingClient
                 Limit = limit
             };
 
-            var response = await _policy.ExecuteAsync(() => client.GetCourierLocationHistoryAsync(request).ResponseAsync);
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(_timeoutSeconds));
+            var response = await _policy.ExecuteAsync(() => client.GetCourierLocationHistoryAsync(request, cancellationToken: cts.Token).ResponseAsync);
 
             return response.Points
                 .Select(p => (p.Latitude, p.Longitude, p.TimestampMs, p.Accuracy))

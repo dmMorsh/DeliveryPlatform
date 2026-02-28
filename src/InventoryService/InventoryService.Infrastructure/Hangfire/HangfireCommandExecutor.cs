@@ -6,6 +6,7 @@ using InventoryService.Application.Models;
 using InventoryService.Infrastructure.Persistence;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 using Shared.Contracts.Events;
 
 namespace InventoryService.Infrastructure.Hangfire;
@@ -46,19 +47,26 @@ public class HangfireCommandExecutor : IHangfireCommandExecutor
 
             if (retryCount >= maxRetries - 1)
             {
-                await PublishInventoryReserveFailed(command, e);
+                await PublishInventoryReserveFailed(command, e, ct);
             }
             throw;
         }
 
-        _db.ProcessedCommands.Add(new ProcessedCommand
+        try
         {
-            CorrelationId = command.CorrelationId,
-            CommandType = typeof(TRequest).Name,
-            ProcessedAt = DateTime.UtcNow
-        });
+            _db.ProcessedCommands.Add(new ProcessedCommand
+            {
+                CorrelationId = command.CorrelationId,
+                CommandType = typeof(TRequest).Name,
+                ProcessedAt = DateTime.UtcNow
+            });
 
-        await _db.SaveChangesAsync(ct);
+            await _db.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateException ex) when (IsUniqueViolation(ex))
+        {
+            return;
+        }
     }
 
     private async Task<bool> AlreadyProcessed<TRequest>(TRequest command, CancellationToken ct)
@@ -70,7 +78,8 @@ public class HangfireCommandExecutor : IHangfireCommandExecutor
             ct);
     }
 
-    private async Task PublishInventoryReserveFailed<TRequest>(TRequest command, Exception e) where TRequest : IHangfireRetryable
+    private async Task PublishInventoryReserveFailed<TRequest>(TRequest command, Exception e, CancellationToken ct)
+        where TRequest : IHangfireRetryable
     {
         if (command is ReserveStockCommand reserveStockCommand)
         {
@@ -83,7 +92,13 @@ public class HangfireCommandExecutor : IHangfireCommandExecutor
             
             var outboxMessages = new List<OutboxMessage> { OutboxMessage.From(reserveFailedEvent) };
             await using var uow = _factory.Create(failedItems.First().ProductId);
-            await uow.SaveChangesAsync(outboxMessages, CancellationToken.None);
+            await uow.SaveChangesAsync(outboxMessages, ct);
         }
+    }
+
+    private static bool IsUniqueViolation(DbUpdateException ex)
+    {
+        return ex.InnerException is PostgresException pg
+               && pg.SqlState == PostgresErrorCodes.UniqueViolation;
     }
 }

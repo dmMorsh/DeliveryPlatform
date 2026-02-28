@@ -1,5 +1,6 @@
 using DeliveryService.Application.Interfaces;
 using DeliveryService.Application.Models;
+using DeliveryService.Application.Services;
 using DeliveryService.Domain.Aggregates;
 using MediatR;
 using Shared.Utilities;
@@ -26,7 +27,7 @@ public class CancelDeliveryCommandHandler : IRequestHandler<CancelDeliveryComman
     {
         var delivery = await _repository.GetByIdAsync(request.DeliveryId, ct);
         if (delivery == null)
-            return ApiResponse.ErrorResponse("Delivery not found");
+            return ApiResponse.ErrorResponse(ErrorCodes.NotFound, "Delivery not found");
 
         if (delivery.Status == DeliveryStatus.Delivered)
             return ApiResponse.SuccessResponse();
@@ -41,6 +42,7 @@ public class CancelDeliveryCommandHandler : IRequestHandler<CancelDeliveryComman
 
         await _uow.SaveChangesAsync(outbox, ct);
         delivery.ClearDomainEvents();
+        DeliveryReadCache.Invalidate(delivery.Id, delivery.OrderId);
 
         return ApiResponse.SuccessResponse();
     }

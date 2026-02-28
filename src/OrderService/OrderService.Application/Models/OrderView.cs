@@ -22,6 +22,20 @@ public record OrderView
     public DateTime? AssignedAt { get; set; }
     public DateTime? DeliveredAt { get; set; }
     public DateTime UpdatedAt { get; set; }
+    public DateTime? ReadyAt { get; set; }
+    public bool IsReadyForDelivery { get; set; }
+    public DateTime? AcceptedAt { get; set; }
+    public DateTime? RejectedAt { get; set; }
+    public string? RejectionReason { get; set; }
+    public DateTime? ExpectedReadyAt { get; set; }
+    public DateTime? KitchenSlotStart { get; set; }
+    public DateTime? KitchenDelayedNotifiedAt { get; set; }
+    public string? DeliveryZoneId { get; set; }
+    public string? DeliveryZoneName { get; set; }
+    public double? DeliveryZoneDistanceKm { get; set; }
+    public int? DeliveryPickupSlaMinutes { get; set; }
+    public int? DeliveryTransitSlaMinutes { get; set; }
+    public double? DeliveryFeeMultiplier { get; set; }
     public IReadOnlyCollection<OrderViewItem> Items { get; init; } = Array.Empty<OrderViewItem>();
 }
 

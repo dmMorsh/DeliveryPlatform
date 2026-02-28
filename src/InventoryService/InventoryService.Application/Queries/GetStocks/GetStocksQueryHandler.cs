@@ -17,15 +17,15 @@ public class GetStocksQueryHandler : IRequestHandler<GetStocksQuery, ApiResponse
     public async Task<ApiResponse<List<StockItemView>>> Handle(GetStocksQuery request, CancellationToken ct)
     {
         await using var uow = _factory.Create(0);
-        var itemViews = uow.Stock
-            .GetAllProductAsync(ct).Result
-            .Select(s=> new StockItemView
+        var items = await uow.Stock.GetAllProductAsync(ct);
+        var itemViews = items
+            .Select(s => new StockItemView
             {
                 ProductId = s.Id,
                 TotalQuantity = s.TotalQuantity,
                 ReservedQuantity = s.ReservedQuantity,
                 AvailableQuantity = s.AvailableQuantity,
-            }).ToList(); // TODO переводить на мапстер
+            }).ToList();
         
         return ApiResponse<List<StockItemView>>.SuccessResponse(itemViews);
     }

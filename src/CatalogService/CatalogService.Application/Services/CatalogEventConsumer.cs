@@ -6,6 +6,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Shared.Contracts.Events;
 using Shared.Services;
+using CatalogService.Application.Interfaces;
 
 namespace CatalogService.Application.Services;
 
@@ -16,16 +17,19 @@ namespace CatalogService.Application.Services;
 public class CatalogEventConsumer : KafkaEventConsumerBase
 {
     private new readonly ILogger<CatalogEventConsumer> _logger;
+    private readonly ICatalogMetricsStore _metrics;
 
     public CatalogEventConsumer(
         IConfiguration config,
         IHostEnvironment env,
         ILogger<CatalogEventConsumer> logger,
+        ICatalogMetricsStore metrics,
         IServiceScopeFactory scopeFactory,
         IEventProducer producer)
         : base(config, env, logger, scopeFactory, producer, null, "order.events", "inventory.events")
     {
         _logger = logger;
+        _metrics = metrics;
     }
 
     /// <summary>
@@ -50,6 +54,10 @@ public class CatalogEventConsumer : KafkaEventConsumerBase
                     break;
             }
         }
+        catch (NonRetryableException)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error handling event {EventType}", eventType);
@@ -61,51 +69,30 @@ public class CatalogEventConsumer : KafkaEventConsumerBase
 
     private async Task HandleOrderCreated(string json)
     {
-        try
-        {
-            var @event = JsonSerializer.Deserialize<OrderCreatedEvent>(json, 
-                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-            if (@event == null) return;
+        var @event = JsonSerializer.Deserialize<OrderCreatedEvent>(json,
+            new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        if (@event == null) throw new NonRetryableException("Invalid OrderCreatedEvent payload");
 
-            _logger.LogInformation("📊 CatalogService: Order created. OrderId={OrderId}. " +
-                "📈 TODO: Update product popularity/sales metrics", 
-                @event.AggregateId);
-            
-            // TODO: Implement popularity/sales metrics update
-            // This would typically:
-            // 1. Extract products from order items
-            // 2. Increment sales count for each product
-            // 3. Update trending products list
-            // 4. Update product recommendations
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error processing OrderCreatedEvent");
-        }
+        _logger.LogInformation("📊 CatalogService: Order created. OrderId={OrderId}.",
+            @event.AggregateId);
+
+        if (@event.Items == null)
+            return;
+
+        foreach (var item in @event.Items)
+            await _metrics.IncrementProductSalesAsync(item.ProductId, item.Quantity);
     }
 
     private async Task HandleStockReserved(string json)
     {
-        try
-        {
-            var @event = JsonSerializer.Deserialize<StockReservedEvent>(json, 
-                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-            if (@event == null) return;
+        var @event = JsonSerializer.Deserialize<StockReservedEvent>(json,
+            new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        if (@event == null) throw new NonRetryableException("Invalid StockReservedEvent payload");
 
-            _logger.LogInformation("📦 CatalogService: Stock reserved. OrderId={OrderId},. " +
-                "💾 TODO: Update available quantity cache",
-                @event.OrderId);
-            
-            // TODO: Update product's available quantity cache
-            // This would typically:
-            // 1. Get product from cache
-            // 2. Decrement available quantity
-            // 3. Update cache/send cache invalidation
-            // 4. Mark product as "low stock" if needed
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error processing StockReservedEvent");
-        }
+        _logger.LogInformation("📦 CatalogService: Stock reserved. OrderId={OrderId}.",
+            @event.OrderId);
+
+        foreach (var item in @event.Items)
+            await _metrics.IncrementReservedQuantityAsync(item.ProductId, item.Quantity);
     }
 }

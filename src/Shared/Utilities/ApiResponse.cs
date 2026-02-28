@@ -9,12 +9,19 @@ public class ApiResponse<T>
     public T? Data { get; set; }
     public string? Message { get; set; }
     public List<string>? Errors { get; set; }
+    public string? ErrorCode { get; set; }
 
     public static ApiResponse<T> SuccessResponse(T data, string? message = null)
         => new() { Success = true, Data = data, Message = message };
 
     public static ApiResponse<T> ErrorResponse(string message, List<string>? errors = null)
         => new() { Success = false, Message = message, Errors = errors };
+
+    public static ApiResponse<T> ErrorResponse(string code, string message, List<string>? errors = null)
+        => new() { Success = false, ErrorCode = code, Message = message, Errors = errors };
+
+    public static ApiResponse<T> ErrorResponse(string code, T data, string? message = null, List<string>? errors = null)
+        => new() { Success = false, ErrorCode = code, Data = data, Message = message, Errors = errors };
 
     public static ApiResponse<T> ErrorResponse(params string[] errors)
         => new() { Success = false, Errors = errors.ToList() };
@@ -31,12 +38,16 @@ public class ApiResponse
     public bool Success { get; set; }
     public string? Message { get; set; }
     public List<string>? Errors { get; set; }
+    public string? ErrorCode { get; set; }
 
     public static ApiResponse SuccessResponse(string? message = null)
         => new() { Success = true, Message = message };
 
     public static ApiResponse ErrorResponse(string message, List<string>? errors = null)
         => new() { Success = false, Message = message, Errors = errors };
+
+    public static ApiResponse ErrorResponse(string code, string message, List<string>? errors = null)
+        => new() { Success = false, ErrorCode = code, Message = message, Errors = errors };
 }
 
 /// <summary>

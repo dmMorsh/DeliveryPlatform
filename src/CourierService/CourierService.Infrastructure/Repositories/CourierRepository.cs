@@ -14,38 +14,38 @@ public class CourierRepository : ICourierRepository
         _context = context;
     }
 
-    public async Task<Courier?> GetCourierByIdAsync(Guid id)
+    public async Task<Courier?> GetCourierByIdAsync(Guid id, CancellationToken ct)
     {
-        return await _context.Couriers.FindAsync(id);
+        return await _context.Couriers.FindAsync([id], ct);
     }
 
-    public async Task<Courier?> GetCourierByPhoneAsync(string phone)
+    public async Task<Courier?> GetCourierByPhoneAsync(string phone, CancellationToken ct)
     {
-        return await _context.Couriers.FirstOrDefaultAsync(c => c.Phone == phone);
+        return await _context.Couriers.FirstOrDefaultAsync(c => c.Phone == phone, ct);
     }
 
-    public async Task<List<Courier>> GetActiveCouriersAsync()
+    public async Task<List<Courier>> GetActiveCouriersAsync(CancellationToken ct)
     {
         return await _context.Couriers
             .Where(c => c.IsActive && c.Status == CourierStatus.Online)
             .OrderByDescending(c => c.Rating)
-            .ToListAsync();
+            .ToListAsync(ct);
     }
 
-    public async Task<Courier> CreateCourierAsync(Courier courier)
+    public async Task<Courier> CreateCourierAsync(Courier courier, CancellationToken ct)
     {
-        await _context.Couriers.AddAsync(courier);
+        await _context.Couriers.AddAsync(courier, ct);
         return courier;
     }
     
-    public async Task<(List<Courier> Items, int Total)> GetCouriersPagedAsync(int page = 1, int pageSize = 20)
+    public async Task<(List<Courier> Items, int Total)> GetCouriersPagedAsync(CancellationToken ct, int page = 1, int pageSize = 20)
     {
         var query = _context.Couriers.OrderByDescending(c => c.CreatedAt);
-        var total = await query.CountAsync();
+        var total = await query.CountAsync(ct);
         var items = await query
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
-            .ToListAsync();
+            .ToListAsync(ct);
 
         return (items, total);
     }

@@ -49,7 +49,8 @@ public class KafkaEventProducer : IEventProducer, IAsyncDisposable
             
             //EnableIdempotence = true,  // Предотвращение дублирования сообщений // Acks = Acks.All
             MessageSendMaxRetries = 3,  // Число повторных попыток
-            RetryBackoffMs = 1000
+            RetryBackoffMs = 1000, 
+            Partitioner = Partitioner.Murmur2,
         };
 
         _producer = new ProducerBuilder<string, string>(producerConfig)
@@ -89,7 +90,7 @@ public class KafkaEventProducer : IEventProducer, IAsyncDisposable
             message,
             ct);
 
-        _logger.LogInformation(
+        _logger.LogDebug(
             "Kafka published: topic={Topic} partition={Partition} offset={Offset}",
             result.Topic,
             result.Partition,

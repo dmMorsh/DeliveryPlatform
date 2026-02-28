@@ -20,18 +20,29 @@ public class PaymentController : ControllerBase
 {
     private readonly IMediator _mediator;
     private readonly IUnitOfWorkFactory _factory;
+    private readonly IConfiguration _config;
+    private readonly IHostEnvironment _env;
 
-    public PaymentController(IMediator mediator, IUnitOfWorkFactory factory)
+    public PaymentController(IMediator mediator, IUnitOfWorkFactory factory, IConfiguration config, IHostEnvironment env)
     {
         _mediator = mediator;
         _factory = factory;
+        _config = config;
+        _env = env;
     }
 
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreatePaymentRequest request)
     {
+        var allowManual = bool.TryParse(_config["Payments:AllowManualCreate"], out var allowed) && allowed;
+        if (!allowManual)
+            return StatusCode(StatusCodes.Status403Forbidden,
+                ApiResponse.ErrorResponse(ErrorCodes.Validation, "Manual payment creation is disabled"));
+
         var cmd = new CreatePaymentCommand(request.OrderId, request.Amount, request.Currency);
         var result = await _mediator.Send(cmd);
+        if (!result.Success)
+            return BadRequest(result);
         return CreatedAtAction(nameof(GetById), new { id = result.Message }, result);
     }
 
@@ -73,7 +84,7 @@ public class PaymentController : ControllerBase
         await using var uow = _factory.Create(orderId);
         var payment = await uow.Payments.GetByOrderId(orderId, ct);
         if (payment is null)
-            return NotFound(ApiResponse<PaymentStatusView>.ErrorResponse("Payment not found"));
+            return NotFound(ApiResponse<PaymentStatusView>.ErrorResponse(ErrorCodes.NotFound, "Payment not found"));
 
         var view = new PaymentStatusView
         {

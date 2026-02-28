@@ -6,6 +6,14 @@ namespace DeliveryService.Infrastructure.Services;
 public class RedisAssignmentQueue : IAssignmentQueue
 {
     private const string QueueKey = "delivery:assigning:queue";
+    private const string DequeueScript = """
+        local vals = redis.call('ZRANGEBYSCORE', KEYS[1], '-inf', ARGV[1], 'LIMIT', 0, 1)
+        if #vals == 0 then
+            return {}
+        end
+        redis.call('ZREM', KEYS[1], vals[1])
+        return vals
+        """;
     private readonly IDatabase _db;
 
     public RedisAssignmentQueue(IConnectionMultiplexer mux)
@@ -23,24 +31,28 @@ public class RedisAssignmentQueue : IAssignmentQueue
     public async Task<Guid?> DequeueReadyAsync(DateTimeOffset now, CancellationToken ct = default)
     {
         var maxScore = now.ToUnixTimeMilliseconds();
-        var values = await _db.SortedSetRangeByScoreAsync(
-            QueueKey,
-            double.NegativeInfinity,
-            maxScore,
-            Exclude.None,
-            Order.Ascending,
-            0,
-            1);
+        var result = await _db.ScriptEvaluateAsync(
+            DequeueScript,
+            new RedisKey[] { QueueKey },
+            new RedisValue[] { maxScore });
 
-        if (values.Length == 0)
+        if (result.IsNull)
             return null;
 
-        var value = values[0];
-        if (value.IsNullOrEmpty)
+        RedisResult[]? values;
+        try
+        {
+            values = (RedisResult[]?)result;
+        }
+        catch (InvalidCastException)
+        {
+            return null;
+        }
+
+        if (values == null || values.Length == 0)
             return null;
 
-        await _db.SortedSetRemoveAsync(QueueKey, value);
-
-        return Guid.TryParse(value.ToString(), out var id) ? id : null;
+        var value = values[0].ToString();
+        return Guid.TryParse(value, out var id) ? id : null;
     }
 }

@@ -1,5 +1,6 @@
 using CourierService.Application.Interfaces;
 using CourierService.Application.Models;
+using CourierService.Application.Services;
 using CourierService.Domain.Aggregates;
 using Mapster;
 using MediatR;
@@ -27,13 +28,13 @@ public class UpdateCourierStatusCommandHandler : IRequestHandler<UpdateCourierSt
         _logger = logger;
     }
 
-    public async Task<ApiResponse<CourierView>> Handle(UpdateCourierStatusCommand request, CancellationToken cancellationToken)
+    public async Task<ApiResponse<CourierView>> Handle(UpdateCourierStatusCommand request, CancellationToken ct)
     {
         try
         {
-            var courier = await _repository.GetCourierByIdAsync(request.CourierId);
+            var courier = await _repository.GetCourierByIdAsync(request.CourierId, ct);
             if (courier == null)
-                return ApiResponse<CourierView>.ErrorResponse($"Courier {request.CourierId} not found");
+                return ApiResponse<CourierView>.ErrorResponse(ErrorCodes.NotFound, $"Courier {request.CourierId} not found");
 
             var oldStatus = courier.Status;
 
@@ -58,8 +59,9 @@ public class UpdateCourierStatusCommandHandler : IRequestHandler<UpdateCourierSt
                 .Select(OutboxMessage.From!)
                 .ToList();
             
-            await _uow.SaveChangesAsync(outboxMessages, cancellationToken);
+            await _uow.SaveChangesAsync(outboxMessages, ct);
             courier.ClearDomainEvents();
+            CourierReadCache.Invalidate(courier.Id);
 
             var result = courier.Adapt<CourierView>();
             result.Status = (int)courier.Status;
@@ -68,7 +70,7 @@ public class UpdateCourierStatusCommandHandler : IRequestHandler<UpdateCourierSt
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error updating courier {CourierId}", request.CourierId);
-            return ApiResponse<CourierView>.ErrorResponse("Internal server error");
+            return ApiResponse<CourierView>.ErrorResponse(ErrorCodes.Invariant, "Internal server error");
         }
     }
 }

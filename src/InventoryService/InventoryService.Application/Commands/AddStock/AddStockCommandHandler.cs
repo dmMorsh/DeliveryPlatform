@@ -2,6 +2,7 @@
 using InventoryService.Application.Models;
 using InventoryService.Domain.Aggregates;
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 using Shared.Utilities;
 
 namespace InventoryService.Application.Commands.AddStock;
@@ -20,7 +21,7 @@ public class AddStockCommandHandler : IRequestHandler<AddStockCommand, ApiRespon
     public async Task<ApiResponse<List<ProcessedStockItemModel>?>> Handle(AddStockCommand request, CancellationToken ct)
     {
         if (request.Models.Length == 0)
-            return ApiResponse<List<ProcessedStockItemModel>?>.ErrorResponse("No item in request");
+            return ApiResponse<List<ProcessedStockItemModel>?>.ErrorResponse(ErrorCodes.Validation, "No item in request");
         var errors = new List<ProcessedStockItemModel>();
         
         var shardGroups = request.Models.DistinctBy(x=>x.ProductId)
@@ -32,7 +33,7 @@ public class AddStockCommandHandler : IRequestHandler<AddStockCommand, ApiRespon
         }
         
         if (errors.Any())
-            return ApiResponse<List<ProcessedStockItemModel>?>.ErrorResponse("Adding failed partly");
+            return ApiResponse<List<ProcessedStockItemModel>?>.ErrorResponse(ErrorCodes.Invariant, errors, "Some items were skipped");
         return ApiResponse<List<ProcessedStockItemModel>?>.SuccessResponse(null, "Stocks added");
     }
 
@@ -46,8 +47,9 @@ public class AddStockCommandHandler : IRequestHandler<AddStockCommand, ApiRespon
 
         if (existStocks.Any())
         {
+            var existingIds = existStocks.Select(s => s.Id).ToHashSet();
             errors.AddRange(baseStockModels
-                .Where(m=> existStocks.Select(s=>s.Id).Contains(m.ProductId))
+                .Where(m => existingIds.Contains(m.ProductId))
                 .Select(i=> new ProcessedStockItemModel(
                     i.ProductId,
                     i.Quantity,
@@ -56,7 +58,7 @@ public class AddStockCommandHandler : IRequestHandler<AddStockCommand, ApiRespon
             
             // TODO можно возвращать пропущенные в ответе
             baseStockModels = baseStockModels
-                .Where(m=> !existStocks.Select(s=>s.Id).Contains(m.ProductId)).ToArray();
+                .Where(m => !existingIds.Contains(m.ProductId)).ToArray();
         }
         
         var stocks = baseStockModels.Select(m => 
@@ -66,7 +68,28 @@ public class AddStockCommandHandler : IRequestHandler<AddStockCommand, ApiRespon
         ).ToArray();
         
         await uow.Stock.AddRangeAsync(stocks, ct);
-        await uow.SaveChangesWithoutMessagesAsync(ct);
+        try
+        {
+            await uow.SaveChangesWithoutMessagesAsync(ct);
+        }
+        catch (DbUpdateException)
+        {
+            var existing = await uow.Stock
+                .GetByProductIdsAsync(baseStockModels.Select(m => m.ProductId).ToList(), ct);
+            if (existing.Any())
+            {
+                var existingIds = existing.Select(s => s.Id).ToHashSet();
+                errors.AddRange(baseStockModels
+                    .Where(m => existingIds.Contains(m.ProductId))
+                    .Select(i => new ProcessedStockItemModel(
+                        i.ProductId,
+                        i.Quantity,
+                        "Stock already exist"))
+                );
+                return true;
+            }
+            throw;
+        }
         return true;
     }
 }

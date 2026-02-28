@@ -1,5 +1,6 @@
 using CartService.Application.Interfaces;
 using CartService.Application.Models;
+using CartService.Application.Services;
 using CartService.Domain.Aggregates;
 using MediatR;
 using Shared.Utilities;
@@ -38,6 +39,7 @@ public class AddItemToCartCommandHandler : IRequestHandler<AddItemToCartCommand,
 
         await _uow.SaveChangesAsync(outboxMessages, ct);
         cart.ClearDomainEvents();
+        CartReadCache.Invalidate(request.CustomerId);
 
         return ApiResponse<Guid>.SuccessResponse(cart.Id, "Item added to cart");
     }

@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 using OrderService.Infrastructure.Persistence;
 using Shared.Contracts.Events;
 using Shared.Services;
@@ -26,10 +27,26 @@ public sealed class OrderEventInbox : IEventInbox
         if (string.IsNullOrWhiteSpace(eventId))
             return false;
 
-        var exists = await _db.ProcessedEvents.AsNoTracking()
-            .AnyAsync(x => x.EventId == eventId, ct);
-        if (exists)
+        var existing = await _db.ProcessedEvents
+            .FirstOrDefaultAsync(x => x.EventId == eventId, ct);
+        if (existing != null)
+        {
+            if (existing.Status == "failed")
+            {
+                existing.Status = "processing";
+                existing.Error = null;
+                existing.EventType = eventType;
+                existing.AggregateId = aggregateId;
+                existing.Topic = topic;
+                existing.Partition = partition;
+                existing.Offset = offset;
+                existing.ReceivedAt = DateTime.UtcNow;
+                await _db.SaveChangesAsync(ct);
+                return true;
+            }
+
             return false;
+        }
 
         var entry = new ProcessedEvent
         {
@@ -46,8 +63,15 @@ public sealed class OrderEventInbox : IEventInbox
         };
 
         _db.ProcessedEvents.Add(entry);
-        await _db.SaveChangesAsync(ct);
-        return true;
+        try
+        {
+            await _db.SaveChangesAsync(ct);
+            return true;
+        }
+        catch (DbUpdateException ex) when (IsUniqueViolation(ex))
+        {
+            return false;
+        }
     }
 
     public async Task MarkProcessedAsync(string eventId, CancellationToken ct = default)
@@ -69,5 +93,11 @@ public sealed class OrderEventInbox : IEventInbox
         entry.Error = error;
         entry.Attempts += 1;
         await _db.SaveChangesAsync(ct);
+    }
+
+    private static bool IsUniqueViolation(DbUpdateException ex)
+    {
+        return ex.InnerException is PostgresException pg
+               && pg.SqlState == PostgresErrorCodes.UniqueViolation;
     }
 }

@@ -145,3 +145,41 @@ public record DeliveryReturnedEvent : IntegrationEvent
     public Guid? CourierId { get; init; }
     public string? Reason { get; init; }
 }
+
+public record DeliveryPickupTimeoutEvent : IntegrationEvent
+{
+    public override string EventType => "delivery.pickup_timeout";
+    public override int Version => 1;
+    public override string AggregateType => "Delivery";
+    public override Guid AggregateId => DeliveryId;
+    public required Guid DeliveryId { get; init; }
+    public required Guid OrderId { get; init; }
+    public Guid? CourierId { get; init; }
+    public DateTime? AssignedAt { get; init; }
+    public DateTime DetectedAt { get; init; }
+}
+
+public record DeliveryInTransitTimeoutEvent : IntegrationEvent
+{
+    public override string EventType => "delivery.in_transit_timeout";
+    public override int Version => 1;
+    public override string AggregateType => "Delivery";
+    public override Guid AggregateId => DeliveryId;
+    public required Guid DeliveryId { get; init; }
+    public required Guid OrderId { get; init; }
+    public Guid? CourierId { get; init; }
+    public DateTime? InTransitAt { get; init; }
+    public DateTime DetectedAt { get; init; }
+}
+
+public record DeliveryReassignRequestedEvent : IntegrationEvent
+{
+    public override string EventType => "delivery.reassign_requested";
+    public override int Version => 1;
+    public override string AggregateType => "Delivery";
+    public override Guid AggregateId => DeliveryId;
+    public required Guid DeliveryId { get; init; }
+    public required Guid OrderId { get; init; }
+    public Guid? PreviousCourierId { get; init; }
+    public string? Reason { get; init; }
+}

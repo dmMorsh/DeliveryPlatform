@@ -24,6 +24,16 @@ public record DeliveryView
     public DateTime? CancelledAt { get; set; }
     public DateTime? FailedAt { get; set; }
     public DateTime? ReturnedAt { get; set; }
+    public DateTime? EstimatedPickupAt { get; set; }
+    public DateTime? EstimatedDeliveryAt { get; set; }
+    public double? EstimatedDistanceKm { get; set; }
+    public int? EstimatedTravelMinutes { get; set; }
+    public string? DeliveryZoneId { get; set; }
+    public string? DeliveryZoneName { get; set; }
+    public int? DeliveryPickupSlaMinutes { get; set; }
+    public int? DeliveryTransitSlaMinutes { get; set; }
+    public double? DeliveryFeeMultiplier { get; set; }
+    public double? DeliveryZoneDistanceKm { get; set; }
     public string? Signature { get; set; }
     public string? PhotoUrl { get; set; }
     public string? Notes { get; set; }
@@ -53,6 +63,16 @@ public record DeliveryView
             CancelledAt = delivery.CancelledAt,
             FailedAt = delivery.FailedAt,
             ReturnedAt = delivery.ReturnedAt,
+            EstimatedPickupAt = delivery.EstimatedPickupAt,
+            EstimatedDeliveryAt = delivery.EstimatedDeliveryAt,
+            EstimatedDistanceKm = delivery.EstimatedDistanceKm,
+            EstimatedTravelMinutes = delivery.EstimatedTravelMinutes,
+            DeliveryZoneId = delivery.DeliveryZoneId,
+            DeliveryZoneName = delivery.DeliveryZoneName,
+            DeliveryPickupSlaMinutes = delivery.DeliveryPickupSlaMinutes,
+            DeliveryTransitSlaMinutes = delivery.DeliveryTransitSlaMinutes,
+            DeliveryFeeMultiplier = delivery.DeliveryFeeMultiplier,
+            DeliveryZoneDistanceKm = delivery.DeliveryZoneDistanceKm,
             Signature = delivery.Signature,
             PhotoUrl = delivery.PhotoUrl,
             Notes = delivery.Notes,

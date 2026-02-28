@@ -1,5 +1,6 @@
 using CartService.Application.Interfaces;
 using CartService.Application.Models;
+using CartService.Application.Services;
 using MediatR;
 using Shared.Utilities;
 
@@ -39,6 +40,7 @@ public class CheckoutCartCommandHandler : IRequestHandler<CheckoutCartCommand, A
 
         await _uow.SaveChangesAsync(outboxMessages, ct);
         cart.ClearDomainEvents();
+        CartReadCache.Invalidate(request.CustomerId);
 
         return ApiResponse<Guid>.SuccessResponse(orderId, "Cart checked out successfully");
     }

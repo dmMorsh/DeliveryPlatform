@@ -1,4 +1,5 @@
 using CatalogService.Application.Interfaces;
+using CatalogService.Application.Models;
 using CatalogService.Application.MediatR;
 using CatalogService.Application.Services;
 using CatalogService.Infrastructure.Inbox;
@@ -6,11 +7,13 @@ using CatalogService.Infrastructure.Mapping;
 using CatalogService.Infrastructure.Outbox;
 using CatalogService.Infrastructure.Persistence;
 using CatalogService.Infrastructure.Repositories;
+using CatalogService.Infrastructure.Services;
 using Confluent.Kafka;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
 using Shared.Services;
+using StackExchange.Redis;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -51,8 +54,24 @@ if (!useInMemory)
     catalogHealthChecks.AddNpgSql(pg, name: "db", tags: new[] { "ready" });
 }
 
+var redisConnection = ConfigurationGuard.GetRequired(builder.Configuration, builder.Environment, "Redis:Connection", "redis:6379");
+try
+{
+    var redisOptions = ConfigurationOptions.Parse(redisConnection);
+    redisOptions.AbortOnConnectFail = false;
+    var mux = ConnectionMultiplexer.Connect(redisOptions);
+    builder.Services.AddSingleton<IConnectionMultiplexer>(mux);
+    catalogHealthChecks.AddRedis(redisConnection, name: "redis", tags: new[] { "ready" });
+}
+catch (Exception ex)
+{
+    builder.Services.AddSingleton<IConnectionMultiplexer>(_ =>
+        throw new InvalidOperationException($"Failed to connect to Redis at {redisConnection}", ex));
+}
+
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddSingleton<IProductIntegrationEventMapper, ProductIntegrationEventMapper>();
+builder.Services.AddSingleton<ICatalogMetricsStore, RedisCatalogMetricsStore>();
 // Kafka Event Producer
 builder.Services.AddSingleton<IEventProducer, KafkaEventProducer>();
 // Ensure Kafka topics exist on startup
@@ -63,7 +82,11 @@ builder.Services.AddSingleton<CatalogEventConsumer>();
 builder.Services.AddHostedService<KafkaEventConsumerHostedService<CatalogEventConsumer>>();
 // Outbox processor
 if (!useInMemory)
+{
     builder.Services.AddHostedService<OutboxProcessor>();
+    builder.Services.AddHostedService<OutboxCleanupHostedService<CatalogDbContext, OutboxMessage>>();
+    builder.Services.AddHostedService<ProcessedEventCleanupHostedService<CatalogDbContext>>();
+}
 
 // Auth
 builder.AddExtededAuthentication();

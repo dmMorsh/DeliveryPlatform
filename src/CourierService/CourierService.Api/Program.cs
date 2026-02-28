@@ -1,5 +1,6 @@
 using Confluent.Kafka;
 using CourierService.Application.Interfaces;
+using CourierService.Application.Models;
 using CourierService.Application.MediatR;
 using CourierService.Application.Services;
 using CourierService.Infrastructure.Inbox;
@@ -50,7 +51,11 @@ builder.Services.AddHostedService<KafkaTopicBootstrapper>();
 builder.Services.AddScoped<IEventInbox, CourierEventInbox>();
 // Outbox processor
 if (!useInMemory)
+{
     builder.Services.AddHostedService<OutboxProcessor>();
+    builder.Services.AddHostedService<OutboxCleanupHostedService<CourierDbContext, OutboxMessage>>();
+    builder.Services.AddHostedService<ProcessedEventCleanupHostedService<CourierDbContext>>();
+}
 
 builder.Services.AddScoped<ICourierRepository, CourierRepository>();
 // Mapper for domain->integration events for courier

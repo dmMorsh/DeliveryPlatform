@@ -40,13 +40,29 @@ public class Payment : AggregateRoot
 
     public void Start(string provider, string externalPaymentId, string paymentUrl)
     {
-        if (Status != PaymentStatus.Created)
+        if (Status != PaymentStatus.Starting)
             throw new DomainException("Payment already started");
 
         Status = PaymentStatus.Pending;
         Provider = provider;
         ExternalPaymentId = externalPaymentId;
         PaymentUrl = paymentUrl;
+    }
+
+    public void MarkReady()
+    {
+        if (Status is not (PaymentStatus.Created or PaymentStatus.Starting))
+            return;
+
+        Status = PaymentStatus.Ready;
+    }
+
+    public void MarkStarting()
+    {
+        if (Status != PaymentStatus.Ready)
+            throw new DomainException("Payment is not ready");
+
+        Status = PaymentStatus.Starting;
     }
 
     public void MarkAuthorized(string externalId)
@@ -95,11 +111,13 @@ public class Payment : AggregateRoot
 
 public enum PaymentStatus
 {
-    Created,
-    Pending,
-    Authorized,
-    Captured,
-    Failed,
-    Cancelled,
-    Refunded
+    Created = 0,
+    Pending = 1,
+    Authorized = 2,
+    Captured = 3,
+    Failed = 4,
+    Cancelled = 5,
+    Refunded = 6,
+    Ready = 7,
+    Starting = 8
 }

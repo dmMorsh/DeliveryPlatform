@@ -28,7 +28,7 @@ public class ProcessOrderCanceledCommandHandler
         await using var uow = _factory.Create(request.OrderId);
         var payment = await uow.Payments.GetByOrderId(request.OrderId, ct);
         if (payment is null)
-            return ApiResponse.SuccessResponse();
+            return ApiResponse.ErrorResponse(ErrorCodes.NotFound, "Payment not found");
 
         if (payment.Status is PaymentStatus.Refunded or PaymentStatus.Cancelled or PaymentStatus.Failed)
             return ApiResponse.SuccessResponse();
@@ -47,7 +47,7 @@ public class ProcessOrderCanceledCommandHandler
             if (payment.Status != prev)
                 outbox.Add(OutboxMessage.From(_eventMapper.MapRefunded(payment)));
         }
-        else if (payment.Status is PaymentStatus.Authorized or PaymentStatus.Pending)
+        else if (payment.Status is PaymentStatus.Authorized or PaymentStatus.Pending or PaymentStatus.Starting)
         {
             if (!string.IsNullOrWhiteSpace(payment.ExternalPaymentId))
             {
@@ -59,7 +59,7 @@ public class ProcessOrderCanceledCommandHandler
             if (payment.Status != prev)
                 outbox.Add(OutboxMessage.From(_eventMapper.MapCancelled(payment)));
         }
-        else if (payment.Status == PaymentStatus.Created)
+        else if (payment.Status is PaymentStatus.Created or PaymentStatus.Ready)
         {
             payment.MarkCancelled();
             if (payment.Status != prev)

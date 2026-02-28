@@ -47,7 +47,18 @@ public class InMemoryEventInboxTests
     {
         var field = typeof(InMemoryEventInbox)
             .GetField("_events", BindingFlags.Instance | BindingFlags.NonPublic);
-        var dict = field?.GetValue(inbox) as System.Collections.Concurrent.ConcurrentDictionary<string, string>;
-        return dict != null && dict.TryGetValue(eventId, out var value) ? value : null;
+        var dict = field?.GetValue(inbox);
+        if (dict is not System.Collections.IDictionary objDict)
+            return null;
+
+        if (!objDict.Contains(eventId))
+            return null;
+
+        var entry = objDict[eventId];
+        if (entry == null)
+            return null;
+
+        var statusProp = entry.GetType().GetProperty("Status", BindingFlags.Instance | BindingFlags.Public);
+        return statusProp?.GetValue(entry) as string;
     }
 }

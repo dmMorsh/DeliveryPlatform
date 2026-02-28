@@ -2,6 +2,7 @@ using MediatR;
 using Microsoft.Extensions.Logging;
 using OrderService.Application.Interfaces;
 using OrderService.Application.Models;
+using OrderService.Application.Services;
 using OrderService.Domain.Aggregates;
 using Shared.Utilities;
 
@@ -29,12 +30,24 @@ public class UpdateOrderStatusFromPaymentCommandHandler
         await using var uow = _factory.Create(request.OrderId);
         var order = await uow.Orders.GetOrderByIdAsync(request.OrderId, ct);
         if (order == null)
-            return ApiResponse.ErrorResponse("Order not found");
+            return ApiResponse.ErrorResponse(ErrorCodes.NotFound, "Order not found");
 
         if (order.Status is OrderStatus.Delivered or OrderStatus.InDelivery or OrderStatus.Assigned or OrderStatus.Assigning)
         {
             _logger.LogInformation(
                 "Skipping payment status update for order {OrderId}. Current status {Status}, target {TargetStatus}, reason {Reason}",
+                request.OrderId,
+                order.Status,
+                request.NewStatus,
+                request.Reason);
+            return ApiResponse.SuccessResponse();
+        }
+
+        if (order.Status == OrderStatus.Pending &&
+            request.NewStatus is OrderStatus.Confirmed or OrderStatus.Failed or OrderStatus.Cancelled)
+        {
+            _logger.LogWarning(
+                "Ignoring payment status update before stock reservation for order {OrderId}. Current status {Status}, target {TargetStatus}, reason {Reason}",
                 request.OrderId,
                 order.Status,
                 request.NewStatus,
@@ -55,6 +68,7 @@ public class UpdateOrderStatusFromPaymentCommandHandler
 
         await uow.SaveChangesAsync(outboxMessages, ct);
         order.ClearDomainEvents();
+        OrderReadCache.Invalidate(order.Id);
 
         return ApiResponse.SuccessResponse();
     }

@@ -14,9 +14,20 @@ public record OrderCreatedDomainEvent : DomainEvent
     public double FromLongitude { get; init; }
     public double ToLatitude { get; init; }
     public double ToLongitude { get; init; }
+    public int WeightGrams { get; init; }
     public long CostCents { get; init; }
     public string Currency { get; init; } = string.Empty;
+    public string? CourierNote { get; init; }
     public string? Description { get; init; }
+    public DateTime CreatedAt { get; init; }
+    public DateTime? ExpectedReadyAt { get; init; }
+    public DateTime? KitchenSlotStart { get; init; }
+    public string? DeliveryZoneId { get; init; }
+    public string? DeliveryZoneName { get; init; }
+    public double? DeliveryZoneDistanceKm { get; init; }
+    public int? DeliveryPickupSlaMinutes { get; init; }
+    public int? DeliveryTransitSlaMinutes { get; init; }
+    public double? DeliveryFeeMultiplier { get; init; }
 
     public required IReadOnlyList<DomainOrderItemSnapshot> Items { get; init; }
 }
@@ -38,6 +49,32 @@ public record OrderStatusChangedDomainEvent : DomainEvent
     public Guid OrderId { get; init; }
     public OrderStatus PreviousStatus { get; init; }
     public OrderStatus NewStatus { get; init; }
+}
+
+public record OrderReadyDomainEvent : DomainEvent
+{
+    public Guid OrderId { get; init; }
+    public DateTime ReadyAt { get; init; }
+}
+
+public record OrderAcceptedDomainEvent : DomainEvent
+{
+    public Guid OrderId { get; init; }
+    public DateTime AcceptedAt { get; init; }
+}
+
+public record OrderRejectedDomainEvent : DomainEvent
+{
+    public Guid OrderId { get; init; }
+    public DateTime RejectedAt { get; init; }
+    public string? Reason { get; init; }
+}
+
+public record OrderCanceledDomainEvent : DomainEvent
+{
+    public Guid OrderId { get; init; }
+    public Guid? CourierId { get; init; }
+    public string? Reason { get; init; }
 }
 
 public record DomainOrderItemSnapshot

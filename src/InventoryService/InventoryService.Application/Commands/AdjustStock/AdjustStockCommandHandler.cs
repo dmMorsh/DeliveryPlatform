@@ -19,7 +19,7 @@ public class AdjustStockCommandHandler: IRequestHandler<AdjustStockCommand, ApiR
     public async Task<ApiResponse<List<ProcessedStockItemModel>?>> Handle(AdjustStockCommand request, CancellationToken ct)
     {
         if (request.Models.Length == 0)
-            return ApiResponse<List<ProcessedStockItemModel>?>.ErrorResponse("No item in request");
+            return ApiResponse<List<ProcessedStockItemModel>?>.ErrorResponse(ErrorCodes.Validation, "No item in request");
         var errors = new List<ProcessedStockItemModel>();
 
         var shardGroups = request.Models
@@ -31,7 +31,7 @@ public class AdjustStockCommandHandler: IRequestHandler<AdjustStockCommand, ApiR
         }
         
         if (errors.Any())
-            return ApiResponse<List<ProcessedStockItemModel>?>.ErrorResponse(errors,"Adjusting failed partly");
+            return ApiResponse<List<ProcessedStockItemModel>?>.ErrorResponse(ErrorCodes.Invariant, errors, "Adjusting failed partly");
         return ApiResponse<List<ProcessedStockItemModel>?>.SuccessResponse(null,"Stock adjusted");
     }
 

@@ -54,7 +54,9 @@ public class ProxyService : IProxyService
             
             _logger.LogInformation("Proxying POST request to {Url}", url);
             
-            var response = await SendProxyRequestAsync(HttpMethod.Post, client, httpContext, url, body, ct);
+            using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            cts.CancelAfter(TimeSpan.FromSeconds(10));
+            var response = await SendProxyRequestAsync(HttpMethod.Post, client, httpContext, url, body, cts.Token);
             var content = await response.Content.ReadAsStringAsync(ct);
 
             if (response.IsSuccessStatusCode)
@@ -65,6 +67,11 @@ public class ProxyService : IProxyService
 
             _logger.LogWarning("Service {ServiceName} returned status {StatusCode}: {Content}", serviceName, response.StatusCode, content);
             return (default, (int)response.StatusCode, content);
+        }
+        catch (TaskCanceledException ex) when (!ct.IsCancellationRequested)
+        {
+            _logger.LogError(ex, "HTTP timeout calling {ServiceName}", serviceName);
+            return (default, 504, $"Service {serviceName} timeout");
         }
         catch (HttpRequestException ex)
         {
@@ -93,7 +100,9 @@ public class ProxyService : IProxyService
 
             _logger.LogInformation("Proxying GET request to {Url}", url);
 
-            var response = await SendProxyRequestAsync(HttpMethod.Get, client, httpContext, url, null, ct);
+            using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            cts.CancelAfter(TimeSpan.FromSeconds(10));
+            var response = await SendProxyRequestAsync(HttpMethod.Get, client, httpContext, url, null, cts.Token);
             var content = await response.Content.ReadAsStringAsync(ct);
 
             if (response.IsSuccessStatusCode)
@@ -105,6 +114,11 @@ public class ProxyService : IProxyService
 
             _logger.LogWarning("Service {ServiceName} returned status {StatusCode}: {Content}", serviceName, response.StatusCode, content);
             return (default, (int)response.StatusCode, content);
+        }
+        catch (TaskCanceledException ex) when (!ct.IsCancellationRequested)
+        {
+            _logger.LogError(ex, "HTTP timeout calling {ServiceName}", serviceName);
+            return (default, 504, $"Service {serviceName} timeout");
         }
         catch (HttpRequestException ex)
         {
@@ -133,7 +147,9 @@ public class ProxyService : IProxyService
 
             _logger.LogInformation("Proxying PUT request to {Url}", url);
 
-            var response = await SendProxyRequestAsync(HttpMethod.Put, client, httpContext, url, body, ct);
+            using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            cts.CancelAfter(TimeSpan.FromSeconds(10));
+            var response = await SendProxyRequestAsync(HttpMethod.Put, client, httpContext, url, body, cts.Token);
             var content = await response.Content.ReadAsStringAsync(ct);
 
             if (response.IsSuccessStatusCode)
@@ -144,6 +160,11 @@ public class ProxyService : IProxyService
 
             _logger.LogWarning("Service {ServiceName} returned status {StatusCode}: {Content}", serviceName, response.StatusCode, content);
             return (default, (int)response.StatusCode, content);
+        }
+        catch (TaskCanceledException ex) when (!ct.IsCancellationRequested)
+        {
+            _logger.LogError(ex, "HTTP timeout calling {ServiceName}", serviceName);
+            return (default, 504, $"Service {serviceName} timeout");
         }
         catch (HttpRequestException ex)
         {
@@ -172,7 +193,9 @@ public class ProxyService : IProxyService
 
             _logger.LogInformation("Proxying DELETE request to {Url}", url);
 
-            var response = await SendProxyRequestAsync(HttpMethod.Delete, client, httpContext, url, null, ct);
+            using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            cts.CancelAfter(TimeSpan.FromSeconds(10));
+            var response = await SendProxyRequestAsync(HttpMethod.Delete, client, httpContext, url, null, cts.Token);
             var content = await response.Content.ReadAsStringAsync(ct);
 
             if (response.IsSuccessStatusCode)
@@ -184,6 +207,11 @@ public class ProxyService : IProxyService
 
             _logger.LogWarning("Service {ServiceName} returned status {StatusCode}: {Content}", serviceName, response.StatusCode, content);
             return (default, (int)response.StatusCode, content);
+        }
+        catch (TaskCanceledException ex) when (!ct.IsCancellationRequested)
+        {
+            _logger.LogError(ex, "HTTP timeout calling {ServiceName}", serviceName);
+            return (default, 504, $"Service {serviceName} timeout");
         }
         catch (HttpRequestException ex)
         {

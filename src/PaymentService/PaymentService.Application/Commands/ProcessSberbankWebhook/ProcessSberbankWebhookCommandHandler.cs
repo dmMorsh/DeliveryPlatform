@@ -26,7 +26,7 @@ public class ProcessSberbankWebhookCommandHandler : IRequestHandler<ProcessSberb
     public async Task<ApiResponse> Handle(ProcessSberbankWebhookCommand request, CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(request.OrderId))
-            return ApiResponse.ErrorResponse("OrderId is required");
+            return ApiResponse.ErrorResponse(ErrorCodes.Validation, "OrderId is required");
 
         var orderId = await _factory.ResolveOrderIdByExternalPaymentId(request.OrderId, ct);
         if (orderId is null)

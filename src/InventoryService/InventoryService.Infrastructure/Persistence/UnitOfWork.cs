@@ -1,6 +1,7 @@
 ﻿using InventoryService.Application.Interfaces;
 using InventoryService.Application.Models;
 using InventoryService.Infrastructure.Repositories;
+using Shared.Services;
 
 namespace InventoryService.Infrastructure.Persistence;
 
@@ -23,11 +24,11 @@ public class UnitOfWork : IUnitOfWork
         if (outboxMessages.Count > 0)
             _db.OutboxMessages.AddRange(outboxMessages);
 
-        await _db.SaveChangesAsync(ct);
+        await _db.SaveChangesWithConcurrencyRetryAsync(maxRetries: 3, ct);
     }    
     public async Task SaveChangesWithoutMessagesAsync(CancellationToken ct)
     {
-        await _db.SaveChangesAsync(ct);
+        await _db.SaveChangesWithConcurrencyRetryAsync(maxRetries: 3, ct);
     }
 
     public void Dispose()

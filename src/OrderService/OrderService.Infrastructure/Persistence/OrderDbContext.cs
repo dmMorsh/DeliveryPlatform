@@ -47,6 +47,9 @@ public class OrderDbContext : DbContext
             entity.HasIndex(e => e.CourierId);
             entity.HasIndex(e => e.Status);
             entity.HasIndex(e => e.CreatedAt);
+            entity.HasIndex(e => e.KitchenSlotStart);
+            entity.HasIndex(e => e.DeliveryZoneId);
+            entity.HasIndex(e => e.ExpectedReadyAt);
             entity.Property(x => x.RowVersion)
                 .IsRowVersion();
         });

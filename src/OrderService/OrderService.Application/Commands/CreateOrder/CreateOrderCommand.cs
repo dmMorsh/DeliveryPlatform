@@ -17,7 +17,9 @@ public record CreateOrderCommand(
     long CostCents,
     string Currency,
     string? CourierNote,
-    IReadOnlyCollection<CreateOrderItemDto>? Items
+    IReadOnlyCollection<CreateOrderItemDto>? Items,
+    Guid? CheckoutId,
+    DateTime? DesiredReadyAt
 ) : IRequest<ApiResponse<OrderView>>;
 
 public record CreateOrderItemDto(Guid ProductId, string Name, int PriceCents, int Quantity);

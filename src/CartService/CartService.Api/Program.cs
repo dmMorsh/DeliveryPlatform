@@ -1,5 +1,6 @@
 using CartService.Api;
 using CartService.Application.Interfaces;
+using CartService.Application.Models;
 using CartService.Application.MediatR;
 using CartService.Application.Services;
 using CartService.Infrastructure.Inbox;
@@ -43,6 +44,9 @@ builder.Services.AddTransient<GrpcAuthHeaderHandler>();
 
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
+var httpTimeoutSeconds = int.TryParse(builder.Configuration["Http:TimeoutSeconds"], out var httpTimeout)
+    ? httpTimeout
+    : 10;
 
 var kafkaBrokers = ConfigurationGuard.GetRequired(builder.Configuration, builder.Environment, "Kafka:Brokers", "localhost:29092");
 var cartHealthChecks = builder.Services.AddHealthChecks()
@@ -60,7 +64,9 @@ builder.Services.AddGrpcClient<OrderGrpc.OrderGrpcClient>(o =>
 })
     .AddHttpMessageHandler<GrpcAuthHeaderHandler>()
     .AddPolicyHandler((sp, _) =>
-        HttpResiliencePolicies.CreatePolicyWrap(sp.GetRequiredService<ILogger<OrderGrpc.OrderGrpcClient>>()));
+        HttpResiliencePolicies.CreatePolicyWrap(
+            sp.GetRequiredService<ILogger<OrderGrpc.OrderGrpcClient>>(),
+            httpTimeoutSeconds));
 
 builder.Services.AddScoped<IOrderService, OrderGrpcService>();
 
@@ -82,7 +88,11 @@ builder.Services.AddSingleton<CartEventConsumer>();
 builder.Services.AddHostedService<KafkaEventConsumerHostedService<CartEventConsumer>>();
 // Outbox processor
 if (!useInMemory)
+{
     builder.Services.AddHostedService<OutboxProcessor>();
+    builder.Services.AddHostedService<OutboxCleanupHostedService<CartDbContext, OutboxMessage>>();
+    builder.Services.AddHostedService<ProcessedEventCleanupHostedService<CartDbContext>>();
+}
 
 // Auth
 builder.AddExtededAuthentication();

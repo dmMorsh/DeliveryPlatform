@@ -1,5 +1,6 @@
 using CatalogService.Application.Interfaces;
 using CatalogService.Application.Models;
+using CatalogService.Application.Services;
 using CatalogService.Domain.Aggregates;
 using CatalogService.Domain.ValueObjects;
 using MediatR;
@@ -39,6 +40,7 @@ public class CreateProductCommandHandler : IRequestHandler<CreateProductCommand,
 
         await _uow.SaveChangesAsync(outboxMessages, ct);
         product.ClearDomainEvents();
+        ProductReadCache.Invalidate(product.Id);
 
         var view = new ProductView(product.Id, product.Name, product.Description, product.PriceCents.AmountCents, product.PriceCents.Currency, product.WeightGrams.Value);
         return ApiResponse<ProductView>.SuccessResponse(view, "Product created successfully");

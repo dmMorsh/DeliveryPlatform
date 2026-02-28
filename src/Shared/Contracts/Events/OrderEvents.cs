@@ -18,9 +18,19 @@ public record OrderCreatedEvent : IntegrationEvent
     public double FromLongitude { get; init; }
     public double ToLatitude { get; init; }
     public double ToLongitude { get; init; }
+    public int WeightGrams { get; init; }
     public long CostCents { get; init; }
     public string Currency { get; init; } = string.Empty;
+    public string? CourierNote { get; init; }
     public DateTime CreatedAt { get; init; }
+    public DateTime? ExpectedReadyAt { get; init; }
+    public DateTime? KitchenSlotStart { get; init; }
+    public string? DeliveryZoneId { get; init; }
+    public string? DeliveryZoneName { get; init; }
+    public double? DeliveryZoneDistanceKm { get; init; }
+    public int? DeliveryPickupSlaMinutes { get; init; }
+    public int? DeliveryTransitSlaMinutes { get; init; }
+    public double? DeliveryFeeMultiplier { get; init; }
     public required IReadOnlyCollection<IntegrationOrderItemSnapshot> Items { get; init; }
     public string? Description { get; init; }
 }
@@ -63,6 +73,59 @@ public record OrderStatusChangedEvent : IntegrationEvent
     public string Reason { get; init; } = string.Empty;
     public int OldStatus { get; init; }
     public DateTime ChangedAt { get; init; }
+}
+
+public record OrderReadyEvent : IntegrationEvent
+{
+    public override string EventType => "order.ready";
+    public override int Version => 1;
+    public override string AggregateType => "Order";
+    public override Guid AggregateId => OrderId;
+    public required Guid OrderId { get; init; }
+    public DateTime ReadyAt { get; init; }
+}
+
+public record OrderAcceptedEvent : IntegrationEvent
+{
+    public override string EventType => "order.accepted";
+    public override int Version => 1;
+    public override string AggregateType => "Order";
+    public override Guid AggregateId => OrderId;
+    public required Guid OrderId { get; init; }
+    public DateTime AcceptedAt { get; init; }
+}
+
+public record OrderRejectedEvent : IntegrationEvent
+{
+    public override string EventType => "order.rejected";
+    public override int Version => 1;
+    public override string AggregateType => "Order";
+    public override Guid AggregateId => OrderId;
+    public required Guid OrderId { get; init; }
+    public DateTime RejectedAt { get; init; }
+    public string? Reason { get; init; }
+}
+
+public record OrderAssigningTimeoutEvent : IntegrationEvent
+{
+    public override string EventType => "order.assigning_timeout";
+    public override int Version => 1;
+    public override string AggregateType => "Order";
+    public override Guid AggregateId => OrderId;
+    public required Guid OrderId { get; init; }
+    public DateTime? ReadyAt { get; init; }
+    public DateTime DetectedAt { get; init; }
+}
+
+public record OrderKitchenDelayedEvent : IntegrationEvent
+{
+    public override string EventType => "order.kitchen_delayed";
+    public override int Version => 1;
+    public override string AggregateType => "Order";
+    public override Guid AggregateId => OrderId;
+    public required Guid OrderId { get; init; }
+    public DateTime? ExpectedReadyAt { get; init; }
+    public DateTime DetectedAt { get; init; }
 }
 
 /// <summary>
@@ -114,9 +177,26 @@ public record OrderCriticalErrorEvent : IntegrationEvent
 {
     public override string EventType => "order.critical_error";
     public override int Version => 1;
-    public override string AggregateType => "Order"; //TODO "Errors" ?
+    public override string AggregateType => "Order";
     public override Guid AggregateId => OrderId;
     public required Guid OrderId { get; init; }
     public Guid ClientId { get; init; }
     public string? Description { get; init; }
+}
+
+/// <summary>
+/// Shared enum for cross-service order status mapping.
+/// Keep values stable for integration events.
+/// </summary>
+public enum OrderStatusCode
+{
+    Pending = 0,
+    Reserved = 1,
+    Confirmed = 2,
+    Assigning = 3,
+    Assigned = 4,
+    InDelivery = 5,
+    Delivered = 6,
+    Cancelled = 7,
+    Failed = 8
 }

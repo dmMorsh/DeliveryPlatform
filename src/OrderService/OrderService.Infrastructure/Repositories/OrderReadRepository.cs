@@ -1,15 +1,15 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using OrderService.Application.Interfaces;
 using OrderService.Application.Models;
-using OrderService.Infrastructure.Persistence;
+using OrderService.Infrastructure.ReadStore;
 
 namespace OrderService.Infrastructure.Repositories;
 
 public class OrderReadRepository : IOrderReadRepository
 {
-    private readonly OrderDbContext _context;
+    private readonly OrderReadDbContext _context;
 
-    public OrderReadRepository(OrderDbContext context)
+    public OrderReadRepository(OrderReadDbContext context)
     {
         _context = context;
     }
@@ -23,11 +23,39 @@ public class OrderReadRepository : IOrderReadRepository
             {
                 Id = o.Id,
                 OrderNumber = o.OrderNumber,
-                Status = o.Status.ToString(),
-                FromAddress = o.From.Street,
-                ToAddress = o.To.Street,
-                CostCents = o.CostCents.AmountCents,
-                Items = o.Items.Select(i => new OrderViewItem(i.ProductId,i.Name,i.PriceCents, i.Quantity)).ToArray()
+                ClientId = o.ClientId,
+                CourierId = o.CourierId,
+                Status = ((OrderService.Domain.Aggregates.OrderStatus)o.Status).ToString(),
+                FromAddress = o.FromAddress,
+                ToAddress = o.ToAddress,
+                FromLatitude = o.FromLatitude,
+                FromLongitude = o.FromLongitude,
+                ToLatitude = o.ToLatitude,
+                ToLongitude = o.ToLongitude,
+                Description = o.Description,
+                WeightGrams = o.WeightGrams,
+                CostCents = o.CostCents,
+                Currency = o.Currency,
+                CourierNote = o.CourierNote,
+                CreatedAt = o.CreatedAt,
+                UpdatedAt = o.UpdatedAt,
+                AssignedAt = o.AssignedAt,
+                DeliveredAt = o.DeliveredAt,
+                ReadyAt = o.ReadyAt,
+                IsReadyForDelivery = o.IsReadyForDelivery,
+                AcceptedAt = o.AcceptedAt,
+                RejectedAt = o.RejectedAt,
+                RejectionReason = o.RejectionReason,
+                ExpectedReadyAt = o.ExpectedReadyAt,
+                KitchenSlotStart = o.KitchenSlotStart,
+                KitchenDelayedNotifiedAt = o.KitchenDelayedNotifiedAt,
+                DeliveryZoneId = o.DeliveryZoneId,
+                DeliveryZoneName = o.DeliveryZoneName,
+                DeliveryZoneDistanceKm = o.DeliveryZoneDistanceKm,
+                DeliveryPickupSlaMinutes = o.DeliveryPickupSlaMinutes,
+                DeliveryTransitSlaMinutes = o.DeliveryTransitSlaMinutes,
+                DeliveryFeeMultiplier = o.DeliveryFeeMultiplier,
+                Items = o.Items.Select(i => new OrderViewItem(i.ProductId, i.Name, i.PriceCents, i.Quantity)).ToArray()
             })
             .FirstOrDefaultAsync(ct);
     }
@@ -41,11 +69,39 @@ public class OrderReadRepository : IOrderReadRepository
             {
                 Id = o.Id,
                 OrderNumber = o.OrderNumber,
-                Status = o.Status.ToString(),
-                FromAddress = o.From.Street,
-                ToAddress = o.To.Street,
-                CostCents = o.CostCents.AmountCents,
-                Items = o.Items.Select(i => new OrderViewItem(i.ProductId,i.Name,i.PriceCents, i.Quantity)).ToArray()
+                ClientId = o.ClientId,
+                CourierId = o.CourierId,
+                Status = ((OrderService.Domain.Aggregates.OrderStatus)o.Status).ToString(),
+                FromAddress = o.FromAddress,
+                ToAddress = o.ToAddress,
+                FromLatitude = o.FromLatitude,
+                FromLongitude = o.FromLongitude,
+                ToLatitude = o.ToLatitude,
+                ToLongitude = o.ToLongitude,
+                Description = o.Description,
+                WeightGrams = o.WeightGrams,
+                CostCents = o.CostCents,
+                Currency = o.Currency,
+                CourierNote = o.CourierNote,
+                CreatedAt = o.CreatedAt,
+                UpdatedAt = o.UpdatedAt,
+                AssignedAt = o.AssignedAt,
+                DeliveredAt = o.DeliveredAt,
+                ReadyAt = o.ReadyAt,
+                IsReadyForDelivery = o.IsReadyForDelivery,
+                AcceptedAt = o.AcceptedAt,
+                RejectedAt = o.RejectedAt,
+                RejectionReason = o.RejectionReason,
+                ExpectedReadyAt = o.ExpectedReadyAt,
+                KitchenSlotStart = o.KitchenSlotStart,
+                KitchenDelayedNotifiedAt = o.KitchenDelayedNotifiedAt,
+                DeliveryZoneId = o.DeliveryZoneId,
+                DeliveryZoneName = o.DeliveryZoneName,
+                DeliveryZoneDistanceKm = o.DeliveryZoneDistanceKm,
+                DeliveryPickupSlaMinutes = o.DeliveryPickupSlaMinutes,
+                DeliveryTransitSlaMinutes = o.DeliveryTransitSlaMinutes,
+                DeliveryFeeMultiplier = o.DeliveryFeeMultiplier,
+                Items = o.Items.Select(i => new OrderViewItem(i.ProductId, i.Name, i.PriceCents, i.Quantity)).ToArray()
             })
             .ToListAsync(ct);
     }

@@ -50,12 +50,26 @@ public class Delivery : AggregateRoot
     public DateTime? CancelledAt { get; private set; }
     public DateTime? FailedAt { get; private set; }
     public DateTime? ReturnedAt { get; private set; }
+    public DateTime? PickupTimeoutNotifiedAt { get; private set; }
+    public DateTime? TransitTimeoutNotifiedAt { get; private set; }
+    public DateTime? EstimatedPickupAt { get; private set; }
+    public DateTime? EstimatedDeliveryAt { get; private set; }
+    public double? EstimatedDistanceKm { get; private set; }
+    public int? EstimatedTravelMinutes { get; private set; }
+    public int ReassignAttempts { get; private set; }
+    public DateTime? LastReassignAt { get; private set; }
 
     public string? VerificationCode { get; private set; }
     public DateTime? VerificationGeneratedAt { get; private set; }
     public string? Signature { get; private set; }
     public string? PhotoUrl { get; private set; }
     public string? Notes { get; private set; }
+    public string? DeliveryZoneId { get; private set; }
+    public string? DeliveryZoneName { get; private set; }
+    public int? DeliveryPickupSlaMinutes { get; private set; }
+    public int? DeliveryTransitSlaMinutes { get; private set; }
+    public double? DeliveryFeeMultiplier { get; private set; }
+    public double? DeliveryZoneDistanceKm { get; private set; }
 
     public Guid? CurrentOfferCourierId { get; private set; }
     public DateTime? CurrentOfferExpiresAt { get; private set; }
@@ -107,6 +121,7 @@ public class Delivery : AggregateRoot
         if (Status == DeliveryStatus.Assigning || Status == DeliveryStatus.Assigned)
             return;
 
+        EnsureTransition(DeliveryStatus.Assigning);
         Status = DeliveryStatus.Assigning;
     }
 
@@ -151,6 +166,7 @@ public class Delivery : AggregateRoot
         CourierId = courierId;
         AssignedAt = DateTime.UtcNow;
         AcceptedAt = DateTime.UtcNow;
+        EnsureTransition(DeliveryStatus.Assigned);
         Status = DeliveryStatus.Assigned;
         CurrentOfferCourierId = null;
         CurrentOfferExpiresAt = null;
@@ -204,6 +220,7 @@ public class Delivery : AggregateRoot
         if (Status != DeliveryStatus.Assigned)
             throw new DomainException("Delivery is not assigned");
 
+        EnsureTransition(DeliveryStatus.PickedUp);
         Status = DeliveryStatus.PickedUp;
         PickedUpAt = DateTime.UtcNow;
 
@@ -221,6 +238,7 @@ public class Delivery : AggregateRoot
         if (Status != DeliveryStatus.PickedUp)
             throw new DomainException("Delivery is not picked up");
 
+        EnsureTransition(DeliveryStatus.InDelivery);
         Status = DeliveryStatus.InDelivery;
         InTransitAt = DateTime.UtcNow;
 
@@ -241,6 +259,7 @@ public class Delivery : AggregateRoot
         if (!string.IsNullOrWhiteSpace(VerificationCode) && VerificationCode != verificationCode)
             throw new DomainException("Verification code mismatch");
 
+        EnsureTransition(DeliveryStatus.Delivered);
         Status = DeliveryStatus.Delivered;
         DeliveredAt = DateTime.UtcNow;
         Signature = signature;
@@ -263,6 +282,7 @@ public class Delivery : AggregateRoot
         if (Status == DeliveryStatus.Delivered)
             throw new DomainException("Delivery already delivered");
 
+        EnsureTransition(DeliveryStatus.Cancelled);
         Status = DeliveryStatus.Cancelled;
         CancelledAt = DateTime.UtcNow;
 
@@ -280,6 +300,7 @@ public class Delivery : AggregateRoot
         if (Status == DeliveryStatus.Delivered)
             throw new DomainException("Delivery already delivered");
 
+        EnsureTransition(DeliveryStatus.Failed);
         Status = DeliveryStatus.Failed;
         FailedAt = DateTime.UtcNow;
 
@@ -297,6 +318,7 @@ public class Delivery : AggregateRoot
         if (Status != DeliveryStatus.Failed && Status != DeliveryStatus.Cancelled)
             throw new DomainException("Delivery is not failed or cancelled");
 
+        EnsureTransition(DeliveryStatus.Returned);
         Status = DeliveryStatus.Returned;
         ReturnedAt = DateTime.UtcNow;
 
@@ -307,6 +329,103 @@ public class Delivery : AggregateRoot
             CourierId = CourierId,
             Reason = reason
         });
+    }
+
+    public void SetEta(DateTime estimatedPickupAt, DateTime estimatedDeliveryAt, double distanceKm, int travelMinutes)
+    {
+        EstimatedPickupAt = estimatedPickupAt;
+        EstimatedDeliveryAt = estimatedDeliveryAt;
+        EstimatedDistanceKm = distanceKm;
+        EstimatedTravelMinutes = travelMinutes;
+    }
+
+    public void SetDeliveryZone(
+        string? zoneId,
+        string? zoneName,
+        int? pickupSlaMinutes,
+        int? transitSlaMinutes,
+        double? deliveryFeeMultiplier,
+        double? zoneDistanceKm)
+    {
+        DeliveryZoneId = zoneId;
+        DeliveryZoneName = zoneName;
+        DeliveryPickupSlaMinutes = pickupSlaMinutes;
+        DeliveryTransitSlaMinutes = transitSlaMinutes;
+        DeliveryFeeMultiplier = deliveryFeeMultiplier;
+        DeliveryZoneDistanceKm = zoneDistanceKm;
+    }
+
+    public void SetPickupTimeoutNotifiedAt(DateTime value)
+    {
+        PickupTimeoutNotifiedAt = value;
+    }
+
+    public void SetTransitTimeoutNotifiedAt(DateTime value)
+    {
+        TransitTimeoutNotifiedAt = value;
+    }
+
+    public void ResetAssignment(string? reason)
+    {
+        if (Status != DeliveryStatus.Assigned)
+            throw new DomainException("Delivery is not assigned");
+
+        var previousCourierId = CourierId;
+        EnsureTransition(DeliveryStatus.Assigning);
+        Status = DeliveryStatus.Assigning;
+        CourierId = null;
+        AssignedAt = null;
+        AcceptedAt = null;
+        CurrentOfferCourierId = null;
+        CurrentOfferExpiresAt = null;
+
+        ReassignAttempts += 1;
+        LastReassignAt = DateTime.UtcNow;
+
+        AddDomainEvent(new DeliveryReassignRequestedDomainEvent
+        {
+            DeliveryId = Id,
+            OrderId = OrderId,
+            PreviousCourierId = previousCourierId,
+            Reason = reason
+        });
+    }
+
+    public bool CanReassign(int maxAttempts, TimeSpan cooldown, DateTime now)
+    {
+        if (maxAttempts <= 0)
+            return false;
+        if (ReassignAttempts >= maxAttempts)
+            return false;
+        if (cooldown > TimeSpan.Zero && LastReassignAt.HasValue && LastReassignAt.Value.Add(cooldown) > now)
+            return false;
+        return true;
+    }
+
+    private void EnsureTransition(DeliveryStatus to)
+    {
+        if (Status == to)
+            return;
+
+        if (!IsValidTransition(Status, to))
+            throw new DomainException($"Invalid delivery status transition {Status} -> {to}");
+    }
+
+    private static bool IsValidTransition(DeliveryStatus from, DeliveryStatus to)
+    {
+        return from switch
+        {
+            DeliveryStatus.PendingPayment => to is DeliveryStatus.Assigning or DeliveryStatus.Cancelled or DeliveryStatus.Failed,
+            DeliveryStatus.Assigning => to is DeliveryStatus.Assigned or DeliveryStatus.Cancelled or DeliveryStatus.Failed,
+            DeliveryStatus.Assigned => to is DeliveryStatus.PickedUp or DeliveryStatus.Assigning or DeliveryStatus.Cancelled or DeliveryStatus.Failed,
+            DeliveryStatus.PickedUp => to is DeliveryStatus.InDelivery or DeliveryStatus.Failed,
+            DeliveryStatus.InDelivery => to is DeliveryStatus.Delivered or DeliveryStatus.Failed,
+            DeliveryStatus.Delivered => false,
+            DeliveryStatus.Cancelled => to is DeliveryStatus.Returned,
+            DeliveryStatus.Failed => to is DeliveryStatus.Returned,
+            DeliveryStatus.Returned => false,
+            _ => false
+        };
     }
 
     private void EnsureCourierAssigned()

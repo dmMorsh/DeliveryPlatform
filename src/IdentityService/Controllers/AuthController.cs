@@ -32,6 +32,8 @@ public class AuthController : ControllerBase
     {
         if (!ModelState.IsValid)
             return BadRequest(ModelState);
+        if (string.IsNullOrWhiteSpace(request.Password))
+            return BadRequest("Password is required");
 
         var user = new ApplicationUser
         {
@@ -62,6 +64,9 @@ public class AuthController : ControllerBase
     {
         if (!ModelState.IsValid)
             return BadRequest(ModelState);
+
+        if (string.IsNullOrWhiteSpace(request.Password))
+            return Unauthorized();
 
         var user = await _userManager.FindByEmailAsync(request.Email);
         if (user == null)

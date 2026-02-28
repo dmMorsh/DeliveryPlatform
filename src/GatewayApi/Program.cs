@@ -34,9 +34,14 @@ builder.Host.UseSerilog((ctx, cfg) =>
 // Регистрация сервисов
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
+var httpTimeoutSeconds = int.TryParse(builder.Configuration["Http:TimeoutSeconds"], out var httpTimeout)
+    ? httpTimeout
+    : 10;
 builder.Services.AddHttpClient("proxy")
     .AddPolicyHandler((sp, _) =>
-        HttpResiliencePolicies.CreatePolicyWrap(sp.GetRequiredService<ILoggerFactory>().CreateLogger("GatewayHttpClient")));
+        HttpResiliencePolicies.CreatePolicyWrap(
+            sp.GetRequiredService<ILoggerFactory>().CreateLogger("GatewayHttpClient"),
+            httpTimeoutSeconds));
 builder.Services.AddScoped<IProxyService, ProxyService>();
 builder.AddServiceTelemetry("gateway-api");
 // gRPC Location Tracking Client for GatewayApi

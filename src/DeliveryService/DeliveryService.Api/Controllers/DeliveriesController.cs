@@ -9,11 +9,15 @@ using DeliveryService.Application.Commands.FailDelivery;
 using DeliveryService.Application.Commands.MarkInTransit;
 using DeliveryService.Application.Commands.MarkPickedUp;
 using DeliveryService.Application.Commands.ReturnDelivery;
+using DeliveryService.Application.Interfaces;
 using DeliveryService.Application.Queries.GetDelivery;
 using DeliveryService.Application.Queries.GetDeliveryByOrder;
+using DeliveryService.Application.Queries.GetCourierOffer;
+using DeliveryService.Application.Services;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
 using Shared.Services;
 using Shared.Utilities;
 using StackExchange.Redis;
@@ -27,19 +31,29 @@ public class DeliveriesController : ControllerBase
     private readonly IMediator _mediator;
     private readonly ILocationTrackingClient _trackingClient;
     private readonly IConnectionMultiplexer _redis;
+    private readonly ICourierActivityStore _courierActivity;
+    private readonly int _offerAcceptWindowSeconds;
+    private readonly int _offerTtlSeconds;
     private readonly bool _streamEnabled;
 
     public DeliveriesController(
         IMediator mediator,
         ILocationTrackingClient trackingClient,
         IConnectionMultiplexer redis,
-        IConfiguration config)
+        IConfiguration config,
+        ICourierActivityStore courierActivity,
+        IOptions<DeliveryAssignmentOptions> assignmentOptions)
     {
         _mediator = mediator;
         _trackingClient = trackingClient;
         _redis = redis;
+        _courierActivity = courierActivity;
         var mode = config["Delivery:Tracking:Mode"] ?? "stream";
         _streamEnabled = !string.Equals(mode, "poll", StringComparison.OrdinalIgnoreCase);
+        _offerTtlSeconds = Math.Max(assignmentOptions.Value.OfferTtlSeconds, 1);
+        _offerAcceptWindowSeconds = int.TryParse(config["Delivery:Courier:OfferAcceptWindowSeconds"], out var value)
+            ? value
+            : _offerTtlSeconds;
     }
 
     [HttpGet("{id:guid}")]
@@ -65,6 +79,77 @@ public class DeliveriesController : ControllerBase
         if (result.Data != null)
             result.Data.VerificationCode = null;
 
+        return Ok(result);
+    }
+
+    [Authorize]
+    [HttpGet("courier/offer")]
+    public async Task<IActionResult> GetCourierOffer(CancellationToken ct)
+    {
+        if (!TryGetCourierId(out var courierId))
+            return Unauthorized(ApiResponse.ErrorResponse(ErrorCodes.NotFound, "Courier not found in claims"));
+
+        await _courierActivity.TouchAsync(courierId, DateTime.UtcNow, ct);
+
+        var result = await _mediator.Send(new GetCourierOfferQuery(courierId), ct);
+        if (!result.Success)
+            return BadRequest(result);
+
+        if (result.Data == null)
+            return NoContent();
+        return Ok(result);
+    }
+
+    [Authorize]
+    [HttpPost("courier/offer/{deliveryId:guid}/accept")]
+    public async Task<IActionResult> AcceptOffer(Guid deliveryId, CancellationToken ct)
+    {
+        if (!TryGetCourierId(out var courierId))
+            return Unauthorized(ApiResponse.ErrorResponse(ErrorCodes.NotFound, "Courier not found in claims"));
+
+        var offer = await _mediator.Send(new GetCourierOfferQuery(courierId), ct);
+        if (!offer.Success)
+            return BadRequest(offer);
+
+        if (offer.Data == null || offer.Data.DeliveryId != deliveryId)
+            return Conflict(ApiResponse.ErrorResponse(ErrorCodes.Invariant, "Offer not found or expired"));
+
+        if (!IsOfferAcceptable(offer.Data!.ExpiresAt))
+            return Conflict(ApiResponse.ErrorResponse(ErrorCodes.Invariant, "Offer expired"));
+
+        var result = await _mediator.Send(new AcceptDeliveryCommand(deliveryId, courierId), ct);
+        if (!result.Success)
+            return BadRequest(result);
+
+        await _courierActivity.TouchAsync(courierId, DateTime.UtcNow, ct);
+        return Ok(result);
+    }
+
+    [Authorize]
+    [HttpPost("courier/offer/{deliveryId:guid}/decline")]
+    public async Task<IActionResult> DeclineOffer(
+        Guid deliveryId,
+        [FromBody] CourierOfferDeclineRequest? request,
+        CancellationToken ct)
+    {
+        if (!TryGetCourierId(out var courierId))
+            return Unauthorized(ApiResponse.ErrorResponse(ErrorCodes.NotFound, "Courier not found in claims"));
+
+        var offer = await _mediator.Send(new GetCourierOfferQuery(courierId), ct);
+        if (!offer.Success)
+            return BadRequest(offer);
+
+        if (offer.Data == null || offer.Data.DeliveryId != deliveryId)
+            return Conflict(ApiResponse.ErrorResponse(ErrorCodes.Invariant, "Offer not found or expired"));
+
+        if (!IsOfferAcceptable(offer.Data!.ExpiresAt))
+            return Conflict(ApiResponse.ErrorResponse(ErrorCodes.Invariant, "Offer expired"));
+
+        var result = await _mediator.Send(new DeclineDeliveryCommand(deliveryId, courierId, request?.Reason), ct);
+        if (!result.Success)
+            return BadRequest(result);
+
+        await _courierActivity.TouchAsync(courierId, DateTime.UtcNow, ct);
         return Ok(result);
     }
 
@@ -164,7 +249,7 @@ public class DeliveriesController : ControllerBase
             return NotFound(delivery);
 
         if (!delivery.Data.CourierId.HasValue)
-            return Conflict(ApiResponse.ErrorResponse("Courier is not assigned"));
+            return Conflict(ApiResponse.ErrorResponse(ErrorCodes.Invariant, "Courier is not assigned"));
 
         var location = await _trackingClient.GetCourierLocationAsync(delivery.Data.CourierId.Value);
 
@@ -187,7 +272,7 @@ public class DeliveriesController : ControllerBase
             return NotFound(delivery);
 
         if (!delivery.Data.CourierId.HasValue)
-            return Conflict(ApiResponse.ErrorResponse("Courier is not assigned"));
+            return Conflict(ApiResponse.ErrorResponse(ErrorCodes.Invariant, "Courier is not assigned"));
 
         var history = await _trackingClient.GetCourierLocationHistoryAsync(
             delivery.Data.CourierId.Value,
@@ -244,7 +329,7 @@ public class DeliveriesController : ControllerBase
                 return;
 
             try
-            {// TODO check message
+            {
                 using var doc = JsonDocument.Parse(message.Message.ToString());
                 if (!doc.RootElement.TryGetProperty("CourierId", out var idValue))
                     return;
@@ -265,5 +350,31 @@ public class DeliveriesController : ControllerBase
             await Response.WriteAsync($"data: {data}\n\n", ct);
             await Response.Body.FlushAsync(ct);
         }
+    }
+
+    private bool TryGetCourierId(out Guid courierId)
+    {
+        courierId = Guid.Empty;
+        var userIdClaim = User?.FindFirst("sub") ?? User?.FindFirst("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier");
+        if (userIdClaim == null)
+            return false;
+        return Guid.TryParse(userIdClaim.Value, out courierId);
+    }
+
+    private bool IsOfferAcceptable(DateTime? expiresAt)
+    {
+        if (!expiresAt.HasValue)
+            return false;
+
+        var now = DateTime.UtcNow;
+        if (expiresAt.Value <= now)
+            return false;
+
+        if (_offerAcceptWindowSeconds <= 0)
+            return false;
+
+        var offeredAt = expiresAt.Value.AddSeconds(-_offerTtlSeconds);
+        var acceptUntil = offeredAt.AddSeconds(_offerAcceptWindowSeconds);
+        return now <= acceptUntil;
     }
 }

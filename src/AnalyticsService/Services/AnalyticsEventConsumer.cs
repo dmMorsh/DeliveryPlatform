@@ -18,7 +18,9 @@ public class AnalyticsEventConsumer : KafkaEventConsumerBase
     private int _deliveredOrders = 0;
     private int _totalCouriers = 0;
     private Dictionary<int, int> _ordersByStatus = new();
-    private Dictionary<Guid, int> _deliveriesByCourier = new();
+    private Dictionary<Guid, (int Count, DateTime UpdatedAtUtc)> _deliveriesByCourier = new();
+    private static readonly TimeSpan CourierStatsTtl = TimeSpan.FromHours(6);
+    private const int MaxCourierEntries = 10000;
 
     public AnalyticsEventConsumer(
         IConfiguration config,
@@ -26,7 +28,7 @@ public class AnalyticsEventConsumer : KafkaEventConsumerBase
         ILogger<AnalyticsEventConsumer> logger,
         IServiceScopeFactory scopeFactory,
         IEventProducer producer)
-        : base(config, env, logger, scopeFactory, producer, null, "cart.events", "order.events", "courier.events")
+        : base(config, env, logger, scopeFactory, producer, null, null, "cart.events", "order.events", "courier.events")
     {
         _logger = logger;
     }
@@ -57,11 +59,18 @@ public class AnalyticsEventConsumer : KafkaEventConsumerBase
                     case "courier.status.changed":
                         HandleCourierStatusChanged(json);
                         break;
+                    case "courier.registered":
+                        HandleCourierRegistered(json);
+                        break;
                     default:
                         _logger.LogWarning("Unknown event type: {EventType}", eventType);
                         break;
                 }
             }
+        }
+        catch (NonRetryableException)
+        {
+            throw;
         }
         catch (Exception ex)
         {
@@ -78,7 +87,7 @@ public class AnalyticsEventConsumer : KafkaEventConsumerBase
         {
             var @event = JsonSerializer.Deserialize<OrderCreatedEvent>(json, 
                 new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-            if (@event == null) return;
+            if (@event == null) throw new NonRetryableException("Invalid OrderCreatedEvent payload");
 
             _totalOrders++;
             if (!_ordersByStatus.ContainsKey(0))
@@ -86,6 +95,10 @@ public class AnalyticsEventConsumer : KafkaEventConsumerBase
             _ordersByStatus[0]++;
 
             _logger.LogInformation("Analytics: Order created. Total orders: {Total}", _totalOrders);
+        }
+        catch (NonRetryableException)
+        {
+            throw;
         }
         catch (Exception ex)
         {
@@ -99,10 +112,14 @@ public class AnalyticsEventConsumer : KafkaEventConsumerBase
         {
             var @event = JsonSerializer.Deserialize<OrderAssignedEvent>(json, 
                 new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-            if (@event == null) return;
+            if (@event == null) throw new NonRetryableException("Invalid OrderAssignedEvent payload");
 
             _logger.LogInformation("Analytics: Order {OrderId} assigned to courier {CourierId}", 
                 @event.OrderId, @event.CourierId);
+        }
+        catch (NonRetryableException)
+        {
+            throw;
         }
         catch (Exception ex)
         {
@@ -116,7 +133,7 @@ public class AnalyticsEventConsumer : KafkaEventConsumerBase
         {
             var @event = JsonSerializer.Deserialize<OrderStatusChangedEvent>(json, 
                 new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-            if (@event == null) return;
+            if (@event == null) throw new NonRetryableException("Invalid OrderStatusChangedEvent payload");
 
             // Update status counters
             if (_ordersByStatus.ContainsKey(@event.PreviousStatus))
@@ -127,6 +144,10 @@ public class AnalyticsEventConsumer : KafkaEventConsumerBase
 
             _logger.LogInformation("Analytics: Order {OrderId} status changed: {Old} -> {New}", 
                 @event.OrderId, @event.PreviousStatus, @event.NewStatus);
+        }
+        catch (NonRetryableException)
+        {
+            throw;
         }
         catch (Exception ex)
         {
@@ -140,15 +161,21 @@ public class AnalyticsEventConsumer : KafkaEventConsumerBase
         {
             var @event = JsonSerializer.Deserialize<OrderDeliveredEvent>(json, 
                 new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-            if (@event == null) return;
+            if (@event == null) throw new NonRetryableException("Invalid OrderDeliveredEvent payload");
 
             _deliveredOrders++;
-            if (!_deliveriesByCourier.ContainsKey(@event.CourierId))
-                _deliveriesByCourier[@event.CourierId] = 0;
-            _deliveriesByCourier[@event.CourierId]++;
+            if (!_deliveriesByCourier.TryGetValue(@event.CourierId, out var entry))
+                entry = (0, DateTime.UtcNow);
+            _deliveriesByCourier[@event.CourierId] = (entry.Count + 1, DateTime.UtcNow);
+
+            CleanupCourierStatsIfNeeded();
 
             _logger.LogInformation("Analytics: Order {OrderId} delivered by courier {CourierId}. Total delivered: {Total}", 
                 @event.OrderId, @event.CourierId, _deliveredOrders);
+        }
+        catch (NonRetryableException)
+        {
+            throw;
         }
         catch (Exception ex)
         {
@@ -162,14 +189,40 @@ public class AnalyticsEventConsumer : KafkaEventConsumerBase
         {
             var @event = JsonSerializer.Deserialize<CourierStatusChangedEvent>(json, 
                 new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-            if (@event == null) return;
+            if (@event == null) throw new NonRetryableException("Invalid CourierStatusChangedEvent payload");
 
             _logger.LogInformation("Analytics: Courier {CourierId} status changed: {Old} -> {New}", 
                 @event.CourierId, @event.PreviousStatus, @event.NewStatus);
         }
+        catch (NonRetryableException)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error processing CourierStatusChangedEvent");
+        }
+    }
+
+    private void HandleCourierRegistered(string json)
+    {
+        try
+        {
+            var @event = JsonSerializer.Deserialize<CourierRegisteredEvent>(json,
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            if (@event == null) throw new NonRetryableException("Invalid CourierRegisteredEvent payload");
+
+            _totalCouriers++;
+
+            _logger.LogInformation("Analytics: Courier registered. Total couriers: {Total}", _totalCouriers);
+        }
+        catch (NonRetryableException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error processing CourierRegisteredEvent");
         }
     }
 
@@ -180,16 +233,42 @@ public class AnalyticsEventConsumer : KafkaEventConsumerBase
     {
         lock (_lockObj)
         {
+            CleanupCourierStatsIfNeeded();
             return new AnalyticsSnapshot
             {
                 TotalOrders = _totalOrders,
                 DeliveredOrders = _deliveredOrders,
                 TotalCouriers = _totalCouriers,
                 OrdersByStatus = new Dictionary<int, int>(_ordersByStatus),
-                DeliveriesByCourier = new Dictionary<Guid, int>(_deliveriesByCourier),
+                DeliveriesByCourier = _deliveriesByCourier.ToDictionary(kvp => kvp.Key, kvp => kvp.Value.Count),
                 Timestamp = DateTime.UtcNow
             };
         }
+    }
+
+    private void CleanupCourierStatsIfNeeded()
+    {
+        var now = DateTime.UtcNow;
+        if (_deliveriesByCourier.Count == 0)
+            return;
+
+        var expired = _deliveriesByCourier
+            .Where(kvp => now - kvp.Value.UpdatedAtUtc > CourierStatsTtl)
+            .Select(kvp => kvp.Key)
+            .ToList();
+        foreach (var key in expired)
+            _deliveriesByCourier.Remove(key);
+
+        if (_deliveriesByCourier.Count <= MaxCourierEntries)
+            return;
+
+        var toRemove = _deliveriesByCourier
+            .OrderBy(kvp => kvp.Value.UpdatedAtUtc)
+            .Take(_deliveriesByCourier.Count - MaxCourierEntries)
+            .Select(kvp => kvp.Key)
+            .ToList();
+        foreach (var key in toRemove)
+            _deliveriesByCourier.Remove(key);
     }
 }
 

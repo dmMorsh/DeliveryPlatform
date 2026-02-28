@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Logging;
 using OrderService.Application.Interfaces;
 using OrderService.Application.Models;
+using OrderService.Application.Services;
 using OrderService.Domain.Aggregates;
 using OrderService.Domain.Entities;
 using Shared.Contracts.Events;
@@ -27,7 +28,7 @@ public class UpdateReservedStockCommandHandler : IRequestHandler<UpdateReservedS
         await using var uow = _factory.Create(request.OrderId);
         var order = await uow.Orders.GetOrderByIdAsync(request.OrderId, ct);
         if (order == null)
-            return ApiResponse.ErrorResponse("Order not found");
+            return ApiResponse.ErrorResponse(ErrorCodes.NotFound, "Order not found");
 
         // Already canceled
         if (order.Status is OrderStatus.Failed or OrderStatus.Cancelled)
@@ -56,7 +57,7 @@ public class UpdateReservedStockCommandHandler : IRequestHandler<UpdateReservedS
 
         if (await HasErrors(uow, order, items, request, ct))
         {
-            return ApiResponse.ErrorResponse("Stock reservation invariant violation error");
+            return ApiResponse.ErrorResponse(ErrorCodes.Invariant, "Stock reservation invariant violation error");
         }
 
         order.MarkItemsReserved(items.Select(pair => pair.OrderItem).ToArray());
@@ -69,6 +70,7 @@ public class UpdateReservedStockCommandHandler : IRequestHandler<UpdateReservedS
         
         await uow.SaveChangesAsync(outboxMessages, ct);
         order.ClearDomainEvents();
+        OrderReadCache.Invalidate(order.Id);
 
         _logger.LogInformation("Order updated: {OrderNumber} (ID: {OrderId})", order.OrderNumber, order.Id);
         
@@ -88,7 +90,7 @@ public class UpdateReservedStockCommandHandler : IRequestHandler<UpdateReservedS
         
         if (await HasErrors(uow, order, items, request, ct))
         {
-            return ApiResponse.ErrorResponse("Stock reservation invariant violation error");
+            return ApiResponse.ErrorResponse(ErrorCodes.Invariant, "Stock reservation invariant violation error");
         }
         
         if (!items.Any(i => i.Status is OrderItemStatus.Pending or OrderItemStatus.Reserved))
@@ -105,7 +107,7 @@ public class UpdateReservedStockCommandHandler : IRequestHandler<UpdateReservedS
             .Where(ie => ie != null)
             .Select(OutboxMessage.From!)
             .ToList();
-        if (outboxMessages.All(om => om.GetType() != typeof(StockReservationReleaseRequestedEvent)))
+        if (outboxMessages.All(om => om.Type != "inventory.stock.release_requested"))
         {
             outboxMessages.Add(OutboxMessage.From(new StockReservationReleaseRequestedEvent
             {
@@ -124,6 +126,7 @@ public class UpdateReservedStockCommandHandler : IRequestHandler<UpdateReservedS
         
         await uow.SaveChangesAsync(outboxMessages, ct);
         order.ClearDomainEvents();
+        OrderReadCache.Invalidate(order.Id);
         
         _logger.LogInformation("Order already canceled: {OrderNumber} (ID: {OrderId})." +
                                " Sending compensation message.", order.OrderNumber, order.Id);
@@ -135,7 +138,7 @@ public class UpdateReservedStockCommandHandler : IRequestHandler<UpdateReservedS
         Order order, OrderItem[] items,
         UpdateReservedStockCommand request, CancellationToken ct)
     {
-        if (items.Length == request.Items.Count)
+        if (items.Length == 0)
         {
             var error = $"No matching items in order {order.Id}";
             order.MarkAsInconsistent(error);
@@ -149,6 +152,7 @@ public class UpdateReservedStockCommandHandler : IRequestHandler<UpdateReservedS
         
             await uow.SaveChangesAsync(failMessages, ct);
             order.ClearDomainEvents();
+            OrderReadCache.Invalidate(order.Id);
             return true;
         }
 
@@ -159,9 +163,9 @@ public class UpdateReservedStockCommandHandler : IRequestHandler<UpdateReservedS
         (OrderItem OrderItem, UpdateOrderItemDto RequestItem)[] items,
         UpdateReservedStockCommand request, CancellationToken ct)
     {
-        if (items.Length != request.Items.Count)
+        if (items.Length == 0)
         {
-            var error = $"Stock reservation invariant violation. OrderId={order.Id}. Details=Items mismatch";
+            var error = $"Stock reservation invariant violation. OrderId={order.Id}. Details=No matching items";
             order.MarkAsInconsistent(error);
             _logger.LogCritical(error);
             var failMessages = order.DomainEvents
@@ -172,6 +176,7 @@ public class UpdateReservedStockCommandHandler : IRequestHandler<UpdateReservedS
         
             await uow.SaveChangesAsync(failMessages, ct);
             order.ClearDomainEvents();
+            OrderReadCache.Invalidate(order.Id);
             return true;
         }
 
@@ -188,6 +193,7 @@ public class UpdateReservedStockCommandHandler : IRequestHandler<UpdateReservedS
         
             await uow.SaveChangesAsync(failMessages, ct);
             order.ClearDomainEvents();
+            OrderReadCache.Invalidate(order.Id);
             return true;
         }
         return false;

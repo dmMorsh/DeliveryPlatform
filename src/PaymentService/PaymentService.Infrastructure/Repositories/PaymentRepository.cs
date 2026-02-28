@@ -38,6 +38,14 @@ public class PaymentRepository : IPaymentRepository
         return await _db.Payments.FirstOrDefaultAsync(x => x.OrderId == orderId, ct);
     }
 
+    public async Task<bool> TryMarkStartingAsync(Guid orderId, CancellationToken ct = default)
+    {
+        var affected = await _db.Database.ExecuteSqlInterpolatedAsync(
+            $"UPDATE payment.\"Payments\" SET \"Status\" = {(int)PaymentStatus.Starting} WHERE \"OrderId\" = {orderId} AND \"Status\" = {(int)PaymentStatus.Ready}",
+            ct);
+        return affected > 0;
+    }
+
     public async Task UpsertExternalPaymentIdMap(
         Guid orderId,
         Guid paymentId,

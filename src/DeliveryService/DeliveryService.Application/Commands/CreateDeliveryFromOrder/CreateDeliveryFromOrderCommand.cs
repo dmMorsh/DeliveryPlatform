@@ -11,4 +11,10 @@ public record CreateDeliveryFromOrderCommand(
     double FromLatitude,
     double FromLongitude,
     double ToLatitude,
-    double ToLongitude) : IRequest<ApiResponse>;
+    double ToLongitude,
+    string? DeliveryZoneId,
+    string? DeliveryZoneName,
+    int? DeliveryPickupSlaMinutes,
+    int? DeliveryTransitSlaMinutes,
+    double? DeliveryFeeMultiplier,
+    double? DeliveryZoneDistanceKm) : IRequest<ApiResponse>;

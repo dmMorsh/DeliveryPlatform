@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Logging;
 using OrderService.Application.Interfaces;
 using OrderService.Application.Models;
+using OrderService.Application.Services;
 using OrderService.Domain.Aggregates;
 using OrderService.Domain.Entities;
 using Shared.Utilities;
@@ -26,7 +27,7 @@ public class MarkStockReservationFailedCommandHandler : IRequestHandler<MarkStoc
         await using var uow = _factory.Create(request.OrderId);
         var order = await uow.Orders.GetOrderByIdAsync(request.OrderId, ct);
         if (order == null)
-            return ApiResponse.ErrorResponse("Order not found");
+            return ApiResponse.ErrorResponse(ErrorCodes.NotFound, "Order not found");
 
         if (order.Status is not (OrderStatus.Pending 
             or OrderStatus.Reserved // ? 
@@ -52,7 +53,7 @@ public class MarkStockReservationFailedCommandHandler : IRequestHandler<MarkStoc
 
         if (await HasErrors(uow, order, items, request, ct))
         {
-            return ApiResponse.ErrorResponse("Stock reservation invariant violation error");
+            return ApiResponse.ErrorResponse(ErrorCodes.Invariant, "Stock reservation invariant violation error");
         }
        
         order.MarkItemsFailed(items.Select(pair => pair.OrderItem).ToArray());
@@ -65,6 +66,7 @@ public class MarkStockReservationFailedCommandHandler : IRequestHandler<MarkStoc
         
         await uow.SaveChangesAsync(outboxMessages, ct);
         order.ClearDomainEvents();
+        OrderReadCache.Invalidate(order.Id);
 
         _logger.LogInformation("Order updated: {OrderNumber} (ID: {OrderId})", order.OrderNumber, order.Id);
         
@@ -75,9 +77,9 @@ public class MarkStockReservationFailedCommandHandler : IRequestHandler<MarkStoc
         (OrderItem OrderItem, MarkStockFailedItemDto RequestItem)[] items,
         MarkStockReservationFailedCommand request, CancellationToken ct)
     {
-        if (items.Length != request.Items.Count)
+        if (items.Length == 0)
         {
-            var error = $"Stock reservation invariant violation. OrderId={order.Id}. Details=Items mismatch";
+            var error = $"Stock reservation invariant violation. OrderId={order.Id}. Details=No matching items";
             order.MarkAsInconsistent(error);
             _logger.LogCritical(error);
             var failMessages = order.DomainEvents
@@ -88,6 +90,7 @@ public class MarkStockReservationFailedCommandHandler : IRequestHandler<MarkStoc
         
             await uow.SaveChangesAsync(failMessages, ct);
             order.ClearDomainEvents();
+            OrderReadCache.Invalidate(order.Id);
             return true;
         }
 
@@ -104,6 +107,7 @@ public class MarkStockReservationFailedCommandHandler : IRequestHandler<MarkStoc
         
             await uow.SaveChangesAsync(failMessages, ct);
             order.ClearDomainEvents();
+            OrderReadCache.Invalidate(order.Id);
             return true;
         }
         return false;

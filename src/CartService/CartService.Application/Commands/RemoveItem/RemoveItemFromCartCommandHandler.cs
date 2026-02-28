@@ -1,5 +1,6 @@
 using CartService.Application.Interfaces;
 using CartService.Application.Models;
+using CartService.Application.Services;
 using CartService.Domain.SeedWork;
 using MediatR;
 using Shared.Utilities;
@@ -21,12 +22,13 @@ public class RemoveItemFromCartCommandHandler: IRequestHandler<RemoveItemFromCar
 
     public async Task<ApiResponse> Handle(RemoveItemFromCartCommand request, CancellationToken ct)
     {
-        var cart = await _repo.GetCartByCustomerIdAsync(request.CustomerId, ct) 
-                   ?? throw new DomainException("Cart not found");
+        var cart = await _repo.GetCartByCustomerIdAsync(request.CustomerId, ct);
+        if (cart == null)
+            return ApiResponse.SuccessResponse("Item removed from cart");
 
         var item = cart.Items.FirstOrDefault(i => i.ProductId == request.ProductId);
         if (item == null)
-            throw new DomainException($"Item with id {request.ProductId} not found");
+            return ApiResponse.SuccessResponse("Item removed from cart");
         
         cart.RemoveItem(item);
         
@@ -38,6 +40,7 @@ public class RemoveItemFromCartCommandHandler: IRequestHandler<RemoveItemFromCar
 
         await _uow.SaveChangesAsync(outboxMessages, ct);
         cart.ClearDomainEvents();
+        CartReadCache.Invalidate(request.CustomerId);
 
         return ApiResponse.SuccessResponse("Item removed from cart");
     }

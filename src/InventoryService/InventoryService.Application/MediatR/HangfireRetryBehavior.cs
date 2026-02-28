@@ -29,8 +29,9 @@ public class HangfireRetryBehavior<TReq, TRes>
             // важно: только idempotent команды
             if (request is IHangfireRetryable retryable)
             {
-                _jobs.Schedule<IHangfireCommandExecutor>(x=> 
-                    x.ExecuteAsync(retryable, null, ct),  TimeSpan.FromSeconds(30));
+                // Do not capture the request cancellation token for a future job execution.
+                _jobs.Schedule<IHangfireCommandExecutor>(x =>
+                    x.ExecuteAsync(retryable, null, CancellationToken.None), TimeSpan.FromSeconds(30));
             }
 
             throw;

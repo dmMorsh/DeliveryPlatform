@@ -9,6 +9,7 @@ public static class OrderFactory
     public static Order CreateNew(CreateOrderCommand command)
     {
         return Order.Create(
+            orderId: command.CheckoutId,
             clientId: command.ClientId,
             fromAddress: command.FromAddress,
             toAddress: command.ToAddress,

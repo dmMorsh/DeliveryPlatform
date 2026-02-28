@@ -3,7 +3,11 @@ using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using OrderService.Api.Contracts;
+using OrderService.Application.Commands.CancelOrder;
 using OrderService.Application.Commands.CreateOrder;
+using OrderService.Application.Commands.MarkOrderReady;
+using OrderService.Application.Commands.MarkOrderAccepted;
+using OrderService.Application.Commands.MarkOrderRejected;
 using OrderService.Application.Commands.UpdateOrder;
 using OrderService.Application.Queries.GetClientOrders;
 using OrderService.Application.Queries.GetOrder;
@@ -69,6 +73,55 @@ public class OrdersController : ControllerBase
             updateOrderRequest.CourierNote
         );
         var result = await _mediator.Send(cmd, ct);
+        if (!result.Success)
+            return BadRequest(result);
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Отменить заказ
+    /// </summary>
+    [HttpPost("{id}/cancel")]
+    public async Task<IActionResult> CancelOrder(Guid id, [FromBody] CancelOrderRequest request, CancellationToken ct)
+    {
+        var cmd = new CancelOrderCommand(id, request?.Reason);
+        var result = await _mediator.Send(cmd, ct);
+        if (!result.Success)
+            return BadRequest(result);
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Отметить заказ как готовый (например, кухня/поставщик)
+    /// </summary>
+    [HttpPost("{id}/ready")]
+    public async Task<IActionResult> MarkReady(Guid id, CancellationToken ct)
+    {
+        var result = await _mediator.Send(new MarkOrderReadyCommand(id), ct);
+        if (!result.Success)
+            return BadRequest(result);
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Принять заказ (кухня/поставщик)
+    /// </summary>
+    [HttpPost("{id}/accept")]
+    public async Task<IActionResult> MarkAccepted(Guid id, CancellationToken ct)
+    {
+        var result = await _mediator.Send(new MarkOrderAcceptedCommand(id), ct);
+        if (!result.Success)
+            return BadRequest(result);
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Отклонить заказ (кухня/поставщик)
+    /// </summary>
+    [HttpPost("{id}/reject")]
+    public async Task<IActionResult> MarkRejected(Guid id, [FromBody] CancelOrderRequest? request, CancellationToken ct)
+    {
+        var result = await _mediator.Send(new MarkOrderRejectedCommand(id, request?.Reason), ct);
         if (!result.Success)
             return BadRequest(result);
         return Ok(result);

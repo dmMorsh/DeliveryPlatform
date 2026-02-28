@@ -16,7 +16,7 @@ public class InventoryDbContext : DbContext
     public DbSet<StockItem> StockItems => Set<StockItem>();
     public DbSet<StockReservation> StockReservation => Set<StockReservation>();
     public DbSet<OutboxMessage> OutboxMessages => Set<OutboxMessage>();
-    public DbSet<ProcessedCommand> ProcessedCommands => Set<ProcessedCommand>();// TODO переместить в HF бд
+    public DbSet<ProcessedCommand> ProcessedCommands => Set<ProcessedCommand>();
     public DbSet<ProcessedEvent> ProcessedEvents => Set<ProcessedEvent>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -50,6 +50,12 @@ public class InventoryDbContext : DbContext
                 .IsRequired()
                 .HasMaxLength(255);
             entity.Property(x => x.Status).IsRequired();
+        });
+
+        modelBuilder.Entity<ProcessedCommand>(entity =>
+        {
+            entity.HasIndex(x => new { x.CorrelationId, x.CommandType })
+                .IsUnique();
         });
     }
 }

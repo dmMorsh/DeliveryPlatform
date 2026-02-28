@@ -1,11 +1,15 @@
 using System.Text.Json;
 using Confluent.Kafka;
+using CourierService.Application.Commands.UpdateCourierStatus;
+using CourierService.Domain.Aggregates;
+using MediatR;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Shared.Contracts.Events;
 using Shared.Services;
+using Shared.Utilities;
 
 namespace CourierService.Application.Services;
 
@@ -23,7 +27,7 @@ public class CourierEventConsumer : KafkaEventConsumerBase
         ILogger<CourierEventConsumer> logger,
         IServiceScopeFactory scopeFactory,
         IEventProducer producer)
-        : base(config, env, logger, scopeFactory, producer, null, "order.events")
+        : base(config, env, logger, scopeFactory, producer, null, null, "order.events")
     {
         _logger = logger;
     }
@@ -42,13 +46,17 @@ public class CourierEventConsumer : KafkaEventConsumerBase
                 case "order.assigned":
                     await HandleOrderAssigned(json);
                     break;
-                case "order.created":
-                    await HandleOrderCreated(json);
+                case "order.canceled":
+                    await HandleOrderCanceled(json);
                     break;
                 default:
                     _logger.LogWarning("Unknown event type: {EventType}", eventType);
                     break;
             }
+        }
+        catch (NonRetryableException)
+        {
+            throw;
         }
         catch (Exception ex)
         {
@@ -61,48 +69,56 @@ public class CourierEventConsumer : KafkaEventConsumerBase
 
     private async Task HandleOrderAssigned(string json)
     {
-        try
-        {
-            var @event = JsonSerializer.Deserialize<OrderAssignedEvent>(json, 
-                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-            if (@event == null) return;
+        var @event = JsonSerializer.Deserialize<OrderAssignedEvent>(json,
+            new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        if (@event == null) throw new NonRetryableException("Invalid OrderAssignedEvent payload");
 
-            _logger.LogInformation("📍 CourierService: Order assigned to courier. OrderId={OrderId}, CourierId={CourierId}. " +
-                "🚚 TODO: Notify courier about new delivery",
-                @event.OrderId, @event.CourierId);
-            
-            // TODO: Implement courier notification
-            // This would typically:
-            // 1. Get courier details
-            // 2. Get order details (via gRPC from OrderService)
-            // 3. Send push notification to courier mobile app
-            // 4. Add delivery to courier's task list
-            // 5. Update delivery status
-        }
-        catch (Exception ex)
+        _logger.LogInformation("📍 CourierService: Order assigned to courier. OrderId={OrderId}, CourierId={CourierId}. " +
+            "Updating courier status to OnDelivery",
+            @event.OrderId, @event.CourierId);
+
+        using var scope = _scopeFactory.CreateScope();
+        var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
+        var result = await mediator.Send(new UpdateCourierStatusCommand(
+            @event.CourierId,
+            (int)CourierStatus.OnDelivery,
+            null,
+            null,
+            null));
+        if (!result.Success)
         {
-            _logger.LogError(ex, "Error processing OrderAssignedEvent");
+            var message = result.Message ?? string.Join("; ", result.Errors ?? []);
+            if (result.ErrorCode == ErrorCodes.NotFound)
+                throw new Exception(message);
+            throw new NonRetryableException(message);
         }
     }
 
-    private async Task HandleOrderCreated(string json)
+    private async Task HandleOrderCanceled(string json)
     {
-        try
-        {
-            var @event = JsonSerializer.Deserialize<OrderCreatedEvent>(json, 
-                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-            if (@event == null) return;
+        var @event = JsonSerializer.Deserialize<OrderCanceledEvent>(json,
+            new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        if (@event == null) throw new NonRetryableException("Invalid OrderCanceledEvent payload");
+        if (@event.CourierId == Guid.Empty) return;
 
-            _logger.LogInformation("📦 CourierService: Order created. OrderId={OrderId}. " +
-                "📊 TODO: Update metrics or prepare for assignment",
-                @event.AggregateId);
-            
-            // TODO: Handle order creation
-            // Could update demand map, prepare for auto-assignment, etc.
-        }
-        catch (Exception ex)
+        _logger.LogInformation("📍 CourierService: Order canceled. OrderId={OrderId}, CourierId={CourierId}. " +
+            "Updating courier status to Online",
+            @event.OrderId, @event.CourierId);
+
+        using var scope = _scopeFactory.CreateScope();
+        var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
+        var result = await mediator.Send(new UpdateCourierStatusCommand(
+            @event.CourierId,
+            (int)CourierStatus.Online,
+            null,
+            null,
+            null));
+        if (!result.Success)
         {
-            _logger.LogError(ex, "Error processing OrderCreatedEvent");
+            var message = result.Message ?? string.Join("; ", result.Errors ?? []);
+            if (result.ErrorCode == ErrorCodes.NotFound)
+                throw new Exception(message);
+            throw new NonRetryableException(message);
         }
     }
 }

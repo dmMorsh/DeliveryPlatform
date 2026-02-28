@@ -4,6 +4,7 @@ using InventoryService.Domain.Aggregates;
 using InventoryService.Domain.Entities;
 using InventoryService.Domain.Events;
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 using Shared.Contracts.Events;
 using Shared.Utilities;
 
@@ -31,7 +32,7 @@ public class ReserveStockCommandHandler
         CancellationToken ct)
     {
         if (request.ReserveStockModels.Length == 0)
-            return ApiResponse.ErrorResponse("No item in request");
+            return ApiResponse.ErrorResponse(ErrorCodes.Validation, "No item in request");
 
         var shardGroups = request.ReserveStockModels
             .GroupBy(i => _resolver.ResolveShard(i.ProductId));
@@ -40,7 +41,7 @@ public class ReserveStockCommandHandler
             var shardId = shardGroup.Key;
             var success = await ProcessMessage(shardId, request.OrderId, shardGroup.ToArray(), ct);
             if (!success)
-                return ApiResponse.ErrorResponse("Reservation failed");
+                return ApiResponse.ErrorResponse(ErrorCodes.Invariant, "Reservation failed");
         }
         
         return ApiResponse.SuccessResponse("item reserved");
@@ -51,26 +52,37 @@ public class ReserveStockCommandHandler
     {
         await using var uow = _factory.Create(shardId);
 
-        if (await uow.Reservations.ReservationExistAsync(orderId, ct))
+        var reservedIds = await uow.Reservations.GetReservedProductIdsAsync(
+            orderId,
+            reserveStockModels.Select(m => m.ProductId),
+            ct);
+        if (reservedIds.Count > 0)
+        {
+            reserveStockModels = reserveStockModels
+                .Where(m => !reservedIds.Contains(m.ProductId))
+                .ToArray();
+        }
+        if (reserveStockModels.Length == 0)
             return true;
 
         var outboxMessages = new List<OutboxMessage>();
         var failedItems = new List<FailedStockItemSnapshot>();
         var toReserve = new List<(StockItem stock, int qty)>();
         
+        var productIds = reserveStockModels.Select(m => m.ProductId).ToList();
+        var stockItems = await uow.Stock.GetByProductIdsAsync(productIds, ct);
+        var stockById = stockItems.ToDictionary(s => s.Id);
+
         foreach (var reserveStockModel in reserveStockModels)
         {
-            var stock = await uow.Stock
-                .GetByProductIdAsync(reserveStockModel.ProductId, ct);
-            if (stock == null)
+            if (!stockById.TryGetValue(reserveStockModel.ProductId, out var stock))
             {
                 failedItems.Add(new FailedStockItemSnapshot
-                    {
-                        ProductId = reserveStockModel.ProductId,
-                        Reason = "Stock item not found",
-                        Quantity = reserveStockModel.Quantity
-                    }
-                );
+                {
+                    ProductId = reserveStockModel.ProductId,
+                    Reason = "Stock item not found",
+                    Quantity = reserveStockModel.Quantity
+                });
                 continue;
             }
 
@@ -120,7 +132,18 @@ public class ReserveStockCommandHandler
             );
         outboxMessages.Add(OutboxMessage.From(integrationEvent));
         
-        await uow.SaveChangesAsync(outboxMessages, ct);
+        try
+        {
+            await uow.SaveChangesAsync(outboxMessages, ct);
+        }
+        catch (DbUpdateException)
+        {
+            var guids = toReserve.Select(x => x.stock.Id).ToArray();
+            var alreadyReserved = await uow.Reservations.GetReservedProductIdsAsync(orderId, guids, ct);
+            if (alreadyReserved.Count == guids.Length)
+                return true;
+            throw;
+        }
         
         foreach (var item in toReserve.Select(x=>x.stock)) 
             item.ClearDomainEvents();

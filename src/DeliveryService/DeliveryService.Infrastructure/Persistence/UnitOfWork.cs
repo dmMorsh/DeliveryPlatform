@@ -1,5 +1,6 @@
 using DeliveryService.Application.Interfaces;
 using DeliveryService.Application.Models;
+using Shared.Services;
 
 namespace DeliveryService.Infrastructure.Persistence;
 
@@ -18,6 +19,6 @@ public class UnitOfWork : IUnitOfWork
         if (messages.Count > 0)
             _db.OutboxMessages.AddRange(messages);
 
-        await _db.SaveChangesAsync(ct);
+        await _db.SaveChangesWithConcurrencyRetryAsync(maxRetries: 3, ct);
     }
 }

@@ -7,15 +7,15 @@ namespace OrderService.Domain.Aggregates;
 
 public enum OrderStatus
 {
-    Pending,
-    Reserved,
-    Confirmed,
-    Assigning,
-    Assigned,
-    InDelivery,
-    Delivered,
-    Cancelled,
-    Failed
+    Pending = Shared.Contracts.Events.OrderStatusCode.Pending,
+    Reserved = Shared.Contracts.Events.OrderStatusCode.Reserved,
+    Confirmed = Shared.Contracts.Events.OrderStatusCode.Confirmed,
+    Assigning = Shared.Contracts.Events.OrderStatusCode.Assigning,
+    Assigned = Shared.Contracts.Events.OrderStatusCode.Assigned,
+    InDelivery = Shared.Contracts.Events.OrderStatusCode.InDelivery,
+    Delivered = Shared.Contracts.Events.OrderStatusCode.Delivered,
+    Cancelled = Shared.Contracts.Events.OrderStatusCode.Cancelled,
+    Failed = Shared.Contracts.Events.OrderStatusCode.Failed
 }
 
 public class Order : AggregateRoot
@@ -34,6 +34,20 @@ public class Order : AggregateRoot
     public DateTime? AssignedAt { get; private set; }
     public DateTime? DeliveredAt { get; private set; }
     public DateTime UpdatedAt { get; private set; } = DateTime.UtcNow;
+    public DateTime? ReadyAt { get; private set; }
+    public bool IsReadyForDelivery { get; private set; }
+    public DateTime? AcceptedAt { get; private set; }
+    public DateTime? RejectedAt { get; private set; }
+    public string? RejectionReason { get; private set; }
+    public DateTime? ExpectedReadyAt { get; private set; }
+    public DateTime? KitchenSlotStart { get; private set; }
+    public DateTime? KitchenDelayedNotifiedAt { get; private set; }
+    public string? DeliveryZoneId { get; private set; }
+    public string? DeliveryZoneName { get; private set; }
+    public double? DeliveryZoneDistanceKm { get; private set; }
+    public int? DeliveryPickupSlaMinutes { get; private set; }
+    public int? DeliveryTransitSlaMinutes { get; private set; }
+    public double? DeliveryFeeMultiplier { get; private set; }
 
     private List<OrderItem> _items = new();
     public IReadOnlyCollection<OrderItem> Items => _items.AsReadOnly();
@@ -41,10 +55,12 @@ public class Order : AggregateRoot
     public void AssignCourier(Guid courierId)
     {
         if (CourierId.HasValue) return;
+        if (Status is not (OrderStatus.Confirmed or OrderStatus.Assigning or OrderStatus.Assigned))
+            return;
         CourierId = courierId;
         AssignedAt = DateTime.UtcNow;
         AddDomainEvent(new OrderAssignedDomainEvent { OrderId = Id, CourierId = courierId });
-        if (Status == OrderStatus.Pending)
+        if (Status is OrderStatus.Confirmed or OrderStatus.Assigning)
             Status = OrderStatus.Assigned;
     }
 
@@ -53,13 +69,158 @@ public class Order : AggregateRoot
         var prev = Status;
         if (prev == newStatus) return;
 
-        if (newStatus == OrderStatus.Reserved && prev != OrderStatus.Pending)
-            throw new Exception($"previous status must be pending. previous status is {prev.ToString()}");
+        if (!IsValidTransition(prev, newStatus))
+            return;
         
         Status = newStatus;
         if (newStatus == OrderStatus.Delivered && !DeliveredAt.HasValue)
             DeliveredAt = DateTime.UtcNow;
         AddDomainEvent(new OrderStatusChangedDomainEvent { OrderId = Id, PreviousStatus = prev, NewStatus = newStatus });
+
+        if (newStatus == OrderStatus.Cancelled)
+        {
+            AddDomainEvent(new OrderCanceledDomainEvent
+            {
+                OrderId = Id,
+                CourierId = CourierId
+            });
+        }
+
+        if (newStatus is OrderStatus.Cancelled or OrderStatus.Failed)
+            RequestStockReleaseIfNeeded();
+    }
+
+    public void MarkReadyForDelivery()
+    {
+        if (IsReadyForDelivery)
+            return;
+
+        if (RejectedAt.HasValue)
+            throw new DomainException("Rejected order cannot be marked as ready");
+
+        IsReadyForDelivery = true;
+        ReadyAt = DateTime.UtcNow;
+        AddDomainEvent(new OrderReadyDomainEvent
+        {
+            OrderId = Id,
+            ReadyAt = ReadyAt.Value
+        });
+    }
+
+    public void AcceptByKitchen()
+    {
+        if (RejectedAt.HasValue)
+            throw new DomainException("Order already rejected");
+        if (AcceptedAt.HasValue)
+            return;
+        AcceptedAt = DateTime.UtcNow;
+        AddDomainEvent(new OrderAcceptedDomainEvent
+        {
+            OrderId = Id,
+            AcceptedAt = AcceptedAt.Value
+        });
+    }
+
+    public void ScheduleKitchen(DateTime expectedReadyAt, DateTime slotStart)
+    {
+        ExpectedReadyAt = expectedReadyAt;
+        KitchenSlotStart = slotStart;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void MarkKitchenDelayed(DateTime now)
+    {
+        KitchenDelayedNotifiedAt = now;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void SetDeliveryZone(
+        string zoneId,
+        string? zoneName,
+        double distanceKm,
+        int pickupSlaMinutes,
+        int transitSlaMinutes,
+        double deliveryFeeMultiplier)
+    {
+        DeliveryZoneId = zoneId;
+        DeliveryZoneName = zoneName;
+        DeliveryZoneDistanceKm = distanceKm;
+        DeliveryPickupSlaMinutes = pickupSlaMinutes;
+        DeliveryTransitSlaMinutes = transitSlaMinutes;
+        DeliveryFeeMultiplier = deliveryFeeMultiplier;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void AddCreatedEvent()
+    {
+        if (DomainEvents.OfType<OrderCreatedDomainEvent>().Any())
+            return;
+
+        AddDomainEvent(new OrderCreatedDomainEvent
+        {
+            OrderId = Id,
+            OrderNumber = OrderNumber,
+            ClientId = ClientId,
+            FromAddress = From.Street,
+            ToAddress = To.Street,
+            FromLatitude = From.Latitude,
+            FromLongitude = From.Longitude,
+            ToLatitude = To.Latitude,
+            ToLongitude = To.Longitude,
+            WeightGrams = WeightGrams,
+            CostCents = CostCents.AmountCents,
+            Currency = CostCents.Currency,
+            CourierNote = CourierNote,
+            Description = Description,
+            CreatedAt = CreatedAt,
+            ExpectedReadyAt = ExpectedReadyAt,
+            KitchenSlotStart = KitchenSlotStart,
+            Items = Items.Select(i => new DomainOrderItemSnapshot
+            {
+                ProductId = i.ProductId,
+                Name = i.Name,
+                PriceCents = i.PriceCents,
+                Quantity = i.Quantity
+            }).ToList(),
+            DeliveryZoneId = DeliveryZoneId,
+            DeliveryZoneName = DeliveryZoneName,
+            DeliveryZoneDistanceKm = DeliveryZoneDistanceKm,
+            DeliveryPickupSlaMinutes = DeliveryPickupSlaMinutes,
+            DeliveryTransitSlaMinutes = DeliveryTransitSlaMinutes,
+            DeliveryFeeMultiplier = DeliveryFeeMultiplier
+        });
+    }
+
+    public void RejectByKitchen(string? reason)
+    {
+        if (RejectedAt.HasValue)
+            return;
+        RejectedAt = DateTime.UtcNow;
+        RejectionReason = string.IsNullOrWhiteSpace(reason) ? null : reason;
+        AddDomainEvent(new OrderRejectedDomainEvent
+        {
+            OrderId = Id,
+            RejectedAt = RejectedAt.Value,
+            Reason = RejectionReason
+        });
+        Cancel("kitchen_rejected");
+    }
+
+    private static bool IsValidTransition(OrderStatus from, OrderStatus to)
+    {
+        return from switch
+        {
+            OrderStatus.Pending => to is OrderStatus.Reserved or OrderStatus.Cancelled or OrderStatus.Failed,
+            OrderStatus.Reserved => to is OrderStatus.Confirmed or OrderStatus.Cancelled or OrderStatus.Failed,
+            OrderStatus.Confirmed => to is OrderStatus.Assigning or OrderStatus.Assigned or OrderStatus.Cancelled or OrderStatus.Failed,
+            OrderStatus.Assigning => to is OrderStatus.Assigned or OrderStatus.Cancelled or OrderStatus.Failed,
+            OrderStatus.Assigned => to is OrderStatus.InDelivery or OrderStatus.Cancelled or OrderStatus.Failed,
+            OrderStatus.InDelivery => to is OrderStatus.Delivered or OrderStatus.Failed,
+            OrderStatus.Delivered => false,
+            OrderStatus.Cancelled => false,
+            OrderStatus.Failed => false,
+            _ => false
+        };
     }
 
     public void AddCourierNote(string note)
@@ -68,6 +229,7 @@ public class Order : AggregateRoot
     }
 
     public static Order Create(
+        Guid? orderId,
         Guid clientId,
         string fromAddress,
         string toAddress,
@@ -84,10 +246,12 @@ public class Order : AggregateRoot
     {
         if (items == null || !items.Any())
             throw new DomainException("Order must contain items");
+        if (orderId == Guid.Empty)
+            throw new DomainException("OrderId cannot be empty");
 
         var order = new Order
         {
-            Id = Guid.NewGuid(),
+            Id = orderId ?? Guid.NewGuid(),
             OrderNumber = Shared.Utilities.OrderNumberGenerator.GenerateOrderNumber(),
             ClientId = clientId,
             From = new Address(fromAddress,fromLatitude,fromLongitude),
@@ -101,28 +265,6 @@ public class Order : AggregateRoot
             UpdatedAt = DateTime.UtcNow,
             _items = items
         };
-
-        order.AddDomainEvent(new OrderCreatedDomainEvent {
-            OrderId = order.Id,
-            OrderNumber = order.OrderNumber,
-            ClientId = order.ClientId,
-            FromAddress = order.From.Street,
-            ToAddress = order.To.Street,
-            FromLatitude = order.From.Latitude,
-            FromLongitude = order.From.Longitude,
-            ToLatitude = order.To.Latitude,
-            ToLongitude = order.To.Longitude,
-            CostCents = order.CostCents.AmountCents,
-            Currency = order.CostCents.Currency,
-            Description = order.Description,
-            Items = order.Items.Select(i=> new DomainOrderItemSnapshot
-            {
-                ProductId =  i.ProductId, 
-                Name = i.Name,
-                PriceCents = i.PriceCents,
-                Quantity = i.Quantity,
-            }).ToList(),
-        });
 
         return order;
     }
@@ -163,23 +305,6 @@ public class Order : AggregateRoot
         }
 
         ChangeStatus(OrderStatus.Failed);
-
-        if (Items.Any(i => i.Status is OrderItemStatus.Reserved))
-        {
-            AddDomainEvent(new OrderItemsReleaseDomainEvent
-            {
-                OrderId = Id,
-                Items = Items.Where(i => i.Status is OrderItemStatus.Reserved)
-                    .Select(i => new DomainOrderItemSnapshot
-                    {
-                        ProductId = i.ProductId,
-                        Quantity = i.Quantity,
-                    }).ToArray()
-            });
-            Items.Where(i => i.Status is OrderItemStatus.Reserved)
-                .ToList()
-                .ForEach(i => i.MarkReleasing());
-        }
     }
 
     public void MarkAsInconsistent(string error)
@@ -192,5 +317,39 @@ public class Order : AggregateRoot
             ClientId = ClientId, 
             Description = Description
         });
+    }
+
+    public void Cancel(string? reason = null)
+    {
+        if (Status == OrderStatus.Delivered)
+            throw new DomainException("Delivered order cannot be canceled");
+
+        if (Status == OrderStatus.Cancelled)
+            return;
+
+        if (!string.IsNullOrWhiteSpace(reason))
+            Description += Environment.NewLine + reason;
+
+        ChangeStatus(OrderStatus.Cancelled);
+    }
+
+    private void RequestStockReleaseIfNeeded()
+    {
+        var reservedItems = Items.Where(i => i.Status is OrderItemStatus.Reserved).ToList();
+        if (reservedItems.Count == 0)
+            return;
+
+        AddDomainEvent(new OrderItemsReleaseDomainEvent
+        {
+            OrderId = Id,
+            Items = reservedItems
+                .Select(i => new DomainOrderItemSnapshot
+                {
+                    ProductId = i.ProductId,
+                    Quantity = i.Quantity,
+                }).ToArray()
+        });
+
+        reservedItems.ForEach(i => i.MarkReleasing());
     }
 }

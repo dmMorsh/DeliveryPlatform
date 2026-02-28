@@ -8,4 +8,5 @@ public interface IStockIntegrationEventMapper
     StockReserveFailedEvent MapStockReserveFailedEvent(Guid orderId, List<FailedStockItemSnapshot> items);
     StockReleasedEvent MapStockReleasedEvent(Guid orderId, StockItemSnapshot[] items);
     StockReleaseFailedEvent MapStockReleaseFailedEvent(Guid orderId, List<FailedStockItemSnapshot> items);
+    StockReservationStaleDetectedEvent MapStockReservationStaleDetectedEvent(Guid orderId, DateTime oldestReservedAtUtc, StockItemSnapshot[] items);
 }

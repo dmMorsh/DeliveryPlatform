@@ -24,4 +24,14 @@ public class StockIntegrationEventMapper : IStockIntegrationEventMapper
     {
         return new StockReleaseFailedEvent {OrderId = orderId, Items = items};
     }
+
+    public StockReservationStaleDetectedEvent MapStockReservationStaleDetectedEvent(Guid orderId, DateTime oldestReservedAtUtc, StockItemSnapshot[] items)
+    {
+        return new StockReservationStaleDetectedEvent
+        {
+            OrderId = orderId,
+            OldestReservedAtUtc = oldestReservedAtUtc,
+            Items = items
+        };
+    }
 }

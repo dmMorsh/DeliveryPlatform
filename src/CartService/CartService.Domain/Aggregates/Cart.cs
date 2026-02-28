@@ -8,6 +8,7 @@ public class Cart : AggregateRoot
 {
     public Guid CustomerId { get; private set; }
     public DateTime UpdatedAt { get; private set; }
+    public Guid CheckoutId { get; private set; }
 
     private readonly List<CartItem> _items = new();
     public IReadOnlyCollection<CartItem> Items => _items;
@@ -18,6 +19,7 @@ public class Cart : AggregateRoot
     {
         Id = Guid.NewGuid();
         CustomerId = customerId;
+        CheckoutId = Guid.NewGuid();
         UpdatedAt = DateTime.UtcNow;
     }
 
@@ -40,9 +42,9 @@ public class Cart : AggregateRoot
 
     public void Checkout(Guid orderId)
     {
-        // business rules may be added here
         AddDomainEvent(new CartCheckedOutDomainEvent { CartId = Id, CustomerId = CustomerId, OrderId = orderId});
         _items.Clear();
+        CheckoutId = Guid.NewGuid();
         UpdatedAt = DateTime.UtcNow;
     }
 }

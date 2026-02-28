@@ -42,6 +42,17 @@ public record StockReleaseFailedEvent : IntegrationEvent
     
 }
 
+public record StockReservationStaleDetectedEvent : IntegrationEvent
+{
+    public override string EventType => "stock.reservation_stale";
+    public override int Version => 1;
+    public override string AggregateType => "inventory";
+    public override Guid AggregateId => OrderId;
+    public required Guid OrderId { get; init; }
+    public required DateTime OldestReservedAtUtc { get; init; }
+    public IReadOnlyCollection<StockItemSnapshot> Items { get; init; } = [];
+}
+
 public record StockItemSnapshot
 {
     public Guid ProductId { get; init; }

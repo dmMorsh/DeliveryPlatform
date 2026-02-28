@@ -24,8 +24,7 @@ public class PaymentDbContext : DbContext
             entity.HasKey(x => x.Id);
             entity.Ignore(e => e.DomainEvents);
             entity.HasIndex(p => p.OrderId)
-                .IsUnique()
-                .HasFilter($"\"{nameof(Payment.Status)}\" = {(int)PaymentStatus.Created}");
+                .IsUnique();
             entity.Property(x => x.RowVersion)
                 .IsRowVersion()
                 .HasDefaultValue(Array.Empty<byte>());

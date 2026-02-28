@@ -84,7 +84,7 @@ public static class OrderNumberGenerator
     public static string GenerateOrderNumber()
     {
         var date = DateTime.UtcNow.ToString("yyyyMMdd");
-        var random = new Random().Next(10000000, 99999999);
+        var random = System.Security.Cryptography.RandomNumberGenerator.GetInt32(10000000, 100000000);
         return $"ORD-{date}-{random}";
     }
 }
