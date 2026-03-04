@@ -1,5 +1,3 @@
-using System;
-
 namespace CatalogService.Infrastructure.ReadStore;
 
 public sealed class ProductReadModel

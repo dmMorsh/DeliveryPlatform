@@ -15,6 +15,7 @@ SERVICES=(
   CatalogService
   CourierService
   OrderService
+  OrderReadService
   PaymentService
   InventoryService
   DeliveryService
@@ -32,13 +33,16 @@ get_contexts() {
       echo "CourierDbContext"
       ;;
     OrderService)
-      echo "OrderDbContext"
+      echo "OrderDbContext KitchenDbContext"
+      ;;
+    OrderReadService)
+      echo "OrderReadDbContext"
       ;;
     PaymentService)
       echo "PaymentDbContext PaymentShardMapDbContext"
       ;;
     InventoryService)
-      echo "InventoryDbContext"
+      echo "InventoryDbContext InventoryReadDbContext"
       ;;
     DeliveryService)
       echo "DeliveryDbContext"

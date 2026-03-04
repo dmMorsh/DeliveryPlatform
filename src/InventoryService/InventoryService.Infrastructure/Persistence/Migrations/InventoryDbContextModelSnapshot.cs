@@ -137,6 +137,9 @@ namespace InventoryService.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("CorrelationId", "CommandType")
+                        .IsUnique();
+
                     b.ToTable("ProcessedCommands", "inventory");
                 });
 

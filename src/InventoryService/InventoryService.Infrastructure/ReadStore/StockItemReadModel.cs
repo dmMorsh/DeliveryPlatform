@@ -1,5 +1,3 @@
-using System;
-
 namespace InventoryService.Infrastructure.ReadStore;
 
 public class StockItemReadModel

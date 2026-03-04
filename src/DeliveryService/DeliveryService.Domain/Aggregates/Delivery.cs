@@ -179,8 +179,7 @@ public class Delivery : AggregateRoot
             OrderId = OrderId,
             CourierId = courierId,
             EstimatedPickupAt = EstimatedPickupAt,
-            EstimatedDeliveryAt = EstimatedDeliveryAt,
-            EstimatedTravelMinutes = EstimatedTravelMinutes
+            EstimatedDeliveryAt = EstimatedDeliveryAt
         });
 
         AddDomainEvent(new DeliveryAcceptedDomainEvent

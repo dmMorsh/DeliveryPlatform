@@ -2,7 +2,6 @@ using MediatR;
 using Microsoft.Extensions.Logging;
 using OrderService.Application.Interfaces;
 using OrderService.Application.Models;
-using OrderService.Application.Services;
 using OrderService.Domain.Aggregates;
 using Shared.Utilities;
 
@@ -68,7 +67,6 @@ public class UpdateOrderStatusFromPaymentCommandHandler
 
         await uow.SaveChangesAsync(outboxMessages, ct);
         order.ClearDomainEvents();
-        OrderReadCache.Invalidate(order.Id);
 
         return ApiResponse.SuccessResponse();
     }

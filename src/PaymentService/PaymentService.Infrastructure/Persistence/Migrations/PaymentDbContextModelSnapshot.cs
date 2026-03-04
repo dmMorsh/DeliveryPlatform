@@ -114,8 +114,7 @@ namespace PaymentService.Infrastructure.Persistence.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("OrderId")
-                        .IsUnique()
-                        .HasFilter("\"Status\" = 0");
+                        .IsUnique();
 
                     b.ToTable("Payments", "payment");
                 });

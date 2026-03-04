@@ -14,17 +14,20 @@ public class UpdateCourierStatusCommandHandler : IRequestHandler<UpdateCourierSt
     private readonly ICourierRepository _repository;
     private readonly IUnitOfWork _uow;
     private readonly ICourierEventMapper _eventMapper;
+    private readonly ICourierActiveCourierListCache _cache;
     private readonly ILogger<UpdateCourierStatusCommandHandler> _logger;
 
     public UpdateCourierStatusCommandHandler(
         ICourierRepository repository,
         IUnitOfWork uow,
         ICourierEventMapper eventMapper,
+        ICourierActiveCourierListCache cache,
         ILogger<UpdateCourierStatusCommandHandler> logger)
     {
         _repository = repository;
         _uow = uow;
         _eventMapper = eventMapper;
+        _cache = cache;
         _logger = logger;
     }
 
@@ -62,6 +65,7 @@ public class UpdateCourierStatusCommandHandler : IRequestHandler<UpdateCourierSt
             await _uow.SaveChangesAsync(outboxMessages, ct);
             courier.ClearDomainEvents();
             CourierReadCache.Invalidate(courier.Id);
+            await _cache.RemoveAsync(ct);
 
             var result = courier.Adapt<CourierView>();
             result.Status = (int)courier.Status;

@@ -2,7 +2,6 @@
 using Microsoft.Extensions.Logging;
 using OrderService.Application.Interfaces;
 using OrderService.Application.Models;
-using OrderService.Application.Services;
 using OrderService.Domain.Aggregates;
 using OrderService.Domain.Entities;
 using Shared.Contracts.Events;
@@ -70,7 +69,6 @@ public class UpdateReservedStockCommandHandler : IRequestHandler<UpdateReservedS
         
         await uow.SaveChangesAsync(outboxMessages, ct);
         order.ClearDomainEvents();
-        OrderReadCache.Invalidate(order.Id);
 
         _logger.LogInformation("Order updated: {OrderNumber} (ID: {OrderId})", order.OrderNumber, order.Id);
         
@@ -126,7 +124,6 @@ public class UpdateReservedStockCommandHandler : IRequestHandler<UpdateReservedS
         
         await uow.SaveChangesAsync(outboxMessages, ct);
         order.ClearDomainEvents();
-        OrderReadCache.Invalidate(order.Id);
         
         _logger.LogInformation("Order already canceled: {OrderNumber} (ID: {OrderId})." +
                                " Sending compensation message.", order.OrderNumber, order.Id);
@@ -152,7 +149,6 @@ public class UpdateReservedStockCommandHandler : IRequestHandler<UpdateReservedS
         
             await uow.SaveChangesAsync(failMessages, ct);
             order.ClearDomainEvents();
-            OrderReadCache.Invalidate(order.Id);
             return true;
         }
 
@@ -176,7 +172,6 @@ public class UpdateReservedStockCommandHandler : IRequestHandler<UpdateReservedS
         
             await uow.SaveChangesAsync(failMessages, ct);
             order.ClearDomainEvents();
-            OrderReadCache.Invalidate(order.Id);
             return true;
         }
 
@@ -193,7 +188,6 @@ public class UpdateReservedStockCommandHandler : IRequestHandler<UpdateReservedS
         
             await uow.SaveChangesAsync(failMessages, ct);
             order.ClearDomainEvents();
-            OrderReadCache.Invalidate(order.Id);
             return true;
         }
         return false;

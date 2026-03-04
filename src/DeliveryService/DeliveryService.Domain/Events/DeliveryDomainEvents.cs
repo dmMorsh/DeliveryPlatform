@@ -13,9 +13,10 @@ public record DeliveryAssignedDomainEvent : DomainEvent
     public Guid DeliveryId { get; init; }
     public Guid OrderId { get; init; }
     public Guid CourierId { get; init; }
+
+    // ETA timestamps taken from the aggregate state at the moment of assignment
     public DateTime? EstimatedPickupAt { get; init; }
     public DateTime? EstimatedDeliveryAt { get; init; }
-    public int? EstimatedTravelMinutes { get; init; }
 }
 
 public record DeliveryAcceptedDomainEvent : DomainEvent

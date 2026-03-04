@@ -100,6 +100,36 @@ namespace DeliveryService.Infrastructure.Persistence.Migrations
                     b.Property<DateTime?>("DeliveredAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<double?>("DeliveryFeeMultiplier")
+                        .HasColumnType("double precision");
+
+                    b.Property<int?>("DeliveryPickupSlaMinutes")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("DeliveryTransitSlaMinutes")
+                        .HasColumnType("integer");
+
+                    b.Property<double?>("DeliveryZoneDistanceKm")
+                        .HasColumnType("double precision");
+
+                    b.Property<string>("DeliveryZoneId")
+                        .HasColumnType("text");
+
+                    b.Property<string>("DeliveryZoneName")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("EstimatedDeliveryAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<double?>("EstimatedDistanceKm")
+                        .HasColumnType("double precision");
+
+                    b.Property<DateTime?>("EstimatedPickupAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("EstimatedTravelMinutes")
+                        .HasColumnType("integer");
+
                     b.Property<DateTime?>("FailedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -117,6 +147,9 @@ namespace DeliveryService.Infrastructure.Persistence.Migrations
                     b.Property<DateTime?>("InTransitAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<DateTime?>("LastReassignAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<string>("Notes")
                         .HasColumnType("text");
 
@@ -128,6 +161,12 @@ namespace DeliveryService.Infrastructure.Persistence.Migrations
 
                     b.Property<DateTime?>("PickedUpAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("PickupTimeoutNotifiedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("ReassignAttempts")
+                        .HasColumnType("integer");
 
                     b.Property<DateTime?>("ReturnedAt")
                         .HasColumnType("timestamp with time zone");
@@ -155,6 +194,9 @@ namespace DeliveryService.Infrastructure.Persistence.Migrations
 
                     b.Property<double>("ToLongitude")
                         .HasColumnType("double precision");
+
+                    b.Property<DateTime?>("TransitTimeoutNotifiedAt")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("VerificationCode")
                         .HasColumnType("text");

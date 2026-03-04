@@ -1,7 +1,6 @@
 using CartService.Application.Interfaces;
 using CartService.Application.Models;
 using CartService.Application.Services;
-using CartService.Domain.SeedWork;
 using MediatR;
 using Shared.Utilities;
 

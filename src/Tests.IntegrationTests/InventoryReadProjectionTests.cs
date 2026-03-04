@@ -1,13 +1,6 @@
-using System;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 using InventoryService.Infrastructure.ReadStore;
-using InventoryService.Application.Read;
-using InventoryService.Application.Models;
 using InventoryService.Domain.Events;
 using Microsoft.EntityFrameworkCore;
-using Xunit;
 
 namespace Tests.IntegrationTests;
 
@@ -19,12 +12,14 @@ public class InventoryReadProjectionTests
         var options = new DbContextOptionsBuilder<InventoryReadDbContext>()
             .UseInMemoryDatabase("inv-read-test1").Options;
         await using var context = new InventoryReadDbContext(options);
-        var projector = new InventoryReadProjector(context);
+        var mux = new RedisMockBuilder().BuildRedisMock();
+        var redisCache = new InventoryReadRedisCache(mux);
+        var projector = new InventoryReadProjector(context, redisCache);
 
         var evt = new StockReservedDomainEvent { ProductId = Guid.NewGuid(), OrderId = Guid.NewGuid(), Quantity = 5 };
         await projector.HandleAsync(evt, CancellationToken.None);
 
-        var repo = new InventoryReadRepository(context);
+        var repo = new InventoryReadRepository(context, redisCache);
         var view = await repo.GetByProductIdAsync(evt.ProductId, CancellationToken.None);
 
         Assert.NotNull(view);
@@ -49,13 +44,16 @@ public class InventoryReadProjectionTests
             AvailableQuantity = 5
         });
         await context.SaveChangesAsync();
-
-        var projector = new InventoryReadProjector(context);
+        
+        var mux = new RedisMockBuilder().BuildRedisMock();
+        var redisCache = new InventoryReadRedisCache(mux);
+        
+        var projector = new InventoryReadProjector(context, redisCache);
         var evt = new StockReleasedDomainEvent { ProductId = existingId, OrderId = Guid.NewGuid(), Quantity = 2 };
 
         await projector.HandleAsync(evt, CancellationToken.None);
 
-        var repo = new InventoryReadRepository(context);
+        var repo = new InventoryReadRepository(context, redisCache);
         var view = await repo.GetByProductIdAsync(existingId, CancellationToken.None);
 
         Assert.NotNull(view);

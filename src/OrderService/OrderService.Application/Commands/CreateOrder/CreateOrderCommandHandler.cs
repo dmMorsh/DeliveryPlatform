@@ -18,8 +18,8 @@ public class CreateOrderCommandHandler : IRequestHandler<CreateOrderCommand, Api
     private readonly KitchenCapacityOptions _kitchenOptions;
     private readonly IDeliveryZoneMatcher _zoneMatcher;
     private readonly DeliveryZoneOptions _zoneOptions;
-    private readonly IKitchenSlotReadRepository _kitchenSlots;
-    private readonly OrderService.Application.Interfaces.IKitchenSlotCache _kitchenCache;
+    private readonly IKitchenSlotRepository _kitchenSlots;
+    private readonly IKitchenSlotCache _kitchenCache;
 
     public CreateOrderCommandHandler(
         IUnitOfWorkFactory factory,
@@ -28,8 +28,9 @@ public class CreateOrderCommandHandler : IRequestHandler<CreateOrderCommand, Api
         IOptions<KitchenCapacityOptions> kitchenOptions,
         IDeliveryZoneMatcher zoneMatcher,
         IOptions<DeliveryZoneOptions> zoneOptions,
-        IKitchenSlotReadRepository kitchenSlots,
-        OrderService.Application.Interfaces.IKitchenSlotCache kitchenCache)
+        IKitchenSlotRepository kitchenSlots,
+        IKitchenSlotCache kitchenCache
+        )
     {
         _factory = factory;
         _eventMapper = eventMapper;
@@ -157,7 +158,6 @@ public class CreateOrderCommandHandler : IRequestHandler<CreateOrderCommand, Api
             throw;
         }
         order.ClearDomainEvents();
-        OrderReadCache.Invalidate(order.Id);
 
         _logger.LogInformation("Order created: {OrderNumber} (ID: {OrderId})", order.OrderNumber, order.Id);
 

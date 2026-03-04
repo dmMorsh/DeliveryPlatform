@@ -1,5 +1,6 @@
 using System.Threading.RateLimiting;
 using GatewayApi.Services;
+using Polly;
 using Serilog;
 using Shared.Services;
 
@@ -30,6 +31,16 @@ builder.Host.UseSerilog((ctx, cfg) =>
            rollingInterval: RollingInterval.Day, 
            outputTemplate: "[{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz}] [{Level:u3}] [{SourceContext}] {Message:lj}{NewLine}{Exception}")
        .MinimumLevel.Information());
+
+var circuitPolicy = Policy
+    .Handle<HttpRequestException>(ex => ex.StatusCode == System.Net.HttpStatusCode.TooManyRequests)
+    .Or<HttpRequestException>(ex => ex.StatusCode == System.Net.HttpStatusCode.ServiceUnavailable)
+    .CircuitBreakerAsync(3, durationOfBreak: TimeSpan.FromSeconds(30))
+    .WrapAsync(Policy.TimeoutAsync<HttpResponseMessage>(TimeSpan.FromSeconds(5)));
+
+builder.Services
+    .AddHttpClient("order-api")
+    .AddPolicyHandler(circuitPolicy);
 
 // Регистрация сервисов
 builder.Services.AddControllers();

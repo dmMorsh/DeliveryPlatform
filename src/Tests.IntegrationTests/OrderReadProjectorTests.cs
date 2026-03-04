@@ -1,9 +1,8 @@
-using System.Threading;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
-using OrderService.Infrastructure.ReadStore;
+using OrderReadService.Infrastructure.Persistence;
+using OrderReadService.Infrastructure.Services;
 using Shared.Contracts.Events;
-using Xunit;
 
 namespace Tests.IntegrationTests;
 

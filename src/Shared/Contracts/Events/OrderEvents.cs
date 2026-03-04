@@ -59,6 +59,12 @@ public record OrderAssignedEvent : IntegrationEvent
     public required Guid CourierId { get; init; }
     public string CourierName { get; init; } = string.Empty;
     public string? CourierPhone { get; init; }
+
+    // ETAs computed by DeliveryService and forwarded through OrderService so
+    // downstream consumers (suppliers, analytics, etc.) can use them.
+    public DateTime? EstimatedPickupAt { get; init; }
+    public DateTime? EstimatedDeliveryAt { get; init; }
+    public int? EstimatedArrivalMinutes { get; init; }
 }
 
 public record OrderStatusChangedEvent : IntegrationEvent

@@ -73,6 +73,9 @@ namespace OrderService.Infrastructure.Persistence.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<DateTime?>("AcceptedAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<DateTime?>("AssignedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -82,9 +85,15 @@ namespace OrderService.Infrastructure.Persistence.Migrations
                     b.Property<Guid?>("CourierId")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("CourierName")
+                        .HasColumnType("text");
+
                     b.Property<string>("CourierNote")
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
+
+                    b.Property<string>("CourierPhone")
+                        .HasColumnType("text");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -92,15 +101,54 @@ namespace OrderService.Infrastructure.Persistence.Migrations
                     b.Property<DateTime?>("DeliveredAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<double?>("DeliveryFeeMultiplier")
+                        .HasColumnType("double precision");
+
+                    b.Property<int?>("DeliveryPickupSlaMinutes")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("DeliveryTransitSlaMinutes")
+                        .HasColumnType("integer");
+
+                    b.Property<double?>("DeliveryZoneDistanceKm")
+                        .HasColumnType("double precision");
+
+                    b.Property<string>("DeliveryZoneId")
+                        .HasColumnType("text");
+
+                    b.Property<string>("DeliveryZoneName")
+                        .HasColumnType("text");
+
                     b.Property<string>("Description")
                         .IsRequired()
                         .HasMaxLength(1000)
                         .HasColumnType("character varying(1000)");
 
+                    b.Property<DateTime?>("ExpectedReadyAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsReadyForDelivery")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime?>("KitchenDelayedNotifiedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("KitchenSlotStart")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<string>("OrderNumber")
                         .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
+
+                    b.Property<DateTime?>("ReadyAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("RejectedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("RejectionReason")
+                        .HasColumnType("text");
 
                     b.Property<byte[]>("RowVersion")
                         .IsConcurrencyToken()
@@ -124,6 +172,12 @@ namespace OrderService.Infrastructure.Persistence.Migrations
                     b.HasIndex("CourierId");
 
                     b.HasIndex("CreatedAt");
+
+                    b.HasIndex("DeliveryZoneId");
+
+                    b.HasIndex("ExpectedReadyAt");
+
+                    b.HasIndex("KitchenSlotStart");
 
                     b.HasIndex("OrderNumber")
                         .IsUnique();

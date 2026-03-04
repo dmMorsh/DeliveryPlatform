@@ -9,8 +9,8 @@ using OrderService.Application.Commands.MarkOrderReady;
 using OrderService.Application.Commands.MarkOrderAccepted;
 using OrderService.Application.Commands.MarkOrderRejected;
 using OrderService.Application.Commands.UpdateOrder;
-using OrderService.Application.Queries.GetClientOrders;
-using OrderService.Application.Queries.GetOrder;
+// using OrderService.Application.Queries.GetClientOrders;
+// using OrderService.Application.Queries.GetOrder;
 
 namespace OrderService.Api.Controllers;
 
@@ -25,21 +25,21 @@ public class OrdersController : ControllerBase
     {
         _mediator = mediator;
     }
-
-    /// <summary>
-    /// Получить заказ по ID
-    /// </summary>
-    [HttpGet("{id}")]
-    public async Task<IActionResult> GetOrder(Guid id, CancellationToken ct)
-    {
-        var query = new GetOrderQuery(id);
-        
-        var result = await _mediator.Send(query, ct);
-        if (!result.Success)
-            return NotFound(result);
-        
-        return Ok(result);
-    }
+    
+    // /// <summary>
+    // /// Получить заказ по ID
+    // /// </summary>
+    // [HttpGet("{id}")]
+    // public async Task<IActionResult> GetOrder(Guid id, CancellationToken ct)
+    // {
+    //     var query = new GetOrderQuery(id);
+    //     
+    //     var result = await _mediator.Send(query, ct);
+    //     if (!result.Success)
+    //         return NotFound(result);
+    //     
+    //     return Ok(result);
+    // }
 
     /// <summary>
     /// Создать новый заказ
@@ -55,8 +55,10 @@ public class OrdersController : ControllerBase
         var result = await _mediator.Send(cmd, ct);
         if (!result.Success)
             return BadRequest(result);
+        
+        return Ok(result);
 
-        return CreatedAtAction(nameof(GetOrder), new { id = result.Data?.Id }, result);
+        //return CreatedAtAction(nameof(GetOrder), new { id = result.Data?.Id }, result);
     }
 
     /// <summary>
@@ -131,21 +133,21 @@ public class OrdersController : ControllerBase
     /// Получить заказы клиента
     /// </summary>
     // [HttpGet("client/{clientId}")]
-    [HttpGet]
-    public async Task<IActionResult> GetClientOrders(CancellationToken ct)
-    {
-        var customerId = GetCustomerIdFromContext();
-        if (customerId == Guid.Empty)
-            return Unauthorized(new { error = "Customer ID not found in context" });
-        
-        var query = new GetClientOrdersQuery(customerId);
-        
-        var result = await _mediator.Send(query, ct);
-        if (!result.Success)
-            return NotFound(result);
-        
-        return Ok(result);
-    }
+    // [HttpGet]
+    // public async Task<IActionResult> GetClientOrders(CancellationToken ct)
+    // {
+    //     var customerId = GetCustomerIdFromContext();
+    //     if (customerId == Guid.Empty)
+    //         return Unauthorized(new { error = "Customer ID not found in context" });
+    //     
+    //     var query = new GetClientOrdersQuery(customerId);
+    //     
+    //     var result = await _mediator.Send(query, ct);
+    //     if (!result.Success)
+    //         return NotFound(result);
+    //     
+    //     return Ok(result);
+    // }
     
     private Guid GetCustomerIdFromContext()
     {

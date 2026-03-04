@@ -12,6 +12,7 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
 using Shared.Services;
+using StackExchange.Redis;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -58,6 +59,8 @@ if (!useInMemory)
 }
 
 builder.Services.AddScoped<ICourierRepository, CourierRepository>();
+// Cache for active couriers list
+builder.Services.AddSingleton<ICourierActiveCourierListCache, CourierActiveCourierListRedisCache>();
 // Mapper for domain->integration events for courier
 builder.Services.AddSingleton<ICourierEventMapper, CourierEventMapper>();
 // gRPC Location Tracking Client
@@ -83,6 +86,20 @@ if (string.IsNullOrWhiteSpace(connectionString1))
 
 var kafkaBrokers = ConfigurationGuard.GetRequired(builder.Configuration, builder.Environment, "Kafka:Brokers", "localhost:29092");
 var redisConnection = ConfigurationGuard.GetRequired(builder.Configuration, builder.Environment, "Redis:Connection", "localhost:6379");
+
+try
+{
+    var redisOptions = ConfigurationOptions.Parse(redisConnection);
+    redisOptions.AbortOnConnectFail = false;
+    var mux = ConnectionMultiplexer.Connect(redisOptions);
+    builder.Services.AddSingleton<IConnectionMultiplexer>(mux);
+}
+catch (Exception ex)
+{
+    builder.Services.AddSingleton<IConnectionMultiplexer>(_ =>
+        throw new InvalidOperationException($"Failed to connect to Redis at {redisConnection}", ex));
+}
+
 builder.Services.AddHealthChecks()
     .AddNpgSql(connectionString1, name: "db", tags: new[] { "ready" })
     .AddRedis(redisConnection,

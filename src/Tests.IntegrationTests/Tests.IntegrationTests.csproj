@@ -19,6 +19,7 @@
   <ItemGroup>
     <ProjectReference Include="..\CartService\CartService.Domain\CartService.Domain.csproj" />
     <ProjectReference Include="..\DeliveryService\DeliveryService.Domain\DeliveryService.Domain.csproj" />
+    <ProjectReference Include="..\OrderReadService\OrderReadService.Infrastructure\OrderReadService.Infrastructure.csproj" />
     <ProjectReference Include="..\Shared\Shared.csproj" />
     <ProjectReference Include="..\LocationTrackingService\LocationTrackingService.csproj" />
     <ProjectReference Include="..\PaymentService\PaymentService.Domain\PaymentService.Domain.csproj" />

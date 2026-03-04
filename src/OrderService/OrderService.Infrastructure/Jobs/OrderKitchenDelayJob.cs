@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrderService.Application.Models;
 using OrderService.Domain.Aggregates;
@@ -10,18 +11,17 @@ namespace OrderService.Infrastructure.Jobs;
 
 public sealed class OrderKitchenDelayJob : IOrderKitchenDelayJob
 {
-    private readonly OrderDbContext _db;
+    private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<OrderKitchenDelayJob> _logger;
     private readonly int _batchSize;
     private readonly int _maxBatches;
 
     public OrderKitchenDelayJob(
-        OrderDbContext db,
         IConfiguration config,
-        ILogger<OrderKitchenDelayJob> logger)
+        ILogger<OrderKitchenDelayJob> logger, IServiceScopeFactory scopeFactory)
     {
-        _db = db;
         _logger = logger;
+        _scopeFactory = scopeFactory;
         _batchSize = int.TryParse(config["Order:KitchenDelayBatchSize"], out var batchValue) ? batchValue : 200;
         _maxBatches = int.TryParse(config["Order:KitchenDelayMaxBatches"], out var maxValue) ? maxValue : 20;
     }
@@ -31,9 +31,12 @@ public sealed class OrderKitchenDelayJob : IOrderKitchenDelayJob
         var now = DateTime.UtcNow;
         var batches = 0;
 
+        using var scope = _scopeFactory.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<OrderDbContext>();
+        
         while (!ct.IsCancellationRequested && batches < _maxBatches)
         {
-            var overdueIds = await _db.Orders.AsNoTracking()
+            var overdueIds = await db.Orders.AsNoTracking()
                 .Where(o => o.KitchenDelayedNotifiedAt == null
                             && o.ExpectedReadyAt != null
                             && o.ExpectedReadyAt < now
@@ -53,14 +56,14 @@ public sealed class OrderKitchenDelayJob : IOrderKitchenDelayJob
             {
                 try
                 {
-                    var order = await _db.Orders.FirstOrDefaultAsync(o => o.Id == orderId, ct);
+                    var order = await db.Orders.FirstOrDefaultAsync(o => o.Id == orderId, ct);
                     if (order == null)
                         continue;
                     if (order.KitchenDelayedNotifiedAt != null || order.IsReadyForDelivery)
                         continue;
 
                     order.MarkKitchenDelayed(now);
-                    _db.OutboxMessages.Add(OutboxMessage.From(new OrderKitchenDelayedEvent
+                    db.OutboxMessages.Add(OutboxMessage.From(new OrderKitchenDelayedEvent
                     {
                         OrderId = order.Id,
                         ExpectedReadyAt = order.ExpectedReadyAt,
@@ -73,7 +76,7 @@ public sealed class OrderKitchenDelayJob : IOrderKitchenDelayJob
                 }
             }
 
-            await _db.SaveChangesAsync(ct);
+            await db.SaveChangesAsync(ct);
             batches += 1;
             if (overdueIds.Count < _batchSize)
                 break;

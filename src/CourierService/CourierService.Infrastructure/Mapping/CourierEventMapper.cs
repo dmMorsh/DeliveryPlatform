@@ -19,14 +19,6 @@ public class CourierEventMapper : ICourierEventMapper
                 ChangedAt = DateTime.UtcNow,
                 Timestamp = e.OccurredAt 
             },
-            CourierLocationUpdatedDomainEvent e => new CourierLocationUpdatedEvent 
-            { 
-                CourierId = e.CourierId, 
-                Latitude = e.Latitude, 
-                Longitude = e.Longitude, 
-                UpdatedAt = DateTime.UtcNow,
-                Timestamp = e.OccurredAt 
-            },
             
             CourierRegisteredDomainEvent e => new CourierRegisteredEvent
             {

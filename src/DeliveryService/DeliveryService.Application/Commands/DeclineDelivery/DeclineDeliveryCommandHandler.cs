@@ -15,6 +15,7 @@ public class DeclineDeliveryCommandHandler : IRequestHandler<DeclineDeliveryComm
     private readonly IAssignmentQueue _queue;
     private readonly IUnitOfWork _uow;
     private readonly IDeliveryEventMapper _eventMapper;
+    private readonly IDeliveryOfferCache _offerCache;
     private readonly ILogger<DeclineDeliveryCommandHandler> _logger;
 
     public DeclineDeliveryCommandHandler(
@@ -23,6 +24,7 @@ public class DeclineDeliveryCommandHandler : IRequestHandler<DeclineDeliveryComm
         IAssignmentQueue queue,
         IUnitOfWork uow,
         IDeliveryEventMapper eventMapper,
+        IDeliveryOfferCache offerCache,
         ILogger<DeclineDeliveryCommandHandler> logger)
     {
         _repository = repository;
@@ -30,6 +32,7 @@ public class DeclineDeliveryCommandHandler : IRequestHandler<DeclineDeliveryComm
         _queue = queue;
         _uow = uow;
         _eventMapper = eventMapper;
+        _offerCache = offerCache;
         _logger = logger;
     }
 
@@ -77,6 +80,7 @@ public class DeclineDeliveryCommandHandler : IRequestHandler<DeclineDeliveryComm
         await _uow.SaveChangesAsync(outbox, ct);
         delivery.ClearDomainEvents();
         DeliveryReadCache.Invalidate(delivery.Id, delivery.OrderId);
+        await _offerCache.RemoveAsync(request.CourierId, ct);
 
         return ApiResponse.SuccessResponse();
     }

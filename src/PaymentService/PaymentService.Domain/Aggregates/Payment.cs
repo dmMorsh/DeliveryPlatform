@@ -40,7 +40,7 @@ public class Payment : AggregateRoot
 
     public void Start(string provider, string externalPaymentId, string paymentUrl)
     {
-        if (Status != PaymentStatus.Starting)
+        if (Status != PaymentStatus.Created)
             throw new DomainException("Payment already started");
 
         Status = PaymentStatus.Pending;
@@ -55,14 +55,6 @@ public class Payment : AggregateRoot
             return;
 
         Status = PaymentStatus.Ready;
-    }
-
-    public void MarkStarting()
-    {
-        if (Status != PaymentStatus.Ready)
-            throw new DomainException("Payment is not ready");
-
-        Status = PaymentStatus.Starting;
     }
 
     public void MarkAuthorized(string externalId)

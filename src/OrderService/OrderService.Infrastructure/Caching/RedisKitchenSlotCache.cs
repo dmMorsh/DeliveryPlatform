@@ -1,4 +1,3 @@
-using System.Text;
 using StackExchange.Redis;
 using OrderService.Application.Interfaces;
 
@@ -28,11 +27,11 @@ public sealed class RedisKitchenSlotCache : IKitchenSlotCache
         var db = _conn.GetDatabase();
         // Lua script: if current + 1 > capacity -> return 0, else INCR and set expiry -> return 1
         const string script = @"local cur = redis.call('GET', KEYS[1]);
-if not cur then cur = 0 else cur = tonumber(cur) end
-if cur + 1 > tonumber(ARGV[1]) then return 0 end
-local new = redis.call('INCR', KEYS[1]);
-redis.call('PEXPIRE', KEYS[1], ARGV[2]);
-return 1";
+            if not cur then cur = 0 else cur = tonumber(cur) end
+            if cur + 1 > tonumber(ARGV[1]) then return 0 end
+            local new = redis.call('INCR', KEYS[1]);
+            redis.call('PEXPIRE', KEYS[1], ARGV[2]);
+            return 1";
 
         var res = (int)await db.ScriptEvaluateAsync(script, new RedisKey[] { Key(slotStart) }, new RedisValue[] { capacity, (long)ttl.TotalMilliseconds });
         return res == 1;
@@ -42,11 +41,11 @@ return 1";
     {
         var db = _conn.GetDatabase();
         const string lua = @"local cur = redis.call('GET', KEYS[1]);
-if not cur then return 0 end
-local n = tonumber(cur) - 1
-if n <= 0 then redis.call('DEL', KEYS[1]); return 0 end
-redis.call('SET', KEYS[1], n)
-return n";
+            if not cur then return 0 end
+            local n = tonumber(cur) - 1
+            if n <= 0 then redis.call('DEL', KEYS[1]); return 0 end
+            redis.call('SET', KEYS[1], n)
+            return n";
 
         await db.ScriptEvaluateAsync(lua, new RedisKey[] { Key(slotStart) });
     }

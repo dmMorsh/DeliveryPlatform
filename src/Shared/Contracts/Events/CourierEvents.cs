@@ -31,21 +31,6 @@ public record CourierStatusChangedEvent : IntegrationEvent
 }
 
 /// <summary>
-/// Event: Местоположение курьера обновлено
-/// </summary>
-public record CourierLocationUpdatedEvent : IntegrationEvent
-{
-    public override string EventType => "courier.location.updated";
-    public override int Version => 1;
-    public override string AggregateType => "Courier";
-    public override Guid AggregateId => CourierId;
-    public required Guid CourierId { get; init; }
-    public double Latitude { get; init; }
-    public double Longitude { get; init; }
-    public DateTime UpdatedAt { get; init; }
-}
-
-/// <summary>
 /// Event: Рейтинг курьера обновлен
 /// </summary>
 public record CourierRatingUpdatedEvent : IntegrationEvent

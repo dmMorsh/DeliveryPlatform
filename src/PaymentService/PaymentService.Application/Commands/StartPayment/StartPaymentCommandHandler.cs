@@ -11,15 +11,18 @@ public class StartPaymentCommandHandler : IRequestHandler<StartPaymentCommand, A
     private readonly IUnitOfWorkFactory _factory;
     private readonly IPaymentProviderResolver _providers;
     private readonly IPaymentStatusCheckScheduler _statusScheduler;
+    private readonly IPaymentStatusCache _cache;
 
     public StartPaymentCommandHandler(
         IUnitOfWorkFactory factory,
         IPaymentProviderResolver providers,
-        IPaymentStatusCheckScheduler statusScheduler)
+        IPaymentStatusCheckScheduler statusScheduler,
+        IPaymentStatusCache cache)
     {
         _factory = factory;
         _providers = providers;
         _statusScheduler = statusScheduler;
+        _cache = cache;
     }
 
     public async Task<ApiResponse<StartPaymentResult>> Handle(StartPaymentCommand request, CancellationToken cancellationToken)
@@ -58,6 +61,7 @@ public class StartPaymentCommandHandler : IRequestHandler<StartPaymentCommand, A
             payment.Start(provider.Name, result.ExternalPaymentId, result.PaymentUrl);
             await uow.Payments.UpsertExternalPaymentIdMap(payment.OrderId, payment.Id, result.ExternalPaymentId, provider.Name, cancellationToken);
             await uow.SaveChangesAsync(cancellationToken);
+            await _cache.RemoveAsync(request.OrderId, cancellationToken);
 
             _statusScheduler.ScheduleStatusCheck(payment.OrderId);
             

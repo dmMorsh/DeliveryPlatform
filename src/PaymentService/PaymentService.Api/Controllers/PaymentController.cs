@@ -20,13 +20,15 @@ public class PaymentController : ControllerBase
 {
     private readonly IMediator _mediator;
     private readonly IUnitOfWorkFactory _factory;
+    private readonly IPaymentStatusCache _cache;
     private readonly IConfiguration _config;
     private readonly IHostEnvironment _env;
 
-    public PaymentController(IMediator mediator, IUnitOfWorkFactory factory, IConfiguration config, IHostEnvironment env)
+    public PaymentController(IMediator mediator, IUnitOfWorkFactory factory, IPaymentStatusCache cache, IConfiguration config, IHostEnvironment env)
     {
         _mediator = mediator;
         _factory = factory;
+        _cache = cache;
         _config = config;
         _env = env;
     }
@@ -81,6 +83,11 @@ public class PaymentController : ControllerBase
     [HttpGet("status/{orderId:guid}")]
     public async Task<IActionResult> GetStatus(Guid orderId, CancellationToken ct)
     {
+        // Try cache first
+        var cachedStatus = await _cache.GetAsync(orderId, ct);
+        if (cachedStatus != null)
+            return Ok(ApiResponse<PaymentStatusView>.SuccessResponse(cachedStatus));
+
         await using var uow = _factory.Create(orderId);
         var payment = await uow.Payments.GetByOrderId(orderId, ct);
         if (payment is null)
@@ -97,6 +104,9 @@ public class PaymentController : ControllerBase
             AmountCents = payment.AmountCents,
             Currency = payment.Currency
         };
+
+        // Cache the result
+        await _cache.SetAsync(orderId, view, ct);
 
         return Ok(ApiResponse<PaymentStatusView>.SuccessResponse(view));
     }

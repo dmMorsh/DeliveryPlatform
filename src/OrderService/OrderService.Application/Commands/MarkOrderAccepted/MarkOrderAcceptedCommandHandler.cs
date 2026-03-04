@@ -2,7 +2,6 @@ using MediatR;
 using Microsoft.Extensions.Logging;
 using OrderService.Application.Interfaces;
 using OrderService.Application.Models;
-using OrderService.Application.Services;
 using OrderService.Domain.Aggregates;
 using Shared.Utilities;
 
@@ -44,7 +43,6 @@ public sealed class MarkOrderAcceptedCommandHandler : IRequestHandler<MarkOrderA
 
         await uow.SaveChangesAsync(outboxMessages, ct);
         order.ClearDomainEvents();
-        OrderReadCache.Invalidate(order.Id);
 
         _logger.LogInformation("Order {OrderId} accepted by kitchen", order.Id);
         return ApiResponse.SuccessResponse();

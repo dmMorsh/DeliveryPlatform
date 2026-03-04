@@ -1,9 +1,9 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrderService.Application.Interfaces;
 using OrderService.Application.Models;
-using OrderService.Application.Services;
 using OrderService.Domain.Aggregates;
 using OrderService.Infrastructure.Persistence;
 
@@ -11,8 +11,7 @@ namespace OrderService.Infrastructure.Jobs;
 
 public sealed class OrderPaymentTtlJob : IOrderPaymentTtlJob
 {
-    private readonly OrderDbContext _db;
-    private readonly IUnitOfWorkFactory _uowFactory;
+    private readonly IServiceScopeFactory _scopeFactory;
     private readonly IOrderIntegrationEventMapper _mapper;
     private readonly ILogger<OrderPaymentTtlJob> _logger;
     private readonly TimeSpan _ttl;
@@ -20,16 +19,13 @@ public sealed class OrderPaymentTtlJob : IOrderPaymentTtlJob
     private readonly int _maxBatches;
 
     public OrderPaymentTtlJob(
-        OrderDbContext db,
-        IUnitOfWorkFactory uowFactory,
         IOrderIntegrationEventMapper mapper,
         IConfiguration config,
-        ILogger<OrderPaymentTtlJob> logger)
+        ILogger<OrderPaymentTtlJob> logger, IServiceScopeFactory scopeFactory)
     {
-        _db = db;
-        _uowFactory = uowFactory;
         _mapper = mapper;
         _logger = logger;
+        _scopeFactory = scopeFactory;
 
         var ttlMinutes = int.TryParse(config["Order:PaymentTtlMinutes"], out var ttlValue) ? ttlValue : 15;
         _batchSize = int.TryParse(config["Order:PaymentTtlBatchSize"], out var batchValue) ? batchValue : 200;
@@ -48,9 +44,12 @@ public sealed class OrderPaymentTtlJob : IOrderPaymentTtlJob
         var cutoff = DateTime.UtcNow.Subtract(_ttl);
         var batches = 0;
 
+        using var scope = _scopeFactory.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<OrderDbContext>();
+        
         while (!ct.IsCancellationRequested && batches < _maxBatches)
         {
-            var expiredOrderIds = await _db.Orders.AsNoTracking()
+            var expiredOrderIds = await db.Orders.AsNoTracking()
                 .Where(o => (o.Status == OrderStatus.Pending || o.Status == OrderStatus.Reserved) && o.CreatedAt < cutoff)
                 .OrderBy(o => o.CreatedAt)
                 .Select(o => o.Id)
@@ -64,8 +63,7 @@ public sealed class OrderPaymentTtlJob : IOrderPaymentTtlJob
             {
                 try
                 {
-                    await using var uow = _uowFactory.Create(orderId);
-                    var order = await uow.Orders.GetOrderByIdAsync(orderId, ct);
+                    var order = await db.Orders.FindAsync(orderId, ct);
                     if (order == null)
                         continue;
                     if (order.Status is not (OrderStatus.Pending or OrderStatus.Reserved))
@@ -78,10 +76,10 @@ public sealed class OrderPaymentTtlJob : IOrderPaymentTtlJob
                         .Where(ie => ie != null)
                         .Select(OutboxMessage.From!)
                         .ToList();
-
-                    await uow.SaveChangesAsync(outboxMessages, ct);
+                    if(outboxMessages.Count != 0) db.OutboxMessages.AddRange(outboxMessages);
+                    
+                    await db.SaveChangesAsync(ct);
                     order.ClearDomainEvents();
-                    OrderReadCache.Invalidate(order.Id);
 
                     _logger.LogInformation("Order {OrderId} canceled due to payment TTL", orderId);
                 }

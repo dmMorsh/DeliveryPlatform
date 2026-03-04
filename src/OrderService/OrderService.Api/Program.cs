@@ -16,11 +16,13 @@ using OrderService.Infrastructure.Persistence;
 using OrderService.Infrastructure.Repositories;
 using OrderService.Infrastructure.Inbox;
 using OrderService.Infrastructure.Jobs;
-using OrderService.Infrastructure.ReadStore;
 using StackExchange.Redis;
-using OrderService.Infrastructure.Caching;
 using Serilog;
 using Shared.Services;
+using Shared.HealthChecks;
+using Shared.Middleware;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
+using OrderService.Infrastructure.Caching;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -41,27 +43,21 @@ if (useInMemory && builder.Environment.IsProduction())
     throw new InvalidOperationException("In-memory database is not allowed in production.");
 
 string? postgresConnectionString = null;
-string? readStoreConnectionString = null;
 if (useInMemory)
 {
     builder.Services.AddDbContext<OrderDbContext>(options =>
         options.UseInMemoryDatabase("orders_inmem"));
-    builder.Services.AddDbContext<OrderReadDbContext>(options =>
-        options.UseInMemoryDatabase("orders_read_inmem"));
+    builder.Services.AddDbContext<KitchenDbContext>(options =>
+        options.UseInMemoryDatabase("kitchen_inmem"));
 }
 else
 {
     postgresConnectionString = ConfigurationGuard.GetRequiredConnectionString(builder.Configuration, builder.Environment, "PostgreSQL");
     builder.Services.AddDbContext<OrderDbContext>(options =>
         options.UseNpgsql(postgresConnectionString));
-
-    readStoreConnectionString = builder.Configuration.GetConnectionString("OrderReadStore");
-    if (string.IsNullOrWhiteSpace(readStoreConnectionString))
-        readStoreConnectionString = postgresConnectionString;
-
-    builder.Services.AddDbContext<OrderReadDbContext>(options =>
-        options.UseNpgsql(readStoreConnectionString));
-
+    builder.Services.AddDbContext<KitchenDbContext>(options =>
+        options.UseNpgsql(postgresConnectionString));
+    
     builder.Services.AddHangfire(config =>
     {
         config.UseSimpleAssemblyNameTypeSerializer()
@@ -96,52 +92,28 @@ builder.Services.AddHostedService<KafkaEventConsumerHostedService<OrderEventCons
 builder.Services.AddScoped<IEventInbox, OrderEventInbox>();
 
 builder.Services.AddScoped<IOrderRepository, OrderRepository>();
-builder.Services.AddScoped<IOrderReadRepository, OrderReadRepository>();
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.Configure<KitchenCapacityOptions>(
     builder.Configuration.GetSection("Kitchen"));
 builder.Services.Configure<DeliveryZoneOptions>(
     builder.Configuration.GetSection("DeliveryZones"));
 builder.Services.AddSingleton<IDeliveryZoneMatcher, DeliveryZoneMatcher>();
-builder.Services.AddScoped<IKitchenSlotReadRepository, KitchenSlotReadRepository>();
+builder.Services.AddScoped<IKitchenSlotRepository, KitchenSlotRepository>();
 
 // Register kitchen slot cache: Noop by default, Redis if configured
-builder.Services.AddSingleton<OrderService.Application.Interfaces.IKitchenSlotCache, NoopKitchenSlotCache>();
+builder.Services.AddSingleton<IKitchenSlotCache, NoopKitchenSlotCache>();
 var redisConn = builder.Configuration.GetValue<string>("Redis:Connection");
+IConnectionMultiplexer? redisConnection = null;
 if (!string.IsNullOrWhiteSpace(redisConn))
 {
-    builder.Services.AddSingleton<IConnectionMultiplexer>(_ => ConnectionMultiplexer.Connect(redisConn));
-    builder.Services.AddSingleton<OrderService.Application.Interfaces.IKitchenSlotCache, RedisKitchenSlotCache>();
+    redisConnection = ConnectionMultiplexer.Connect(redisConn);
+    builder.Services.AddSingleton<IConnectionMultiplexer>(_ => redisConnection);
+    builder.Services.AddSingleton<IKitchenSlotCache, RedisKitchenSlotCache>();
+    builder.Services.AddSingleton<IDistributedRateLimiter>(sp => new DistributedRateLimiter(redisConnection, sp.GetRequiredService<ILogger<DistributedRateLimiter>>(), "order-service"));
 }
-
-if (!useInMemory)
+else
 {
-    var readServices = new ServiceCollection();
-    readServices.AddDbContext<OrderReadDbContext>(options => options.UseNpgsql(readStoreConnectionString!));
-    readServices.AddScoped<IEventInbox, OrderReadEventInbox>();
-    readServices.AddScoped<IOrderReadProjector, OrderReadProjector>();
-
-    var readProvider = readServices.BuildServiceProvider();
-    builder.Services.AddSingleton(new ReadStoreScopeFactory(readProvider.GetRequiredService<IServiceScopeFactory>()));
-    builder.Services.AddSingleton(readProvider);
-
-    builder.Services.AddSingleton<OrderReadProjectionConsumer>(sp =>
-        new OrderReadProjectionConsumer(
-            builder.Configuration,
-            builder.Environment,
-            sp.GetRequiredService<ILogger<OrderReadProjectionConsumer>>(),
-            sp.GetRequiredService<ReadStoreScopeFactory>().ScopeFactory,
-            sp.GetRequiredService<IEventProducer>()));
-    builder.Services.AddHostedService<KafkaEventConsumerHostedService<OrderReadProjectionConsumer>>();
-
-    builder.Services.AddSingleton<DeliveryEventsConsumer>(sp =>
-        new DeliveryEventsConsumer(
-            builder.Configuration,
-            builder.Environment,
-            sp.GetRequiredService<ILogger<DeliveryEventsConsumer>>(),
-            sp.GetRequiredService<ReadStoreScopeFactory>().ScopeFactory,
-            sp.GetRequiredService<IEventProducer>()));
-    builder.Services.AddHostedService<KafkaEventConsumerHostedService<DeliveryEventsConsumer>>();
+    builder.Services.AddSingleton<IDistributedRateLimiter>(sp => new DistributedRateLimiter(ConnectionMultiplexer.Connect("localhost"), sp.GetRequiredService<ILogger<DistributedRateLimiter>>(), "order-service"));
 }
 
 // Only run OutboxProcessor when using a real relational DB
@@ -176,8 +148,29 @@ var healthChecks = builder.Services.AddHealthChecks()
 
 if (!useInMemory && !string.IsNullOrWhiteSpace(postgresConnectionString))
 {
-    healthChecks.AddNpgSql(postgresConnectionString, name: "db", tags: new[] { "ready" });
+    healthChecks.AddNpgSql(postgresConnectionString, name: "db", tags: new[] { "ready" });    
+    // Outbox lag health check
+    healthChecks.AddOutboxLagCheck(
+        async () =>
+        {
+            using var scope = builder.Services.BuildServiceProvider().CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<OrderDbContext>();
+            return await db.OutboxMessages.CountAsync();
+        },
+        warningThreshold: 100,
+        criticalThreshold: 500);
 }
+
+// Adaptive throttle service monitors health and adjusts rate limits
+if (!useInMemory && redisConnection != null)
+{
+    builder.Services.AddSingleton<AdaptiveThrottleService>(sp =>
+        new AdaptiveThrottleService(
+            sp.GetRequiredService<IDistributedRateLimiter>(),
+            sp.GetRequiredService<HealthCheckService>(),
+            sp.GetRequiredService<ILogger<AdaptiveThrottleService>>(),
+            async () => (await sp.GetRequiredService<OrderDbContext>().OutboxMessages.CountAsync())));
+    builder.Services.AddHostedService(sp => sp.GetRequiredService<AdaptiveThrottleService>());}
 
 var app = builder.Build();
 
@@ -189,6 +182,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseRouting();
+app.UseDistributedRateLimit();
 app.UseAuthentication();
 app.UseAuthorization();
 
@@ -210,6 +204,8 @@ if (!useInMemory)
     using var scope = app.Services.CreateScope();
     var dbContext = scope.ServiceProvider.GetRequiredService<OrderDbContext>();
     dbContext.Database.Migrate();
+    var kitchenDbContext = scope.ServiceProvider.GetRequiredService<KitchenDbContext>();
+    kitchenDbContext.Database.Migrate();
     Log.Information("Database migration completed for OrderService");
 
     var enabled = bool.TryParse(builder.Configuration["Order:PaymentTtlEnabled"], out var ttlEnabled)

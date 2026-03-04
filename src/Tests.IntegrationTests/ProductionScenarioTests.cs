@@ -8,7 +8,6 @@ using OrderService.Domain.Aggregates;
 using OrderService.Domain.Entities;
 using OrderService.Domain.Events;
 using PaymentService.Domain.Aggregates;
-using PaymentService.Domain.SeedWork;
 
 namespace Tests.IntegrationTests;
 
@@ -75,21 +74,7 @@ public class ProductionScenarioTests
         order.ChangeStatus(OrderStatus.Delivered);
         order.Status.Should().Be(OrderStatus.Pending);
     }
-
-    [Fact]
-    public void Payment_StartRequiresStartingStatus()
-    {
-        var payment = Payment.Create(Guid.NewGuid(), 100, "USD");
-
-        var act = () => payment.Start("provider", "ext", "url");
-        act.Should().Throw<DomainException>();
-
-        payment.MarkReady();
-        payment.MarkStarting();
-        payment.Start("provider", "ext", "url");
-        payment.Status.Should().Be(PaymentStatus.Pending);
-    }
-
+    
     [Fact]
     public void Cart_Checkout_SetsLastOrderIdAndResetsCheckoutId()
     {
@@ -241,16 +226,15 @@ public class ProductionScenarioTests
             toLongitude: 2);
 
         var act = () => delivery.AcceptOffer(Guid.NewGuid());
-        act.Should().Throw<DomainException>();
+        act.Should().Throw<DeliveryService.Domain.SeedWork.DomainException>();
     }
 
     [Fact]
     public void Payment_MarkCaptured_IsIdempotent()
     {
         var payment = Payment.Create(Guid.NewGuid(), 100, "USD");
-        payment.MarkReady();
-        payment.MarkStarting();
         payment.Start("provider", "ext", "url");
+        payment.MarkReady();
 
         payment.MarkCaptured("ext1");
         payment.Status.Should().Be(PaymentStatus.Captured);

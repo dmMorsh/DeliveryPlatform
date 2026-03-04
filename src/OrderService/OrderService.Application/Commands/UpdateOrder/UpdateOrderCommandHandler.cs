@@ -3,7 +3,6 @@ using MediatR;
 using Microsoft.Extensions.Logging;
 using OrderService.Application.Interfaces;
 using OrderService.Application.Models;
-using OrderService.Application.Services;
 using Shared.Utilities;
 
 namespace OrderService.Application.Commands.UpdateOrder;
@@ -53,7 +52,6 @@ public class UpdateOrderCommandHandler
 
         await uow.SaveChangesAsync(outboxMessages, ct);
         order.ClearDomainEvents();
-        OrderReadCache.Invalidate(order.Id);
 
         _logger.LogInformation("Order updated: {OrderNumber} (ID: {OrderId})", order.OrderNumber, order.Id);
         

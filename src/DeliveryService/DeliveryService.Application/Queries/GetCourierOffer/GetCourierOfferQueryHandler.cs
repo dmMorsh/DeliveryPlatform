@@ -8,14 +8,21 @@ namespace DeliveryService.Application.Queries.GetCourierOffer;
 public sealed class GetCourierOfferQueryHandler : IRequestHandler<GetCourierOfferQuery, ApiResponse<CourierOfferView?>>
 {
     private readonly IDeliveryRepository _repository;
+    private readonly IDeliveryOfferCache _cache;
 
-    public GetCourierOfferQueryHandler(IDeliveryRepository repository)
+    public GetCourierOfferQueryHandler(IDeliveryRepository repository, IDeliveryOfferCache cache)
     {
         _repository = repository;
+        _cache = cache;
     }
 
     public async Task<ApiResponse<CourierOfferView?>> Handle(GetCourierOfferQuery request, CancellationToken ct)
     {
+        // Try cache first
+        var cachedOffer = await _cache.GetAsync(request.CourierId, ct);
+        if (cachedOffer != null)
+            return ApiResponse<CourierOfferView?>.SuccessResponse(cachedOffer);
+
         var now = DateTime.UtcNow;
         var delivery = await _repository.GetActiveOfferByCourierIdAsync(request.CourierId, now, ct);
         if (delivery == null)
@@ -37,6 +44,9 @@ public sealed class GetCourierOfferQueryHandler : IRequestHandler<GetCourierOffe
             EstimatedDistanceKm = delivery.EstimatedDistanceKm,
             EstimatedTravelMinutes = delivery.EstimatedTravelMinutes
         };
+
+        // Cache the result
+        await _cache.SetAsync(request.CourierId, view, ct);
 
         return ApiResponse<CourierOfferView?>.SuccessResponse(view);
     }

@@ -44,6 +44,10 @@ public record OrderAssignedDomainEvent : DomainEvent
     public Guid CourierId { get; init; }
     public string? CourierName { get; init; }
     public string? CourierPhone { get; init; }
+
+    public DateTime? EstimatedPickupAt { get; init; }
+    public DateTime? EstimatedDeliveryAt { get; init; }
+    public int? EstimatedArrivalMinutes { get; init; }
 }
 
 public record OrderStatusChangedDomainEvent : DomainEvent

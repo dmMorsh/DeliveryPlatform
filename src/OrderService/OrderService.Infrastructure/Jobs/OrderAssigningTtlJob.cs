@@ -1,9 +1,9 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OrderService.Application.Interfaces;
 using OrderService.Application.Models;
-using OrderService.Application.Services;
 using OrderService.Domain.Aggregates;
 using OrderService.Infrastructure.Persistence;
 using Shared.Contracts.Events;
@@ -12,8 +12,7 @@ namespace OrderService.Infrastructure.Jobs;
 
 public sealed class OrderAssigningTtlJob : IOrderAssigningTtlJob
 {
-    private readonly OrderDbContext _db;
-    private readonly IUnitOfWorkFactory _uowFactory;
+    private readonly IServiceScopeFactory _scopeFactory;
     private readonly IOrderIntegrationEventMapper _mapper;
     private readonly ILogger<OrderAssigningTtlJob> _logger;
     private readonly TimeSpan _ttl;
@@ -21,16 +20,13 @@ public sealed class OrderAssigningTtlJob : IOrderAssigningTtlJob
     private readonly int _maxBatches;
 
     public OrderAssigningTtlJob(
-        OrderDbContext db,
-        IUnitOfWorkFactory uowFactory,
         IOrderIntegrationEventMapper mapper,
         IConfiguration config,
-        ILogger<OrderAssigningTtlJob> logger)
+        ILogger<OrderAssigningTtlJob> logger, IServiceScopeFactory scopeFactory)
     {
-        _db = db;
-        _uowFactory = uowFactory;
         _mapper = mapper;
         _logger = logger;
+        _scopeFactory = scopeFactory;
 
         var ttlMinutes = int.TryParse(config["Order:AssigningTtlMinutes"], out var ttlValue) ? ttlValue : 30;
         _batchSize = int.TryParse(config["Order:AssigningTtlBatchSize"], out var batchValue) ? batchValue : 200;
@@ -49,9 +45,12 @@ public sealed class OrderAssigningTtlJob : IOrderAssigningTtlJob
         var cutoff = DateTime.UtcNow.Subtract(_ttl);
         var batches = 0;
 
+        using var scope = _scopeFactory.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<OrderDbContext>();
+        
         while (!ct.IsCancellationRequested && batches < _maxBatches)
         {
-            var expiredOrderIds = await _db.Orders.AsNoTracking()
+            var expiredOrderIds = await db.Orders.AsNoTracking()
                 .Where(o => o.Status == OrderStatus.Assigning
                             && (o.IsReadyForDelivery ? o.ReadyAt < cutoff : o.CreatedAt < cutoff))
                 .OrderBy(o => o.CreatedAt)
@@ -66,8 +65,7 @@ public sealed class OrderAssigningTtlJob : IOrderAssigningTtlJob
             {
                 try
                 {
-                    await using var uow = _uowFactory.Create(orderId);
-                    var order = await uow.Orders.GetOrderByIdAsync(orderId, ct);
+                    var order = await db.Orders.FindAsync(orderId, ct);
                     if (order == null)
                         continue;
                     if (order.Status != OrderStatus.Assigning)
@@ -95,9 +93,10 @@ public sealed class OrderAssigningTtlJob : IOrderAssigningTtlJob
                     }
 
                     if (outbox.Count > 0)
-                        await uow.SaveChangesAsync(outbox, ct);
-
-                    OrderReadCache.Invalidate(order.Id);
+                    {
+                        db.OutboxMessages.AddRange(outbox);
+                        await db.SaveChangesAsync(ct);
+                    }
                 }
                 catch (Exception ex)
                 {

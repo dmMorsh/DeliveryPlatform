@@ -2,7 +2,6 @@
 using Microsoft.Extensions.Logging;
 using OrderService.Application.Interfaces;
 using OrderService.Application.Models;
-using OrderService.Application.Services;
 using OrderService.Domain.Aggregates;
 using OrderService.Domain.Entities;
 using Shared.Utilities;
@@ -66,7 +65,6 @@ public class MarkStockReservationFailedCommandHandler : IRequestHandler<MarkStoc
         
         await uow.SaveChangesAsync(outboxMessages, ct);
         order.ClearDomainEvents();
-        OrderReadCache.Invalidate(order.Id);
 
         _logger.LogInformation("Order updated: {OrderNumber} (ID: {OrderId})", order.OrderNumber, order.Id);
         
@@ -90,7 +88,6 @@ public class MarkStockReservationFailedCommandHandler : IRequestHandler<MarkStoc
         
             await uow.SaveChangesAsync(failMessages, ct);
             order.ClearDomainEvents();
-            OrderReadCache.Invalidate(order.Id);
             return true;
         }
 
@@ -107,7 +104,6 @@ public class MarkStockReservationFailedCommandHandler : IRequestHandler<MarkStoc
         
             await uow.SaveChangesAsync(failMessages, ct);
             order.ClearDomainEvents();
-            OrderReadCache.Invalidate(order.Id);
             return true;
         }
         return false;

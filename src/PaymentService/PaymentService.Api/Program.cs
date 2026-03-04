@@ -20,6 +20,7 @@ using Microsoft.EntityFrameworkCore;
 using PaymentService.Application.MediatR;
 using Serilog;
 using Shared.Services;
+using StackExchange.Redis;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -49,11 +50,28 @@ var httpTimeoutSeconds = int.TryParse(builder.Configuration["Http:TimeoutSeconds
     ? httpTimeout
     : 10;
 
-builder.Services.AddHealthChecks()
+var catalogHealthChecks = builder.Services.AddHealthChecks()
     .AddKafka(new ProducerConfig { BootstrapServers = kafkaBrokers }, name: "kafka");
+
+var redisConnection = ConfigurationGuard.GetRequired(builder.Configuration, builder.Environment, "Redis:Connection", "redis:6379");
+
+try
+{
+    var redisOptions = ConfigurationOptions.Parse(redisConnection);
+    redisOptions.AbortOnConnectFail = false;
+    var mux = ConnectionMultiplexer.Connect(redisOptions);
+    builder.Services.AddSingleton<IConnectionMultiplexer>(mux);
+    catalogHealthChecks.AddRedis(redisConnection, name: "redis", tags: new[] { "ready" });
+}
+catch (Exception ex)
+{
+    builder.Services.AddSingleton<IConnectionMultiplexer>(_ =>
+        throw new InvalidOperationException($"Failed to connect to Redis at {redisConnection}", ex));
+}
 
 builder.Services.AddMediatR(typeof(ApplicationMarker).Assembly);
 builder.Services.AddScoped<IUnitOfWorkFactory, UnitOfWorkFactory>();
+builder.Services.AddSingleton<IPaymentStatusCache, PaymentStatusRedisCache>();
 builder.Services.AddSingleton<IPaymentDbContextFactory, PaymentDbContextFactory>();
 builder.Services.Configure<PaymentShardOptions>(builder.Configuration.GetSection("Payments:Sharding"));
 builder.Services.AddSingleton<IPaymentShardRouter, PaymentShardRouter>();

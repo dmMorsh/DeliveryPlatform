@@ -1,19 +1,12 @@
 ﻿using CatalogService.Application.Common;
-using CatalogService.Application.Common.Enums;
 using CatalogService.Application.Interfaces;
 using CatalogService.Application.Models;
-using CatalogService.Application.Queries;
 using CatalogService.Application.Queries.SearchProducts;
-using CatalogService.Domain.Aggregates;
 using CatalogService.Infrastructure.Persistence;
 using CatalogService.Infrastructure.ReadStore;
-using Microsoft.EntityFrameworkCore;
 using Elastic.Clients.Elasticsearch;
 using Elastic.Clients.Elasticsearch.QueryDsl;
 using StackExchange.Redis;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Text.Json;
 
 namespace CatalogService.Infrastructure.Repositories;

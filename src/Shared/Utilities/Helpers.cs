@@ -35,7 +35,6 @@ public static class EventSerializer
             "payment.refunded" => typeof(PaymentRefundedEvent),
             "courier.registered" => typeof(CourierRegisteredEvent),
             "courier.status.changed" => typeof(CourierStatusChangedEvent),
-            "courier.location.updated" => typeof(CourierLocationUpdatedEvent),
             "courier.rating.updated" => typeof(CourierRatingUpdatedEvent),
             _ => null
         };

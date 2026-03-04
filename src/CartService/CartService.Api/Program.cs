@@ -9,7 +9,6 @@ using CartService.Infrastructure.Mapping;
 using CartService.Infrastructure.Outbox;
 using CartService.Infrastructure.Persistence;
 using CartService.Infrastructure.Repositories;
-using CartService.Infrastructure.ReadStore;
 using Confluent.Kafka;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -101,9 +100,6 @@ builder.Services.AddScoped<ICartRepository, CartRepository>();
 builder.Services.AddScoped<ICartReadRepository, CartReadRepository>();
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddSingleton<ICartIntegrationEventMapper, CartIntegrationEventMapper>();
-
-// Cart read projector for cache invalidation
-builder.Services.AddScoped<CartReadProjector>();
 
 // Event Consumers
 builder.Services.AddSingleton<CartEventConsumer>();

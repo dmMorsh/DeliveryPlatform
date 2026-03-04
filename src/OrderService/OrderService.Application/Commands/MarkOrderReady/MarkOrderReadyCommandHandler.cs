@@ -2,7 +2,6 @@ using MediatR;
 using Microsoft.Extensions.Logging;
 using OrderService.Application.Interfaces;
 using OrderService.Application.Models;
-using OrderService.Application.Services;
 using OrderService.Domain.Aggregates;
 using Shared.Utilities;
 
@@ -50,7 +49,6 @@ public sealed class MarkOrderReadyCommandHandler : IRequestHandler<MarkOrderRead
 
         await uow.SaveChangesAsync(outboxMessages, ct);
         order.ClearDomainEvents();
-        OrderReadCache.Invalidate(order.Id);
 
         _logger.LogInformation("Order {OrderId} marked as ready for delivery", order.Id);
         return ApiResponse.SuccessResponse();

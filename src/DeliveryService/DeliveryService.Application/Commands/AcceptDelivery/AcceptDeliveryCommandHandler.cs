@@ -13,17 +13,23 @@ public class AcceptDeliveryCommandHandler : IRequestHandler<AcceptDeliveryComman
     private readonly IDeliveryRepository _repository;
     private readonly IUnitOfWork _uow;
     private readonly IDeliveryEventMapper _eventMapper;
+    private readonly IDeliveryOfferCache _offerCache;
+    private readonly IDeliveryEtaCalculator _etaCalculator;
     private readonly ILogger<AcceptDeliveryCommandHandler> _logger;
 
     public AcceptDeliveryCommandHandler(
         IDeliveryRepository repository,
         IUnitOfWork uow,
         IDeliveryEventMapper eventMapper,
+        IDeliveryOfferCache offerCache,
+        IDeliveryEtaCalculator etaCalculator,
         ILogger<AcceptDeliveryCommandHandler> logger)
     {
         _repository = repository;
         _uow = uow;
         _eventMapper = eventMapper;
+        _offerCache = offerCache;
+        _etaCalculator = etaCalculator;
         _logger = logger;
     }
 
@@ -55,6 +61,21 @@ public class AcceptDeliveryCommandHandler : IRequestHandler<AcceptDeliveryComman
             return ApiResponse.ErrorResponse(ErrorCodes.Invariant, "No active offer for courier");
         }
 
+        // recompute ETA based on potentially updated conditions (e.g. delivery age or courier location)
+        var eta = _etaCalculator.Calculate(
+            delivery.FromLatitude,
+            delivery.FromLongitude,
+            delivery.ToLatitude,
+            delivery.ToLongitude);
+        if (eta != null)
+        {
+            delivery.SetEta(
+                eta.EstimatedPickupAt,
+                eta.EstimatedDeliveryAt,
+                eta.DistanceKm,
+                eta.TravelMinutes);
+        }
+
         delivery.AcceptOffer(request.CourierId);
 
         var outbox = delivery.DomainEvents
@@ -66,6 +87,7 @@ public class AcceptDeliveryCommandHandler : IRequestHandler<AcceptDeliveryComman
         await _uow.SaveChangesAsync(outbox, ct);
         delivery.ClearDomainEvents();
         DeliveryReadCache.Invalidate(delivery.Id, delivery.OrderId);
+        await _offerCache.RemoveAsync(request.CourierId, ct);
 
         _logger.LogInformation("Delivery {DeliveryId} accepted by courier {CourierId}", delivery.Id, request.CourierId);
         return ApiResponse.SuccessResponse();

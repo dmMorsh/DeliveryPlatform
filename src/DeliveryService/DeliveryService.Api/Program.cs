@@ -79,6 +79,7 @@ builder.Services.AddScoped<IDeliveryRepository, DeliveryRepository>();
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddSingleton<IDeliveryEventMapper, DeliveryEventMapper>();
 builder.Services.AddSingleton<IAssignmentQueue, RedisAssignmentQueue>();
+builder.Services.AddSingleton<IDeliveryOfferCache, DeliveryOfferRedisCache>();
 
 builder.Services.AddHttpClient<ICourierDirectory, CourierDirectoryHttpClient>()
     .AddPolicyHandler((sp, _) =>

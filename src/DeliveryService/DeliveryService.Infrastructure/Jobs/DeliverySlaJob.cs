@@ -5,6 +5,7 @@ using DeliveryService.Infrastructure.Persistence;
 using Hangfire;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Shared.Contracts.Events;
 
@@ -13,7 +14,7 @@ namespace DeliveryService.Infrastructure.Jobs;
 [DisableConcurrentExecution(60 * 60)]
 public sealed class DeliverySlaJob : IDeliverySlaJob
 {
-    private readonly DeliveryDbContext _db;
+    private readonly IServiceScopeFactory _scopeFactory;
     private readonly IDeliveryEventMapper _eventMapper;
     private readonly IAssignmentQueue _assignmentQueue;
     private readonly ILogger<DeliverySlaJob> _logger;
@@ -25,16 +26,15 @@ public sealed class DeliverySlaJob : IDeliverySlaJob
     private readonly TimeSpan _reassignCooldown;
 
     public DeliverySlaJob(
-        DeliveryDbContext db,
         IDeliveryEventMapper eventMapper,
         IAssignmentQueue assignmentQueue,
         IConfiguration config,
-        ILogger<DeliverySlaJob> logger)
+        ILogger<DeliverySlaJob> logger, IServiceScopeFactory scopeFactory)
     {
-        _db = db;
         _eventMapper = eventMapper;
         _assignmentQueue = assignmentQueue;
         _logger = logger;
+        _scopeFactory = scopeFactory;
 
         var pickupMinutes = int.TryParse(config["Delivery:SlaPickupMinutes"], out var pickupValue) ? pickupValue : 60;
         var transitMinutes = int.TryParse(config["Delivery:SlaTransitMinutes"], out var transitValue) ? transitValue : 180;
@@ -58,9 +58,13 @@ public sealed class DeliverySlaJob : IDeliverySlaJob
         var now = DateTime.UtcNow;
 
         var batches = 0;
+        
+        using var scope = _scopeFactory.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<DeliveryDbContext>();
+        
         while (!ct.IsCancellationRequested && batches < _maxBatches)
         {
-            var pickupCandidates = await _db.Deliveries
+            var pickupCandidates = await db.Deliveries
                 .Where(d => d.Status == DeliveryStatus.Assigned
                             && d.PickupTimeoutNotifiedAt == null
                             && d.AssignedAt != null)
@@ -68,7 +72,7 @@ public sealed class DeliverySlaJob : IDeliverySlaJob
                 .Take(_batchSize)
                 .ToListAsync(ct);
 
-            var transitCandidates = await _db.Deliveries
+            var transitCandidates = await db.Deliveries
                 .Where(d => d.Status == DeliveryStatus.InDelivery
                             && d.TransitTimeoutNotifiedAt == null
                             && d.InTransitAt != null)
@@ -142,8 +146,8 @@ public sealed class DeliverySlaJob : IDeliverySlaJob
 
             if (outbox.Count > 0)
             {
-                _db.OutboxMessages.AddRange(outbox);
-                await _db.SaveChangesAsync(ct);
+                db.OutboxMessages.AddRange(outbox);
+                await db.SaveChangesAsync(ct);
                 _logger.LogInformation("Delivery SLA job emitted {Count} events", outbox.Count);
                 foreach (var deliveryId in toEnqueue)
                     await _assignmentQueue.EnqueueAsync(deliveryId, now, false, ct);

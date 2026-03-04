@@ -11,15 +11,18 @@ public class CapturePaymentCommandHandler : IRequestHandler<CapturePaymentComman
     private readonly IUnitOfWorkFactory _factory;
     private readonly IPaymentProviderResolver _providers;
     private readonly IPaymentIntegrationEventMapper _eventMapper;
+    private readonly IPaymentStatusCache _cache;
 
     public CapturePaymentCommandHandler(
         IUnitOfWorkFactory factory,
         IPaymentProviderResolver providers,
-        IPaymentIntegrationEventMapper eventMapper)
+        IPaymentIntegrationEventMapper eventMapper,
+        IPaymentStatusCache cache)
     {
         _factory = factory;
         _providers = providers;
         _eventMapper = eventMapper;
+        _cache = cache;
     }
 
     public async Task<ApiResponse> Handle(CapturePaymentCommand request, CancellationToken ct)
@@ -43,6 +46,7 @@ public class CapturePaymentCommandHandler : IRequestHandler<CapturePaymentComman
 
         await uow.Payments.UpsertExternalPaymentIdMap(payment.OrderId, payment.Id, payment.ExternalPaymentId, payment.Provider, ct);
         await uow.SaveChangesAsync(outbox, ct);
+        await _cache.RemoveAsync(request.OrderId, ct);
 
         return ApiResponse.SuccessResponse();
     }

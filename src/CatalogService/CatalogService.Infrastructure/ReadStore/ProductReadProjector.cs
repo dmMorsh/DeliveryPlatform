@@ -1,5 +1,3 @@
-using System.Text.Json;
-using CatalogService.Infrastructure.ReadStore;
 using Elastic.Clients.Elasticsearch;
 using Shared.Contracts.Events;
 using StackExchange.Redis;
@@ -20,6 +18,13 @@ public sealed class ProductReadProjector
 
     public async Task HandleAsync(ProductCreatedEvent evt, CancellationToken ct)
     {
+        if (evt.ProductId == Guid.Empty)
+            throw new ArgumentException("ProductId cannot be empty", nameof(evt.ProductId));
+        if (string.IsNullOrWhiteSpace(evt.Name))
+            throw new ArgumentException("Name cannot be empty", nameof(evt.Name));
+        if (evt.PriceCents < 0)
+            throw new ArgumentException("Price cannot be negative", nameof(evt.PriceCents));
+        
         var doc = new ProductReadModel
         {
             Id = evt.ProductId,
@@ -30,13 +35,23 @@ public sealed class ProductReadProjector
             UpdatedAt = evt.Timestamp
         };
 
-        await EnsureIndexExistsAsync(ct);
-        await _es.IndexAsync(doc, i => i.Index(IndexName).Id(evt.ProductId.ToString()), ct);
-        await _redis.GetDatabase().KeyDeleteAsync(CacheKey(evt.ProductId));
+        try
+        {
+            await EnsureIndexExistsAsync(ct);
+            await _es.IndexAsync(doc, i => i.Index(IndexName).Id(evt.ProductId.ToString()), ct);
+        }
+        finally
+        {
+            // Always clear cache, even if ES fails
+            await _redis.GetDatabase().KeyDeleteAsync(CacheKey(evt.ProductId));
+        }
     }
 
     public async Task HandleAsync(ProductPriceChangedEvent evt, CancellationToken ct)
     {
+        if (evt.NewPriceCents < 0)
+            throw new ArgumentException("Price cannot be negative", nameof(evt.NewPriceCents));
+
         await EnsureIndexExistsAsync(ct);
         // construct an explicit request to avoid overload confusion
         var updateReq = new UpdateRequest<ProductReadModel, object>(IndexName, evt.ProductId.ToString())
