@@ -9,8 +9,6 @@ using OrderService.Application.Commands.MarkOrderReady;
 using OrderService.Application.Commands.MarkOrderAccepted;
 using OrderService.Application.Commands.MarkOrderRejected;
 using OrderService.Application.Commands.UpdateOrder;
-// using OrderService.Application.Queries.GetClientOrders;
-// using OrderService.Application.Queries.GetOrder;
 
 namespace OrderService.Api.Controllers;
 
@@ -57,8 +55,6 @@ public class OrdersController : ControllerBase
             return BadRequest(result);
         
         return Ok(result);
-
-        //return CreatedAtAction(nameof(GetOrder), new { id = result.Data?.Id }, result);
     }
 
     /// <summary>

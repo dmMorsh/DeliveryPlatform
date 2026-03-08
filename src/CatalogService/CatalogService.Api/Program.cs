@@ -106,9 +106,9 @@ if (!useInMemory)
 }
 
 // Auth
-builder.AddExtededAuthentication();
+builder.AddExtendedAuthentication();
 builder.Services.AddAuthorization();
-builder.AddExtededCors();
+builder.AddExtendedCors();
 
 var app = builder.Build();
 

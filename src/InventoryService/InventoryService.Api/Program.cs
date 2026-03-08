@@ -137,9 +137,9 @@ builder.Services.AddHostedService<KafkaEventConsumerHostedService<InventoryReadP
 builder.Services.AddSingleton<IStockIntegrationEventMapper, StockIntegrationEventMapper>();
 
 // Auth
-builder.AddExtededAuthentication();
+builder.AddExtendedAuthentication();
 builder.Services.AddAuthorization();
-builder.AddExtededCors();
+builder.AddExtendedCors();
 
 var app = builder.Build();
 

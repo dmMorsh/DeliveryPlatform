@@ -1,7 +1,5 @@
-using Microsoft.AspNetCore.Builder;
+using Confluent.Kafka;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
 using OrderReadService.Application.Interfaces;
 using OrderReadService.Infrastructure.Inbox;
 using OrderReadService.Infrastructure.Persistence;
@@ -10,16 +8,14 @@ using Shared.Services;
 using StackExchange.Redis;
 
 var builder = WebApplication.CreateBuilder(args);
-
 var services = builder.Services;
-var configuration = builder.Configuration;
 
-var readStoreConnectionString = configuration.GetConnectionString("OrderReadDb") ??
-                                Environment.GetEnvironmentVariable("ORDER_READ_DB") ??
-                                "Host=localhost;Database=order_read;Username=postgres;Password=postgres";
+var connectionString = ConfigurationGuard.GetRequiredConnectionString(builder.Configuration, builder.Environment, "PostgreSQL");
+if (string.IsNullOrWhiteSpace(connectionString))
+    throw new InvalidOperationException("PostgreSQL connection string is required.");
 
 services.AddDbContext<OrderReadDbContext>(options =>
-    options.UseNpgsql(readStoreConnectionString));
+    options.UseNpgsql(connectionString));
 
 services.AddScoped<OrderReadProjector>();
 services.AddScoped<IEventInbox, OrderReadEventInbox>();
@@ -41,7 +37,26 @@ services.AddSingleton<IConnectionMultiplexer>(sp =>
 });
 services.AddSingleton<IOrderReadCache, OrderReadRedisCache>();
 
+var kafkaBrokers = ConfigurationGuard.GetRequired(builder.Configuration, builder.Environment, "Kafka:Brokers", "localhost:29092");
+var redisConnection = ConfigurationGuard.GetRequired(builder.Configuration, builder.Environment, "Redis:Connection", "localhost:6379");
+services.AddHealthChecks()
+    .AddNpgSql(connectionString, name: "db", tags: new[] { "ready" })
+    .AddRedis(redisConnection,
+        name: "redis",
+        tags: new[] { "ready" })
+    .AddKafka(new ProducerConfig
+        {
+            BootstrapServers = kafkaBrokers
+        },
+        name: "kafka",
+        tags: new[] { "ready" });
+
 var app = builder.Build();
+
+// Migration
+using var scope = app.Services.CreateScope();
+var dbContext = scope.ServiceProvider.GetRequiredService<OrderReadDbContext>();
+dbContext.Database.Migrate();
 
 app.MapHealthChecks("/health");
 

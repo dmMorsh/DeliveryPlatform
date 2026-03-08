@@ -63,9 +63,9 @@ builder.Services.AddScoped<ILocationTrackingClient>(sp =>
         sp.GetRequiredService<ILogger<LocationTrackingClient>>()));
 
 // Auth
-builder.AddExtededAuthentication();
+builder.AddExtendedAuthentication();
 builder.Services.AddAuthorization();
-builder.AddExtededCors();
+builder.AddExtendedCors();
 
 builder.Services.AddRateLimiter(options =>
 {

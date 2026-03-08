@@ -76,9 +76,9 @@ builder.Services.AddHostedService<KafkaEventConsumerHostedService<CourierEventCo
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
 // Auth
-builder.AddExtededAuthentication();
+builder.AddExtendedAuthentication();
 builder.Services.AddAuthorization();
-builder.AddExtededCors();
+builder.AddExtendedCors();
 
 var connectionString1 = builder.Configuration.GetConnectionString("PostgreSQL");
 if (string.IsNullOrWhiteSpace(connectionString1))

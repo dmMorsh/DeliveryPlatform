@@ -19,35 +19,6 @@ public class OrdersController : ControllerBase
     }
 
     /// <summary>
-    /// Создать новый заказ
-    /// </summary>
-    /// <param name="request">Данные заказа</param>
-    /// <param name="ct"></param>
-    /// <returns>Созданный заказ</returns>
-    [Obsolete]
-    [HttpPost]
-    public async Task<IActionResult> CreateOrder([FromBody] CreateOrderRequest request, CancellationToken ct)
-    {
-        _logger.LogInformation("Gateway: Creating order for client {ClientId}", request.ClientId);
-
-        var (data, statusCode, error) = await _proxyService.ProxyPostAsync<dynamic>(
-            "order-service", 
-            "/api/orders", 
-            HttpContext,
-            request,
-            ct
-        );
-
-        if (statusCode >= 200 && statusCode < 300)
-        {
-            return StatusCode(statusCode, data);
-        }
-
-        _logger.LogError("Error creating order: {Error}", error);
-        return StatusCode(statusCode, new ProxyErrorResponse { Message = error });
-    }
-
-    /// <summary>
     /// Получить заказ по ID
     /// </summary>
     /// <param name="orderId">ID заказа</param>
@@ -59,7 +30,7 @@ public class OrdersController : ControllerBase
         _logger.LogInformation("Gateway: Getting order {OrderId}", orderId);
 
         var (data, statusCode, error) = await _proxyService.ProxyGetAsync<dynamic>(
-            "order-service",
+            "order-read-service",
             $"/api/orders/{orderId}",
             HttpContext,
             ct
@@ -109,7 +80,7 @@ public class OrdersController : ControllerBase
         var path = "/api/orders?" + string.Join("&", queryParams);
 
         var (data, statusCode, error) = await _proxyService.ProxyGetAsync<dynamic>(
-            "order-service",
+            "order-read-service",
             path,
             HttpContext,
             ct
@@ -124,6 +95,36 @@ public class OrdersController : ControllerBase
         return StatusCode(statusCode, new ProxyErrorResponse { Message = error });
     }
 
+    
+    /// <summary>
+    /// Создать новый заказ
+    /// </summary>
+    /// <param name="request">Данные заказа</param>
+    /// <param name="ct"></param>
+    /// <returns>Созданный заказ</returns>
+    [Obsolete]
+    [HttpPost]
+    public async Task<IActionResult> CreateOrder([FromBody] CreateOrderRequest request, CancellationToken ct)
+    {
+        _logger.LogInformation("Gateway: Creating order for client {ClientId}", request.ClientId);
+
+        var (data, statusCode, error) = await _proxyService.ProxyPostAsync<dynamic>(
+            "order-service", 
+            "/api/orders", 
+            HttpContext,
+            request,
+            ct
+        );
+
+        if (statusCode >= 200 && statusCode < 300)
+        {
+            return StatusCode(statusCode, data);
+        }
+
+        _logger.LogError("Error creating order: {Error}", error);
+        return StatusCode(statusCode, new ProxyErrorResponse { Message = error });
+    }
+
     /// <summary>
     /// Обновить заказ (назначить курьера, изменить статус)
     /// </summary>
@@ -131,6 +132,7 @@ public class OrdersController : ControllerBase
     /// <param name="request">Данные для обновления</param>
     /// <param name="ct"></param>
     /// <returns>Обновленный заказ</returns>
+    [Obsolete]
     [HttpPut("{orderId}")]
     public async Task<IActionResult> UpdateOrder(int orderId, [FromBody] UpdateOrderRequest request, CancellationToken ct)
     {

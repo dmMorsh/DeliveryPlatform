@@ -114,9 +114,9 @@ builder.Services.AddScoped<IEventInbox, PaymentEventInbox>();
 builder.Services.AddHostedService<ProcessedEventCleanupHostedService<PaymentDbContext>>();
 
 // Auth
-builder.AddExtededAuthentication();
+builder.AddExtendedAuthentication();
 builder.Services.AddAuthorization();
-builder.AddExtededCors();
+builder.AddExtendedCors();
 
 builder.Services.AddRateLimiter(options =>
 {

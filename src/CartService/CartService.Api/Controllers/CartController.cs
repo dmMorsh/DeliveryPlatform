@@ -108,12 +108,12 @@ public class CartController : ControllerBase
     private Guid GetCustomerIdFromContext()
     {
         // Try to get from JWT claims first
-        var userIdClaim = User?.FindFirst("sub") ?? User?.FindFirst("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier");
+        var userIdClaim = User.FindFirst("sub") ?? User.FindFirst("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier");
         if (userIdClaim != null && Guid.TryParse(userIdClaim.Value, out var customerId))
             return customerId;
 
         // Fallback to User.Identity.Name if available (though should use claims)
-        if (!string.IsNullOrEmpty(User?.Identity?.Name) && Guid.TryParse(User.Identity.Name, out var nameGuid))
+        if (!string.IsNullOrEmpty(User.Identity?.Name) && Guid.TryParse(User.Identity.Name, out var nameGuid))
             return nameGuid;
 
         // Return empty GUID if not found - will be handled by caller

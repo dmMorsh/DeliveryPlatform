@@ -1,4 +1,4 @@
-@IdentityService_HostAddress = http://localhost:5292
+@IdentityService_HostAddress = http://localhost:5200
 
 GET {{IdentityService_HostAddress}}/weatherforecast/
 Accept: application/json

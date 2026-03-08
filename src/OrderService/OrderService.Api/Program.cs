@@ -134,9 +134,9 @@ builder.Services
     .AddTransient(typeof(IPipelineBehavior<,>), typeof(ExceptionBehavior<,>))
     .AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
 // Auth
-builder.AddExtededAuthentication();
+builder.AddExtendedAuthentication();
 builder.Services.AddAuthorization();
-builder.AddExtededCors();
+builder.AddExtendedCors();
 
 var healthChecks = builder.Services.AddHealthChecks()
     .AddKafka(new ProducerConfig
@@ -207,17 +207,19 @@ if (!useInMemory)
     var kitchenDbContext = scope.ServiceProvider.GetRequiredService<KitchenDbContext>();
     kitchenDbContext.Database.Migrate();
     Log.Information("Database migration completed for OrderService");
+    
+    var recurringJobManager = scope.ServiceProvider.GetRequiredService<IRecurringJobManager>();
 
-    var enabled = bool.TryParse(builder.Configuration["Order:PaymentTtlEnabled"], out var ttlEnabled)
+    var paymentEnabled = bool.TryParse(builder.Configuration["Order:PaymentTtlEnabled"], out var ttlEnabled)
         ? ttlEnabled
         : true;
-    if (enabled)
+    if (paymentEnabled)
     {
         var cron = builder.Configuration["Order:PaymentTtlCron"];
         if (string.IsNullOrWhiteSpace(cron))
             cron = "0 3 * * *";
-
-        RecurringJob.AddOrUpdate<IOrderPaymentTtlJob>(
+        
+        recurringJobManager.AddOrUpdate<IOrderPaymentTtlJob>(
             "order-payment-ttl",
             job => job.ExecuteAsync(CancellationToken.None),
             cron);
@@ -232,7 +234,7 @@ if (!useInMemory)
         if (string.IsNullOrWhiteSpace(cron))
             cron = "0 5 * * *";
 
-        RecurringJob.AddOrUpdate<IOrderAssigningTtlJob>(
+        recurringJobManager.AddOrUpdate<IOrderAssigningTtlJob>(
             "order-assigning-ttl",
             job => job.ExecuteAsync(CancellationToken.None),
             cron);
@@ -247,7 +249,7 @@ if (!useInMemory)
         if (string.IsNullOrWhiteSpace(cron))
             cron = "0 6 * * *";
 
-        RecurringJob.AddOrUpdate<IOrderKitchenAcceptanceTtlJob>(
+        recurringJobManager.AddOrUpdate<IOrderKitchenAcceptanceTtlJob>(
             "order-kitchen-accept-ttl",
             job => job.ExecuteAsync(CancellationToken.None),
             cron);
@@ -262,7 +264,7 @@ if (!useInMemory)
         if (string.IsNullOrWhiteSpace(cron))
             cron = "0 12 * * *";
 
-        RecurringJob.AddOrUpdate<IOrderKitchenDelayJob>(
+        recurringJobManager.AddOrUpdate<IOrderKitchenDelayJob>(
             "order-kitchen-delay",
             job => job.ExecuteAsync(CancellationToken.None),
             cron);
@@ -272,5 +274,7 @@ else
 {
     Log.Information("Using in-memory database; skipping migrations.");
 }
+
+app.UseHangfireDashboard();
 
 app.Run();

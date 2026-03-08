@@ -11,6 +11,7 @@ using CartService.Infrastructure.Persistence;
 using CartService.Infrastructure.Repositories;
 using Confluent.Kafka;
 using MediatR;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
 using Shared.Proto;
@@ -101,9 +102,10 @@ builder.Services.AddScoped<ICartReadRepository, CartReadRepository>();
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddSingleton<ICartIntegrationEventMapper, CartIntegrationEventMapper>();
 
-// Event Consumers
-builder.Services.AddSingleton<CartEventConsumer>();
-builder.Services.AddHostedService<KafkaEventConsumerHostedService<CartEventConsumer>>();
+// Event Consumers // Not using yet
+// builder.Services.AddSingleton<CartEventConsumer>();
+// builder.Services.AddHostedService<KafkaEventConsumerHostedService<CartEventConsumer>>();
+
 // Outbox processor
 if (!useInMemory)
 {
@@ -113,9 +115,9 @@ if (!useInMemory)
 }
 
 // Auth
-builder.AddExtededAuthentication();
+builder.AddExtendedAuthentication();
 builder.Services.AddAuthorization();
-builder.AddExtededCors();
+builder.AddExtendedCors();
 
 var app = builder.Build();
 
@@ -125,11 +127,11 @@ app.UseAuthorization();
 app.UseCors();
 
 app.MapControllers();
-app.MapHealthChecks("/health/live", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+app.MapHealthChecks("/health/live", new HealthCheckOptions
 {
     Predicate = _ => false
 });
-app.MapHealthChecks("/health/ready", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+app.MapHealthChecks("/health/ready", new HealthCheckOptions
 {
     Predicate = reg => reg.Tags.Contains("ready")
 });

@@ -28,11 +28,12 @@ public class ProxyService : IProxyService
 
         _serviceUrls = new Dictionary<string, string>
         {
-            ["auth-service"] = ConfigurationGuard.GetRequired(config, env, "Services:AuthServiceUrl", "http://localhost:5292"),
+            ["auth-service"] = ConfigurationGuard.GetRequired(config, env, "Services:AuthServiceUrl", "http://localhost:5200"),
             ["catalog-service"] = ConfigurationGuard.GetRequired(config, env, "Services:CatalogServiceUrl", "http://localhost:5201"),
             ["cart-service"] = ConfigurationGuard.GetRequired(config, env, "Services:CartServiceUrl", "https://localhost:7202"),
             ["inventory-service"] = ConfigurationGuard.GetRequired(config, env, "Services:InventoryServiceUrl", "http://localhost:5203"),
             ["order-service"] = ConfigurationGuard.GetRequired(config, env, "Services:OrderServiceUrl", "https://localhost:7204"),
+            ["order-read-service"] = ConfigurationGuard.GetRequired(config, env, "Services:OrderReadServiceUrl", "https://localhost:7214"),
             ["payment-service"] = ConfigurationGuard.GetRequired(config, env, "Services:PaymentServiceUrl", "http://localhost:5205"),
             ["courier-service"] = ConfigurationGuard.GetRequired(config, env, "Services:CourierServiceUrl", "http://localhost:5206"),
             ["location-tracking"] = ConfigurationGuard.GetRequired(config, env, "Services:LocationTrackingUrl", "http://localhost:5127")

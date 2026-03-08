@@ -51,7 +51,11 @@ public class OrdersController : ControllerBase
     [HttpGet("{id}")]
     public async Task<IActionResult> GetOrder(Guid id, CancellationToken ct)
     {
-        var query = new GetOrderQuery(id);
+        var customerId = GetCustomerIdFromContext();
+        if (customerId == Guid.Empty)
+            return Unauthorized(new { error = "Customer ID not found in context" });
+        
+        var query = new GetOrderQuery(id, customerId);
         
         var result = await _mediator.Send(query, ct);
         if (!result.Success)
@@ -60,11 +64,9 @@ public class OrdersController : ControllerBase
         return Ok(result);
     }
     
-    
     /// <summary>
     /// Получить заказы клиента
     /// </summary>
-    // [HttpGet("client/{clientId}")]
     [HttpGet]
     public async Task<IActionResult> GetClientOrders(CancellationToken ct)
     {
@@ -81,7 +83,6 @@ public class OrdersController : ControllerBase
         return Ok(result);
     }
     
-        
     private Guid GetCustomerIdFromContext()
     {
         // Try to get from JWT claims first
@@ -96,5 +97,4 @@ public class OrdersController : ControllerBase
         // Return empty GUID if not found - will be handled by caller
         return Guid.Empty;
     }
-
 }
