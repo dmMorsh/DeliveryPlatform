@@ -34,4 +34,15 @@ public class StockIntegrationEventMapper : IStockIntegrationEventMapper
             Items = items
         };
     }
+
+    public StockQuantityChangedEvent MapStockQuantityChangedEvent(Guid productId, int totalQuantity, int reservedQuantity, int availableQuantity)
+    {
+        return new StockQuantityChangedEvent
+        {
+            ProductId = productId,
+            TotalQuantity = totalQuantity,
+            ReservedQuantity = reservedQuantity,
+            AvailableQuantity = availableQuantity
+        };
+    }
 }

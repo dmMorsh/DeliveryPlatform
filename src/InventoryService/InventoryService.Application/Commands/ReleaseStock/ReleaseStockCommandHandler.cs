@@ -135,6 +135,15 @@ public class ReleaseStockCommandHandler
                 }).ToArray()
         );
         outboxMessages.Add(OutboxMessage.From(integrationEvent));
+
+        var quantityChangedEvents = toRelease
+            .Select(x => _eventMapper.MapStockQuantityChangedEvent(
+                x.stock.Id,
+                x.stock.TotalQuantity,
+                x.stock.ReservedQuantity,
+                x.stock.AvailableQuantity))
+            .Select(OutboxMessage.From);
+        outboxMessages.AddRange(quantityChangedEvents);
         
         await uow.SaveChangesAsync(outboxMessages, ct);
         

@@ -15,6 +15,7 @@ using Serilog;
 using Shared.Services;
 using StackExchange.Redis;
 using CatalogService.Infrastructure.ReadStore;
+using Elastic.Clients.Elasticsearch;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -48,8 +49,8 @@ builder.Services.AddScoped<IProductReadRepository, ProductReadRepository>();
 
 // Elasticsearch client
 var esUrl = builder.Configuration.GetValue<string>("Elasticsearch:Url", "http://localhost:9200");
-var esSettings = new Elastic.Clients.Elasticsearch.ElasticsearchClientSettings(new Uri(esUrl));
-builder.Services.AddSingleton(new Elastic.Clients.Elasticsearch.ElasticsearchClient(esSettings));
+var esSettings = new ElasticsearchClientSettings(new Uri(esUrl));
+builder.Services.AddSingleton(new ElasticsearchClient(esSettings));
 
 // Read-store projector and consumer
 builder.Services.AddScoped<ProductReadProjector>();
@@ -71,7 +72,7 @@ if (!useInMemory)
     catalogHealthChecks.AddNpgSql(pg, name: "db", tags: new[] { "ready" });
 }
 
-var redisConnection = ConfigurationGuard.GetRequired(builder.Configuration, builder.Environment, "Redis:Connection", "redis:6379");
+var redisConnection = ConfigurationGuard.GetRequired(builder.Configuration, builder.Environment, "Redis:Connection", "localhost:6379");
 try
 {
     var redisOptions = ConfigurationOptions.Parse(redisConnection);

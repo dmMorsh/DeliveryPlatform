@@ -2,7 +2,6 @@
 using InventoryService.Application.Models;
 using InventoryService.Domain.Aggregates;
 using MediatR;
-using Microsoft.EntityFrameworkCore;
 using Shared.Utilities;
 
 namespace InventoryService.Application.Commands.AddStock;
@@ -11,11 +10,13 @@ public class AddStockCommandHandler : IRequestHandler<AddStockCommand, ApiRespon
 {
     private readonly IUnitOfWorkFactory _factory;
     private readonly IShardResolver _resolver;
+    private readonly IStockIntegrationEventMapper _eventMapper;
 
-    public AddStockCommandHandler(IUnitOfWorkFactory factory, IShardResolver resolver)
+    public AddStockCommandHandler(IUnitOfWorkFactory factory, IShardResolver resolver, IStockIntegrationEventMapper eventMapper)
     {
         _factory = factory;
         _resolver = resolver;
+        _eventMapper = eventMapper;
     }
 
     public async Task<ApiResponse<List<ProcessedStockItemModel>?>> Handle(AddStockCommand request, CancellationToken ct)
@@ -41,55 +42,52 @@ public class AddStockCommandHandler : IRequestHandler<AddStockCommand, ApiRespon
         SimpleStockItemModel[] baseStockModels, CancellationToken ct)
     {
         await using var uow = _factory.Create(shardId);
+
+        var invalidItems = baseStockModels
+            .Where(m => m.Quantity <= 0)
+            .Select(m => new ProcessedStockItemModel(
+                m.ProductId,
+                m.Quantity,
+                "Quantity must be positive"))
+            .ToList();
+        if (invalidItems.Count > 0)
+        {
+            errors.AddRange(invalidItems);
+            baseStockModels = baseStockModels.Where(m => m.Quantity > 0).ToArray();
+        }
+        if (baseStockModels.Length == 0)
+            return true;
         
         var existStocks = await uow.Stock
             .GetByProductIdsAsync(baseStockModels.Select(m => m.ProductId).ToList(), ct);
 
-        if (existStocks.Any())
+        var existingById = existStocks.ToDictionary(s => s.Id);
+        var updatedStocks = new List<StockItem>();
+
+        foreach (var model in baseStockModels)
         {
-            var existingIds = existStocks.Select(s => s.Id).ToHashSet();
-            errors.AddRange(baseStockModels
-                .Where(m => existingIds.Contains(m.ProductId))
-                .Select(i=> new ProcessedStockItemModel(
-                    i.ProductId,
-                    i.Quantity,
-                    "Stock already exist"))
-            );
-            
-            // TODO можно возвращать пропущенные в ответе
-            baseStockModels = baseStockModels
-                .Where(m => !existingIds.Contains(m.ProductId)).ToArray();
-        }
-        
-        var stocks = baseStockModels.Select(m => 
-            new StockItem(
-                m.ProductId,
-                m.Quantity)
-        ).ToArray();
-        
-        await uow.Stock.AddRangeAsync(stocks, ct);
-        try
-        {
-            await uow.SaveChangesWithoutMessagesAsync(ct);
-        }
-        catch (DbUpdateException)
-        {
-            var existing = await uow.Stock
-                .GetByProductIdsAsync(baseStockModels.Select(m => m.ProductId).ToList(), ct);
-            if (existing.Any())
+            if (existingById.TryGetValue(model.ProductId, out var stock))
             {
-                var existingIds = existing.Select(s => s.Id).ToHashSet();
-                errors.AddRange(baseStockModels
-                    .Where(m => existingIds.Contains(m.ProductId))
-                    .Select(i => new ProcessedStockItemModel(
-                        i.ProductId,
-                        i.Quantity,
-                        "Stock already exist"))
-                );
-                return true;
+                stock.AddStock(model.Quantity);
+                updatedStocks.Add(stock);
+                continue;
             }
-            throw;
+
+            var newStock = new StockItem(model.ProductId, model.Quantity);
+            await uow.Stock.AddAsync(newStock, ct);
+            updatedStocks.Add(newStock);
         }
+
+        var outboxMessages = updatedStocks
+            .Select(s => _eventMapper.MapStockQuantityChangedEvent(
+                s.Id,
+                s.TotalQuantity,
+                s.ReservedQuantity,
+                s.AvailableQuantity))
+            .Select(OutboxMessage.From)
+            .ToList();
+
+        await uow.SaveChangesAsync(outboxMessages, ct);
         return true;
     }
 }

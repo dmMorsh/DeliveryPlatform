@@ -53,6 +53,18 @@ public record StockReservationStaleDetectedEvent : IntegrationEvent
     public IReadOnlyCollection<StockItemSnapshot> Items { get; init; } = [];
 }
 
+public record StockQuantityChangedEvent : IntegrationEvent
+{
+    public override string EventType => "stock.quantity_changed";
+    public override int Version => 1;
+    public override string AggregateType => "inventory";
+    public override Guid AggregateId => ProductId;
+    public required Guid ProductId { get; init; }
+    public int TotalQuantity { get; init; }
+    public int ReservedQuantity { get; init; }
+    public int AvailableQuantity { get; init; }
+}
+
 public record StockItemSnapshot
 {
     public Guid ProductId { get; init; }

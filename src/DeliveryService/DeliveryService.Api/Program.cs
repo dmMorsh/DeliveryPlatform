@@ -109,7 +109,7 @@ builder.Services.AddHostedService<KafkaEventConsumerHostedService<DeliveryEventC
 builder.Services.AddHostedService<AssignmentScheduler>();
 
 var kafkaBrokers = ConfigurationGuard.GetRequired(builder.Configuration, builder.Environment, "Kafka:Brokers", "localhost:29092");
-var redisConnection = ConfigurationGuard.GetRequired(builder.Configuration, builder.Environment, "Redis:Connection", "redis:6379");
+var redisConnection = ConfigurationGuard.GetRequired(builder.Configuration, builder.Environment, "Redis:Connection", "localhost:6379");
 
 try
 {
@@ -175,7 +175,8 @@ if (!useInMemory)
         if (string.IsNullOrWhiteSpace(cron))
             cron = "0 8,20 * * *";
 
-        RecurringJob.AddOrUpdate<IDeliverySlaJob>(
+        var recurringJobManager = scope.ServiceProvider.GetRequiredService<IRecurringJobManager>();
+        recurringJobManager.AddOrUpdate<IDeliverySlaJob>(
             "delivery-sla",
             job => job.ExecuteAsync(CancellationToken.None),
             cron);

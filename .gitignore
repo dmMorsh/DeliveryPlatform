@@ -13,6 +13,8 @@ bld/
 [Oo]bj/
 [Ll]og/
 [Ll]ogs/
+[Dd]ocs/
+[Tt]ools/
 
 # Visual Studio cache/options
 .vs/

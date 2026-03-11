@@ -1,6 +1,7 @@
 using InventoryService.Infrastructure.ReadStore;
 using InventoryService.Domain.Events;
 using Microsoft.EntityFrameworkCore;
+using Shared.Contracts.Events;
 
 namespace Tests.IntegrationTests;
 
@@ -16,11 +17,11 @@ public class InventoryReadProjectionTests
         var redisCache = new InventoryReadRedisCache(mux);
         var projector = new InventoryReadProjector(context, redisCache);
 
-        var evt = new StockReservedDomainEvent { ProductId = Guid.NewGuid(), OrderId = Guid.NewGuid(), Quantity = 5 };
+        var evt = new StockReservedEvent {OrderId = Guid.NewGuid(), Items = [new StockItemSnapshot{ProductId = Guid.NewGuid() , Quantity = 5}]};
         await projector.HandleAsync(evt, CancellationToken.None);
 
         var repo = new InventoryReadRepository(context, redisCache);
-        var view = await repo.GetByProductIdAsync(evt.ProductId, CancellationToken.None);
+        var view = await repo.GetByProductIdAsync(evt.Items.First().ProductId, CancellationToken.None);
 
         Assert.NotNull(view);
         Assert.Equal(5, view.ReservedQuantity);
@@ -49,7 +50,7 @@ public class InventoryReadProjectionTests
         var redisCache = new InventoryReadRedisCache(mux);
         
         var projector = new InventoryReadProjector(context, redisCache);
-        var evt = new StockReleasedDomainEvent { ProductId = existingId, OrderId = Guid.NewGuid(), Quantity = 2 };
+        var evt = new StockReleasedEvent { OrderId = Guid.NewGuid(), Items = [new StockItemSnapshot{ProductId = existingId, Quantity = 2 }]};
 
         await projector.HandleAsync(evt, CancellationToken.None);
 

@@ -19,7 +19,7 @@ public sealed class ProductReadProjectionConsumer : KafkaEventConsumerBase
         ILogger<ProductReadProjectionConsumer> logger,
         IServiceScopeFactory scopeFactory,
         IEventProducer producer)
-        : base(config, env, logger, scopeFactory, producer, null, "product.events")
+        : base(config, env, logger, scopeFactory, producer, null, "catalog-read-projection", "product.events", "inventory.events")
     {
         _logger = logger;
     }
@@ -42,6 +42,11 @@ public sealed class ProductReadProjectionConsumer : KafkaEventConsumerBase
                     var price = Deserialize<ProductPriceChangedEvent>(json);
                     if (price == null) return true;
                     await projector.HandleAsync(price, CancellationToken.None);
+                    break;
+                case "stock.quantity_changed":
+                    var quantity = Deserialize<StockQuantityChangedEvent>(json);
+                    if (quantity == null) return true;
+                    await projector.HandleAsync(quantity, CancellationToken.None);
                     break;
                 default:
                     return true;

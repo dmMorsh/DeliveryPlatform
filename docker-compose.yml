@@ -31,6 +31,19 @@ services:
       timeout: 5s
       retries: 5
 
+  # Elastic Database
+  elasticsearch:
+    image: elasticsearch:8.13.4
+    container_name: elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+    ports:
+      - "9200:9200"
+    volumes:
+      - elastic_data:/usr/share/elasticsearch/data
+
   # Apache Kafka (Zookeeper + Kafka)
   zookeeper:
     image: confluentinc/cp-zookeeper:7.5.0
@@ -475,6 +488,7 @@ volumes:
   redis_data:
   zookeeper_data:
   kafka_data:
+  elastic_data:
 
 networks:
   default:

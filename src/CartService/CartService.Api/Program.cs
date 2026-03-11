@@ -51,7 +51,7 @@ var httpTimeoutSeconds = int.TryParse(builder.Configuration["Http:TimeoutSeconds
     : 10;
 
 // Redis for cart caching
-var redisConnection = ConfigurationGuard.GetRequired(builder.Configuration, builder.Environment, "Redis:Connection", "redis:6379");
+var redisConnection = ConfigurationGuard.GetRequired(builder.Configuration, builder.Environment, "Redis:Connection", "localhost:6379");
 try
 {
     var redisOptions = ConfigurationOptions.Parse(redisConnection);

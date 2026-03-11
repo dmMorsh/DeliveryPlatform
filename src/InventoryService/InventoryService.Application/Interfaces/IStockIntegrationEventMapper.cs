@@ -9,4 +9,5 @@ public interface IStockIntegrationEventMapper
     StockReleasedEvent MapStockReleasedEvent(Guid orderId, StockItemSnapshot[] items);
     StockReleaseFailedEvent MapStockReleaseFailedEvent(Guid orderId, List<FailedStockItemSnapshot> items);
     StockReservationStaleDetectedEvent MapStockReservationStaleDetectedEvent(Guid orderId, DateTime oldestReservedAtUtc, StockItemSnapshot[] items);
+    StockQuantityChangedEvent MapStockQuantityChangedEvent(Guid productId, int totalQuantity, int reservedQuantity, int availableQuantity);
 }

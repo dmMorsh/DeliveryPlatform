@@ -34,15 +34,6 @@ public class OrdersController : ControllerBase
         await _cache.SetAsync(order, HttpContext.RequestAborted);
         return Ok(order);
     }
-
-    [HttpGet]
-    public async Task<IActionResult> List([FromQuery] int page = 1, [FromQuery] int size = 20)
-    {
-        var q = _db.Orders.AsNoTracking().OrderByDescending(o => o.CreatedAt)
-            .Skip((page - 1) * size).Take(size);
-        var list = await q.ToListAsync();
-        return Ok(list);
-    }
     
     
     /// <summary>

@@ -62,6 +62,21 @@ public sealed class ProductReadProjector
         await _redis.GetDatabase().KeyDeleteAsync(CacheKey(evt.ProductId));
     }
 
+    public async Task HandleAsync(StockQuantityChangedEvent evt, CancellationToken ct)
+    {
+        await EnsureIndexExistsAsync(ct);
+        var updateReq = new UpdateRequest<ProductReadModel, object>(IndexName, evt.ProductId.ToString())
+        {
+            Doc = new
+            {
+                QuantityAvailable = evt.AvailableQuantity,
+                UpdatedAt = evt.Timestamp
+            }
+        };
+        await _es.UpdateAsync(updateReq, ct);
+        await _redis.GetDatabase().KeyDeleteAsync(CacheKey(evt.ProductId));
+    }
+
     private static RedisKey CacheKey(Guid id) => $"product:{id}";
 
     private async Task EnsureIndexExistsAsync(CancellationToken ct)

@@ -131,6 +131,15 @@ public class ReserveStockCommandHandler
                 }).ToArray()
             );
         outboxMessages.Add(OutboxMessage.From(integrationEvent));
+
+        var quantityChangedEvents = toReserve
+            .Select(x => _eventMapper.MapStockQuantityChangedEvent(
+                x.stock.Id,
+                x.stock.TotalQuantity,
+                x.stock.ReservedQuantity,
+                x.stock.AvailableQuantity))
+            .Select(OutboxMessage.From);
+        outboxMessages.AddRange(quantityChangedEvents);
         
         try
         {

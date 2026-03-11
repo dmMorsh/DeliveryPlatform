@@ -23,6 +23,14 @@ public class Product : AggregateRoot
         PriceCents = priceCents;
         WeightGrams = weightGrams;
         IsActive = true;
+        AddDomainEvent(new ProductCreated
+        {
+            Id = Id,
+            Name = Name,
+            Description = Description ?? string.Empty,
+            PriceCents = PriceCents,
+            QuantityAvailable = 0
+        });
     }
 
     public void ChangePrice(Money newPrice)

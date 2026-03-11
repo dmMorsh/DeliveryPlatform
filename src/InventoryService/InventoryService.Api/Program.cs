@@ -103,7 +103,7 @@ builder.Services.AddHostedService<KafkaEventConsumerHostedService<InventoryEvent
 builder.Services.AddScoped<IEventInbox, InventoryEventInbox>();
 
 // read‑store context for inventory
-var redisConnection = ConfigurationGuard.GetRequired(builder.Configuration, builder.Environment, "Redis:Connection", "redis:6379");
+var redisConnection = ConfigurationGuard.GetRequired(builder.Configuration, builder.Environment, "Redis:Connection", "localhost:6379");
 try
 {
     var redisOptions = ConfigurationOptions.Parse(redisConnection);
@@ -164,20 +164,10 @@ if (!useInMemory)
     using var scope = app.Services.CreateScope();
     var dbContext = scope.ServiceProvider.GetRequiredService<InventoryDbContext>();
     dbContext.Database.Migrate();
+    var inventoryReadDbContext = scope.ServiceProvider.GetRequiredService<InventoryReadDbContext>();
+    inventoryReadDbContext.Database.Migrate();
     Log.Information("Database migration completed for InventoryService");
-}
-else
-{
-    Log.Information("Using in-memory database; skipping migrations.");
-}
-
-if (app.Environment.IsDevelopment())
-{
-    app.UseHangfireDashboard("/hangfire");
-}
-
-if (!useInMemory)
-{
+    
     var enabled = bool.TryParse(builder.Configuration["Inventory:ReservationAlertEnabled"], out var alertEnabled)
         ? alertEnabled
         : true;
@@ -187,11 +177,21 @@ if (!useInMemory)
         if (string.IsNullOrWhiteSpace(cron))
             cron = "0 4 * * *";
 
-        RecurringJob.AddOrUpdate<IInventoryReservationAlertJob>(
+        var recurringJobManager = scope.ServiceProvider.GetRequiredService<IRecurringJobManager>();
+        recurringJobManager.AddOrUpdate<IInventoryReservationAlertJob>(
             "inventory-reservation-alert",
             job => job.ExecuteAsync(CancellationToken.None),
             cron);
     }
+}
+else
+{
+    Log.Information("Using in-memory database; skipping migrations.");
+}
+
+if (app.Environment.IsDevelopment())
+{
+    app.UseHangfireDashboard("/hangfire");
 }
 
 app.Run();

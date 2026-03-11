@@ -40,7 +40,7 @@ public class CatalogServiceDomainTests
 
         // Assert
         product.PriceCents.Should().Be(newPrice);
-        product.DomainEvents.Should().HaveCount(1);
+        product.DomainEvents.Should().HaveCount(2);
     }
 
     [Fact]
@@ -54,7 +54,7 @@ public class CatalogServiceDomainTests
         product.ChangePrice(price);
 
         // Assert
-        product.DomainEvents.Should().BeEmpty();
+        product.DomainEvents.Should().HaveCount(1);
     }
 
     [Fact]

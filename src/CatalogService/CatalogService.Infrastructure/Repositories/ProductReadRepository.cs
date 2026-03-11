@@ -2,7 +2,6 @@
 using CatalogService.Application.Interfaces;
 using CatalogService.Application.Models;
 using CatalogService.Application.Queries.SearchProducts;
-using CatalogService.Infrastructure.Persistence;
 using CatalogService.Infrastructure.ReadStore;
 using Elastic.Clients.Elasticsearch;
 using Elastic.Clients.Elasticsearch.QueryDsl;
@@ -13,13 +12,13 @@ namespace CatalogService.Infrastructure.Repositories;
 
 public class ProductReadRepository : IProductReadRepository
 {
-    private readonly CatalogDbContext _db;
     private readonly ElasticsearchClient _es;
     private readonly IDatabase _cache;
 
-    public ProductReadRepository(CatalogDbContext db, ElasticsearchClient es, IConnectionMultiplexer redis)
+    public ProductReadRepository(
+        ElasticsearchClient es, 
+        IConnectionMultiplexer redis)
     {
-        _db = db;
         _es = es;
         _cache = redis.GetDatabase();
     }
