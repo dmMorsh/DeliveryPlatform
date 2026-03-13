@@ -19,7 +19,8 @@ public sealed class OrderReadProjectionConsumer : KafkaEventConsumerBase
         IHostEnvironment env,
         ILogger<OrderReadProjectionConsumer> logger,
         IServiceScopeFactory scopeFactory)
-        : base(config, env, logger, scopeFactory, null, "order.events")
+        : base(config, env, logger, scopeFactory,null,null,null,
+            "order.events")
     {
         _logger = logger;
     }

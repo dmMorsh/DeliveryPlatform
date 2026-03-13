@@ -17,7 +17,7 @@ namespace OrderService.Infrastructure.Persistence.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasDefaultSchema("Kitchen")
+                .HasDefaultSchema("kitchen")
                 .HasAnnotation("ProductVersion", "9.0.0")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
@@ -33,7 +33,7 @@ namespace OrderService.Infrastructure.Persistence.Migrations
 
                     b.HasKey("SlotStart");
 
-                    b.ToTable("KitchenSlots", "Kitchen");
+                    b.ToTable("KitchenSlots", "kitchen");
                 });
 #pragma warning restore 612, 618
         }

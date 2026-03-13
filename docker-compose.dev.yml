@@ -27,6 +27,7 @@ services:
     environment:
       ConnectionStrings__PostgreSQL: Host=${POSTGRES_HOST};Port=${POSTGRES_PORT};Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD};
       Kafka__Brokers: ${KAFKA_BROKERS}
+      Redis__Connection: ${REDIS_CONNECTION}
       Jwt__Key: ${JWT_KEY}
       Jwt__Issuer: ${JWT_ISSUER}
       Jwt__Audience: ${JWT_AUDIENCE}
@@ -52,6 +53,19 @@ services:
     environment:
       ConnectionStrings__PostgreSQL: Host=${POSTGRES_HOST};Port=${POSTGRES_PORT};Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD};
       Kafka__Brokers: ${KAFKA_BROKERS}
+      Jwt__Key: ${JWT_KEY}
+      Jwt__Issuer: ${JWT_ISSUER}
+      Jwt__Audience: ${JWT_AUDIENCE}
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT}
+      Cors__AllowedOrigins__0: ${CORS_ALLOWED_ORIGIN_0}
+      Cors__AllowedOrigins__1: ${CORS_ALLOWED_ORIGIN_1}
+
+  catalog-read-service:
+    env_file: .env
+    environment:
+      Kafka__Brokers: ${KAFKA_BROKERS}
+      Redis__Connection: ${REDIS_CONNECTION}
+      Elasticsearch__Url: http://elasticsearch:9200
       Jwt__Key: ${JWT_KEY}
       Jwt__Issuer: ${JWT_ISSUER}
       Jwt__Audience: ${JWT_AUDIENCE}

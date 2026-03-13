@@ -1,4 +1,4 @@
-﻿namespace CatalogService.Application.Common;
+﻿namespace Shared.Contracts;
 
 public class PagedResult<T>
 {

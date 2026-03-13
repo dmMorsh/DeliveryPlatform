@@ -40,7 +40,7 @@ if (useInMemory)
 else
 {
     var connectionString = ConfigurationGuard.GetRequiredConnectionString(builder.Configuration, builder.Environment, "PostgreSQL");
-    builder.Services.AddDbContext<CourierDbContext>(options =>
+    builder.Services.AddDbContextPool<CourierDbContext>(options =>
         options.UseNpgsql(connectionString));
 }
 

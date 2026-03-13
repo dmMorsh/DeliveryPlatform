@@ -6,9 +6,11 @@
     <tr>
         <th>Number</th>
         <th>Status</th>
+        <th>Created</th>
         <th>From</th>
         <th>To</th>
         <th>Cost</th>
+        <th>Zone</th>
         <th></th>
     </tr>
 
@@ -17,9 +19,11 @@
         <tr>
             <td>@o.OrderNumber</td>
             <td>@o.Status</td>
+            <td>@o.CreatedAt</td>
             <td>@o.FromAddress</td>
             <td>@o.ToAddress</td>
-            <td>@(o.CostCents / 100.0m)</td>
+            <td>@(o.CostCents / 100.0m) @((o.Currency ?? "USD"))</td>
+            <td>@(string.IsNullOrWhiteSpace(o.DeliveryZoneName) ? "-" : o.DeliveryZoneName)</td>
             <td>
                 <a href="/orders/@o.Id">Details</a>
             </td>

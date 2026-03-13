@@ -1,0 +1,17 @@
+@model ProductViewModel
+
+<h2>@Model.Name</h2>
+
+<p>@(Model.Description ?? "-")</p>
+<p><strong>@Model.Price @((Model.Currency ?? "USD"))</strong></p>
+<p><strong>@Model.WeightGrams gram</strong></p>
+<p><strong>Active: @(Model.IsActive?.ToString() ?? "-")</strong></p>
+<p><strong>Available:</strong> @Model.QuantityAvailable</p>
+<p><strong>Category:</strong> @(string.IsNullOrWhiteSpace(Model.Category) ? "-" : Model.Category)</p>
+<p><strong>Brand:</strong> @(string.IsNullOrWhiteSpace(Model.Brand) ? "-" : Model.Brand)</p>
+<p><strong>Rating:</strong> @(Model.Rating?.ToString("0.0") ?? "-")</p>
+<p><strong>Colors:</strong> @(Model.Colors?.Length > 0 ? string.Join(", ", Model.Colors) : "-")</p>
+
+<p>
+    <a asp-action="Edit" asp-route-id="@Model.Id">Edit</a>
+</p>

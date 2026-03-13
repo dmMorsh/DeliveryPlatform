@@ -108,7 +108,7 @@ public class AssignmentService : IAssignmentService
         if (inDelivery == null)
             return false;
 
-        return inDelivery.EstimatedDeliveryAt.Value <= now.AddMinutes(allowExtraMinutes);
+        return inDelivery.EstimatedDeliveryAt != null && inDelivery.EstimatedDeliveryAt.Value <= now.AddMinutes(allowExtraMinutes);
     }
 
     private static double GetDistance(double lat1, double lon1, double? lat2, double? lon2)

@@ -37,9 +37,9 @@ builder.Host.UseSerilog((ctx, cfg) =>
        .MinimumLevel.Information());
 
 var postgresConnectionString = ConfigurationGuard.GetRequiredConnectionString(builder.Configuration, builder.Environment, "PostgreSQL");
-builder.Services.AddDbContext<PaymentDbContext>(options =>
+builder.Services.AddDbContextPool<PaymentDbContext>(options =>
     options.UseNpgsql(postgresConnectionString));
-builder.Services.AddDbContext<PaymentShardMapDbContext>(options =>
+builder.Services.AddDbContextPool<PaymentShardMapDbContext>(options =>
     options.UseNpgsql(postgresConnectionString));
 
 builder.Services.AddControllers();

@@ -3,6 +3,20 @@
 <h2>Order @Model.OrderNumber</h2>
 
 <p>Status: @Model.Status</p>
+<p>Client: @Model.ClientId</p>
+<p>Courier: @(Model.CourierId?.ToString() ?? "-")</p>
+<p>Created: @Model.CreatedAt</p>
+<p>Updated: @Model.UpdatedAt</p>
+<p>Total: @(Model.CostCents / 100.0m) @((Model.Currency ?? "USD"))</p>
+<p>Weight: @Model.WeightGrams gram</p>
+@if (!string.IsNullOrWhiteSpace(Model.Description))
+{
+    <p>Description: @Model.Description</p>
+}
+@if (!string.IsNullOrWhiteSpace(Model.CourierNote))
+{
+    <p>Courier note: @Model.CourierNote</p>
+}
 
 <h3>Payment</h3>
 
@@ -36,17 +50,42 @@ else if (string.Equals(Model.PaymentStatus, "Pending", StringComparison.OrdinalI
 }
 else if (string.IsNullOrWhiteSpace(Model.PaymentStatus))
 {
-    <p>Payment status: noting to pay 🤷</p>
+    <p>Payment status: nothing to pay.</p>
 }
 
 <h3>Route</h3>
 <p><b>From:</b> @Model.FromAddress</p>
+<p><b>From coords:</b> @Model.FromLatitude, @Model.FromLongitude</p>
 <p><b>To:</b> @Model.ToAddress</p>
+<p><b>To coords:</b> @Model.ToLatitude, @Model.ToLongitude</p>
+
+<h3>Delivery</h3>
+<p><b>Zone:</b> @(string.IsNullOrWhiteSpace(Model.DeliveryZoneName) ? "-" : Model.DeliveryZoneName) (@(string.IsNullOrWhiteSpace(Model.DeliveryZoneId) ? "-" : Model.DeliveryZoneId))</p>
+<p><b>Zone distance:</b> @(Model.DeliveryZoneDistanceKm?.ToString("0.##") ?? "-") km</p>
+<p><b>Pickup SLA:</b> @(Model.DeliveryPickupSlaMinutes?.ToString() ?? "-") min</p>
+<p><b>Transit SLA:</b> @(Model.DeliveryTransitSlaMinutes?.ToString() ?? "-") min</p>
+<p><b>Fee multiplier:</b> @(Model.DeliveryFeeMultiplier?.ToString("0.##") ?? "-")</p>
+<p><b>Expected ready:</b> @(Model.ExpectedReadyAt?.ToString() ?? "-")</p>
+<p><b>Kitchen slot:</b> @(Model.KitchenSlotStart?.ToString() ?? "-")</p>
+<p><b>Kitchen delayed:</b> @(Model.KitchenDelayedNotifiedAt?.ToString() ?? "-")</p>
+
+<h3>Timeline</h3>
+<p><b>Assigned:</b> @(Model.AssignedAt?.ToString() ?? "-")</p>
+<p><b>Accepted:</b> @(Model.AcceptedAt?.ToString() ?? "-")</p>
+<p><b>Ready:</b> @(Model.ReadyAt?.ToString() ?? "-")</p>
+<p><b>Delivered:</b> @(Model.DeliveredAt?.ToString() ?? "-")</p>
+<p><b>Rejected:</b> @(Model.RejectedAt?.ToString() ?? "-")</p>
+@if (!string.IsNullOrWhiteSpace(Model.RejectionReason))
+{
+    <p><b>Rejection reason:</b> @Model.RejectionReason</p>
+}
+<p><b>Ready for delivery:</b> @Model.IsReadyForDelivery</p>
 
 <h3>Items</h3>
 
-<table>
+    <table>
     <tr>
+        <th>Product</th>
         <th>Name</th>
         <th>Qty</th>
         <th>Price</th>
@@ -55,11 +94,10 @@ else if (string.IsNullOrWhiteSpace(Model.PaymentStatus))
     @foreach (var i in Model.Items)
     {
         <tr>
+            <td>@i.ProductId</td>
             <td>@i.Name</td>
             <td>@i.Quantity</td>
             <td>@(i.PriceCents / 100.0m)</td>
         </tr>
     }
 </table>
-
-<h3>Total: @(Model.CostCents / 100.0m)</h3>

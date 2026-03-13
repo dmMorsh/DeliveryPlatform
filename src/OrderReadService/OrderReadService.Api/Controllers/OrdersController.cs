@@ -1,10 +1,8 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using OrderReadService.Application.Interfaces;
 using OrderReadService.Application.Queries.GetClientOrders;
 using OrderReadService.Application.Queries.GetOrder;
-using OrderReadService.Infrastructure.Persistence;
 
 namespace OrderReadService.Api.Controllers;
 
@@ -13,28 +11,13 @@ namespace OrderReadService.Api.Controllers;
 public class OrdersController : ControllerBase
 {
     private readonly IMediator _mediator;
-    private readonly OrderReadDbContext _db;
 
     private readonly IOrderReadCache _cache;
-    public OrdersController(OrderReadDbContext db, IOrderReadCache cache, IMediator mediator)
+    public OrdersController(IOrderReadCache cache, IMediator mediator)
     {
-        _db = db;
         _cache = cache;
         _mediator = mediator;
     }
-
-    [HttpGet("{id}")]
-    public async Task<IActionResult> Get(Guid id)
-    {
-        var cached = await _cache.GetAsync(id, HttpContext.RequestAborted);
-        if (cached != null) return Ok(cached);
-
-        var order = await _db.Orders.Include(o => o.Items).FirstOrDefaultAsync(o => o.Id == id);
-        if (order == null) return NotFound();
-        await _cache.SetAsync(order, HttpContext.RequestAborted);
-        return Ok(order);
-    }
-    
     
     /// <summary>
     /// Получить заказ по ID

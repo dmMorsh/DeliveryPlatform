@@ -17,6 +17,7 @@ namespace InventoryService.Infrastructure.Persistence.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
+                .HasDefaultSchema("inventory_read")
                 .HasAnnotation("ProductVersion", "9.0.0")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
@@ -39,7 +40,7 @@ namespace InventoryService.Infrastructure.Persistence.Migrations
 
                     b.HasKey("ProductId");
 
-                    b.ToTable("StockItems");
+                    b.ToTable("StockItems", "inventory_read");
                 });
 #pragma warning restore 612, 618
         }

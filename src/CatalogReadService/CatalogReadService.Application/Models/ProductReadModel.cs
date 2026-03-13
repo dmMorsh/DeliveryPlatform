@@ -1,4 +1,4 @@
-namespace CatalogService.Infrastructure.ReadStore;
+namespace CatalogReadService.Application.Models;
 
 public sealed class ProductReadModel
 {

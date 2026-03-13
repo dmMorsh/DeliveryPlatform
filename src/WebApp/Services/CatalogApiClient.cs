@@ -1,4 +1,5 @@
-﻿using Shared.Utilities;
+﻿using Shared.Contracts;
+using Shared.Utilities;
 using WebApp.Models;
 
 namespace WebApp.Services;
@@ -37,11 +38,4 @@ public class CatalogApiClient
     {
         await _http.PostAsJsonAsync("/api/product", model, ct);
     }
-}
-public class PagedResult<T>
-{
-    public IReadOnlyList<T> Items { get; init; } = [];
-    public int TotalCount { get; init; }
-    public int Page { get; init; }
-    public int PageSize { get; init; }
 }

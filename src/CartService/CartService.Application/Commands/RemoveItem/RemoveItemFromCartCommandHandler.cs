@@ -9,12 +9,18 @@ namespace CartService.Application.Commands.RemoveItem;
 public class RemoveItemFromCartCommandHandler: IRequestHandler<RemoveItemFromCartCommand, ApiResponse>
 {
     private readonly ICartRepository _repo;
+    private readonly ICartReadCache _readCache;
     private readonly IUnitOfWork _uow;
     private readonly ICartIntegrationEventMapper _eventMapper;
 
-    public RemoveItemFromCartCommandHandler(ICartRepository repo, IUnitOfWork uow, ICartIntegrationEventMapper eventMapper)
+    public RemoveItemFromCartCommandHandler(
+        ICartRepository repo,
+        ICartReadCache readCache,
+        IUnitOfWork uow,
+        ICartIntegrationEventMapper eventMapper)
     {
         _repo = repo;
+        _readCache = readCache;
         _uow = uow;
         _eventMapper = eventMapper;
     }
@@ -23,11 +29,17 @@ public class RemoveItemFromCartCommandHandler: IRequestHandler<RemoveItemFromCar
     {
         var cart = await _repo.GetCartByCustomerIdAsync(request.CustomerId, ct);
         if (cart == null)
+        {
+            await _readCache.InvalidateAsync(request.CustomerId, ct);
             return ApiResponse.SuccessResponse("Item removed from cart");
+        }
 
         var item = cart.Items.FirstOrDefault(i => i.ProductId == request.ProductId);
         if (item == null)
+        {
+            await _readCache.InvalidateAsync(request.CustomerId, ct);
             return ApiResponse.SuccessResponse("Item removed from cart");
+        }
         
         cart.RemoveItem(item);
         
@@ -39,7 +51,7 @@ public class RemoveItemFromCartCommandHandler: IRequestHandler<RemoveItemFromCar
 
         await _uow.SaveChangesAsync(outboxMessages, ct);
         cart.ClearDomainEvents();
-        CartReadCache.Invalidate(request.CustomerId);
+        await _readCache.SetAsync(request.CustomerId, CartViewMapper.ToView(cart), ct);
 
         return ApiResponse.SuccessResponse("Item removed from cart");
     }

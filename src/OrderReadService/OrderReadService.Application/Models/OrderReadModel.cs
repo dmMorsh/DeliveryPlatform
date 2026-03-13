@@ -1,4 +1,4 @@
-namespace OrderReadService.Domain.Models;
+namespace OrderReadService.Application.Models;
 
 public sealed class OrderReadModel
 {

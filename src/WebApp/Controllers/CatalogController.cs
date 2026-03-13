@@ -28,17 +28,4 @@ public class CatalogController : Controller
         var product = await _api.GetByIdAsync(id, ct);
         return View(product);
     }
-    
-    [HttpGet]
-    public IActionResult AddItem(CancellationToken ct = default)
-    {
-        return View(new ProductViewModel());
-    }
-    [HttpPost]
-    public async Task<IActionResult> Add(ProductViewModel model, CancellationToken ct = default)
-    {
-        await _api.AddAsync(model, ct);
-        return RedirectToAction("Index");
-    }
-
 }

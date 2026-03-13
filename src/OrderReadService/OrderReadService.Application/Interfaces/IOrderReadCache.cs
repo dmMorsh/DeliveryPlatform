@@ -1,4 +1,4 @@
-using OrderReadService.Domain.Models;
+using OrderReadService.Application.Models;
 
 namespace OrderReadService.Application.Interfaces;
 

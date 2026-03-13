@@ -1,6 +1,5 @@
 ﻿using CartService.Application.Interfaces;
 using CartService.Application.Models;
-using CartService.Application.Services;
 using MediatR;
 using Shared.Services;
 using Shared.Utilities;
@@ -19,15 +18,10 @@ public class GetCartQueryHandler : IRequestHandler<GetCartQuery, ApiResponse<Car
 
     public async Task<ApiResponse<CartView>> Handle(GetCartQuery request, CancellationToken ct)
     {
-        if (!CartReadCache.TryGet(request.CustomerId, out var result))
-        {
-            var task = SingleFlight.RunAsync(
-                request.CustomerId,
-                token => CartReadCache.LoadAsync(
-                    () => _readRepo.GetCartByCustomerIdAsync(request.CustomerId, token)));
-            result = await task.WaitAsync(ct);
-            CartReadCache.Set(request.CustomerId, result);
-        }
+        var task = SingleFlight.RunAsync(
+            request.CustomerId,
+            token => _readRepo.GetCartByCustomerIdAsync(request.CustomerId, token));
+        var result = await task.WaitAsync(ct);
 
         if (result == null)
             return ApiResponse<CartView>.ErrorResponse("Cart not found");

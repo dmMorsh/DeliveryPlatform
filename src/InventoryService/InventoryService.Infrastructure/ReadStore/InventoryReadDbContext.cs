@@ -13,7 +13,7 @@ public class InventoryReadDbContext : DbContext
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
-
+        modelBuilder.HasDefaultSchema("inventory_read");
         modelBuilder.Entity<StockItemReadModel>()
             .HasKey(x => x.ProductId);
     }

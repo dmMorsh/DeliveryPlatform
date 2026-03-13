@@ -1,6 +1,6 @@
 using CatalogService.Application.Interfaces;
-using CatalogService.Application.Models;
 using CatalogService.Application.MediatR;
+using CatalogService.Application.Models;
 using CatalogService.Application.Services;
 using CatalogService.Infrastructure.Inbox;
 using CatalogService.Infrastructure.Mapping;
@@ -14,8 +14,6 @@ using Microsoft.EntityFrameworkCore;
 using Serilog;
 using Shared.Services;
 using StackExchange.Redis;
-using CatalogService.Infrastructure.ReadStore;
-using Elastic.Clients.Elasticsearch;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -37,7 +35,7 @@ if (useInMemory)
 else
 {
     var connectionString = ConfigurationGuard.GetRequiredConnectionString(builder.Configuration, builder.Environment, "PostgreSQL");
-    builder.Services.AddDbContext<CatalogDbContext>(options =>
+    builder.Services.AddDbContextPool<CatalogDbContext>(options =>
         options.UseNpgsql(connectionString));
 }
 
@@ -46,22 +44,6 @@ builder.Services.AddMediatR(typeof(ApplicationMarker).Assembly);
 builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
 builder.Services.AddScoped<IProductRepository, ProductRepository>();
 builder.Services.AddScoped<IProductReadRepository, ProductReadRepository>();
-
-// Elasticsearch client
-var esUrl = builder.Configuration.GetValue<string>("Elasticsearch:Url", "http://localhost:9200");
-var esSettings = new ElasticsearchClientSettings(new Uri(esUrl));
-builder.Services.AddSingleton(new ElasticsearchClient(esSettings));
-
-// Read-store projector and consumer
-builder.Services.AddScoped<ProductReadProjector>();
-builder.Services.AddSingleton<ProductReadProjectionConsumer>(sp =>
-    new ProductReadProjectionConsumer(
-        builder.Configuration,
-        builder.Environment,
-        sp.GetRequiredService<ILogger<ProductReadProjectionConsumer>>(),
-        sp.GetRequiredService<IServiceScopeFactory>(),
-        sp.GetRequiredService<IEventProducer>()));
-builder.Services.AddHostedService<KafkaEventConsumerHostedService<ProductReadProjectionConsumer>>();
 
 var kafkaBrokers = ConfigurationGuard.GetRequired(builder.Configuration, builder.Environment, "Kafka:Brokers", "localhost:29092");
 var catalogHealthChecks = builder.Services.AddHealthChecks()

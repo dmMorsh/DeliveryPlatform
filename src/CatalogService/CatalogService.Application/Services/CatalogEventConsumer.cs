@@ -26,7 +26,8 @@ public class CatalogEventConsumer : KafkaEventConsumerBase
         ICatalogMetricsStore metrics,
         IServiceScopeFactory scopeFactory,
         IEventProducer producer)
-        : base(config, env, logger, scopeFactory, producer, null, "order.events", "inventory.events")
+        : base(config, env, logger, scopeFactory, producer, null,null,
+            "order.events", "inventory.events")
     {
         _logger = logger;
         _metrics = metrics;

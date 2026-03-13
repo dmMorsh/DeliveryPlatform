@@ -28,6 +28,14 @@ builder.Services.AddHttpClient<CatalogApiClient>(client =>
         HttpResiliencePolicies.CreatePolicyWrap(sp.GetRequiredService<ILogger<CatalogApiClient>>()))
     .AddHttpMessageHandler<AuthTokenHandler>();
 
+builder.Services.AddHttpClient<CatalogAdminApiClient>(client =>
+    {
+        client.BaseAddress = new Uri("http://localhost:5136"); // Gateway
+    })
+    .AddPolicyHandler((sp, _) =>
+        HttpResiliencePolicies.CreatePolicyWrap(sp.GetRequiredService<ILogger<CatalogAdminApiClient>>()))
+    .AddHttpMessageHandler<AuthTokenHandler>();
+
 builder.Services.AddHttpClient<AuthApiClient>(client =>
 {
     client.BaseAddress = new Uri("http://localhost:5136"); // Gateway

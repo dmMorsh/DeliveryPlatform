@@ -1,0 +1,36 @@
+@model List<ProductViewModel>
+
+<a asp-action="AddItem">Add new</a>
+<h2>Admin Catalog</h2>
+
+<table>
+    <thead>
+    <tr>
+        <th>ID</th>
+        <th>Name</th>
+        <th>Price</th>
+        <th>Available</th>
+        <th>Category</th>
+        <th>Active</th>
+        <th></th>
+    </tr>
+    </thead>
+    <tbody>
+    @foreach (var p in Model)
+    {
+        <tr>
+            <td>@p.Id</td>
+            <td>@p.Name</td>
+            <td>@p.Price @((p.Currency ?? "USD"))</td>
+            <td>@p.QuantityAvailable</td>
+            <td>@(string.IsNullOrWhiteSpace(p.Category) ? "-" : p.Category)</td>
+            <td>@(p.IsActive?.ToString() ?? "-")</td>
+            <td>
+                <a asp-action="Details" asp-route-id="@p.Id">Details</a>
+                |
+                <a asp-action="Edit" asp-route-id="@p.Id">Edit</a>
+            </td>
+        </tr>
+    }
+    </tbody>
+</table>

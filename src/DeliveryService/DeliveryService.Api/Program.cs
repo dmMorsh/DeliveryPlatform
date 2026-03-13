@@ -47,7 +47,7 @@ if (useInMemory)
 else
 {
     var connectionString = ConfigurationGuard.GetRequiredConnectionString(builder.Configuration, builder.Environment, "PostgreSQL");
-    builder.Services.AddDbContext<DeliveryDbContext>(options =>
+    builder.Services.AddDbContextPool<DeliveryDbContext>(options =>
         options.UseNpgsql(connectionString));
 
     builder.Services.AddHangfire(config =>
@@ -57,9 +57,9 @@ else
 
         var hangfireConnection = builder.Configuration.GetConnectionString("Hangfire");
         if (!string.IsNullOrWhiteSpace(hangfireConnection))
-            config.UsePostgreSqlStorage(hangfireConnection);
+            config.UsePostgreSqlStorage(c=>c.UseNpgsqlConnection(hangfireConnection));
         else
-            config.UsePostgreSqlStorage(connectionString);
+            config.UsePostgreSqlStorage(c=>c.UseNpgsqlConnection(connectionString));
     });
     builder.Services.AddHangfireServer();
 }

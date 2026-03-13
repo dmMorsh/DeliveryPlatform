@@ -17,7 +17,8 @@ public sealed class InventoryReadProjectionConsumer : KafkaEventConsumerBase
         ILogger<InventoryReadProjectionConsumer> logger,
         IServiceScopeFactory scopeFactory,
         IEventProducer producer)
-        : base(config, env, logger, scopeFactory, producer, null, "inventory-read-projection", "inventory.events")
+        : base(config, env, logger, scopeFactory, producer, null, "inventory-read-projection",
+            "inventory.events")
     {
     }
 

@@ -2,6 +2,7 @@ using CatalogService.Application.Interfaces;
 using CatalogService.Domain.Aggregates;
 using CatalogService.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Shared.Contracts;
 
 namespace CatalogService.Infrastructure.Repositories;
 
@@ -24,8 +25,40 @@ public class ProductRepository : IProductRepository
         await _context.Products.AddAsync(product, ct);
     }
 
-    public Task<List<Product>> SearchAsync(string? requestSearchTerm, CancellationToken ct = default)
-    {
-        throw new NotImplementedException();
-    }
+    // public async Task<PagedResult<Product>> SearchAsync(
+    //     string? requestSearchTerm,
+    //     bool? isActive,
+    //     int page,
+    //     int pageSize,
+    //     CancellationToken ct = default)
+    // {
+    //     var query = _context.Products.AsNoTracking();
+    //
+    //     if (!string.IsNullOrWhiteSpace(requestSearchTerm))
+    //     {
+    //         var term = requestSearchTerm.Trim();
+    //         query = query.Where(p =>
+    //             p.Name.Contains(term) ||
+    //             (p.Description != null && p.Description.Contains(term)));
+    //     }
+    //
+    //     if (isActive.HasValue)
+    //         query = query.Where(p => p.IsActive == isActive.Value);
+    //
+    //     var total = await query.CountAsync(ct);
+    //
+    //     var items = await query
+    //         .OrderByDescending(p => p.CreatedAt)
+    //         .Skip((page - 1) * pageSize)
+    //         .Take(pageSize)
+    //         .ToListAsync(ct);
+    //
+    //     return new PagedResult<Product>
+    //     {
+    //         Items = items,
+    //         TotalCount = total,
+    //         Page = page,
+    //         PageSize = pageSize
+    //     };
+    // }
 }

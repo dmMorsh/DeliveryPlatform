@@ -33,7 +33,7 @@ services:
 
   # Elastic Database
   elasticsearch:
-    image: elasticsearch:8.13.4
+    image: elasticsearch:9.3.1
     container_name: elasticsearch
     environment:
       - discovery.type=single-node
@@ -220,6 +220,7 @@ services:
       Jwt__Audience: "platform-api"
       Services__AuthServiceUrl: http://identity-service:8080
       Services__CatalogServiceUrl: http://catalog-service:8080
+      Services__CatalogReadServiceUrl: http://catalog-read-service:8080
       Services__CartServiceUrl: http://cart-service:8080
       Services__InventoryServiceUrl: http://inventory-service:8080
       Services__OrderServiceUrl: http://order-service:8080
@@ -273,6 +274,7 @@ services:
       ASPNETCORE_Kestrel__EndpointDefaults__Protocols: Http1AndHttp2
       ConnectionStrings__PostgreSQL: Host=postgres;Port=5432;Database=delivery_db;Username=postgres;Password=postgres;
       Kafka__Brokers: kafka:9092
+      Redis__Connection: redis:6379
       Jwt__Key: "dev-key"
       Jwt__Issuer: "identity-service"
       Jwt__Audience: "platform-api"
@@ -335,6 +337,35 @@ services:
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
     ports:
       - "5201:8080"
+    restart: unless-stopped
+
+  catalog-read-service:
+    build:
+      context: .
+      dockerfile: src/CatalogReadService/CatalogReadService.Api/Dockerfile
+    container_name: delivery-catalog-read-service
+    depends_on:
+      kafka:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_started
+      otel-collector:
+        condition: service_started
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:8080
+      ASPNETCORE_Kestrel__EndpointDefaults__Protocols: Http1AndHttp2
+      Kafka__Brokers: kafka:9092
+      Redis__Connection: redis:6379
+      Elasticsearch__Url: http://elasticsearch:9200
+      Jwt__Key: "dev-key"
+      Jwt__Issuer: "identity-service"
+      Jwt__Audience: "platform-api"
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+    ports:
+      - "5211:8080"
     restart: unless-stopped
 
   inventory-service:

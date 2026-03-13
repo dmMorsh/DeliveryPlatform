@@ -9,6 +9,7 @@ using CartService.Infrastructure.Mapping;
 using CartService.Infrastructure.Outbox;
 using CartService.Infrastructure.Persistence;
 using CartService.Infrastructure.Repositories;
+using CartService.Infrastructure.Services;
 using Confluent.Kafka;
 using MediatR;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
@@ -37,7 +38,7 @@ if (useInMemory)
 else
 {
     var connectionString = ConfigurationGuard.GetRequiredConnectionString(builder.Configuration, builder.Environment, "PostgreSQL");
-    builder.Services.AddDbContext<CartDbContext>(options =>
+    builder.Services.AddDbContextPool<CartDbContext>(options =>
         options.UseNpgsql(connectionString));
 }
 
@@ -101,6 +102,8 @@ builder.Services.AddScoped<ICartRepository, CartRepository>();
 builder.Services.AddScoped<ICartReadRepository, CartReadRepository>();
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddSingleton<ICartIntegrationEventMapper, CartIntegrationEventMapper>();
+builder.Services.AddSingleton<ICartReadCache, CartReadRedisCache>();
+builder.Services.Configure<CartReadCacheOptions>(builder.Configuration.GetSection("CartCache"));
 
 // Event Consumers // Not using yet
 // builder.Services.AddSingleton<CartEventConsumer>();

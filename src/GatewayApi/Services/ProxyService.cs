@@ -30,6 +30,7 @@ public class ProxyService : IProxyService
         {
             ["auth-service"] = ConfigurationGuard.GetRequired(config, env, "Services:AuthServiceUrl", "http://localhost:5200"),
             ["catalog-service"] = ConfigurationGuard.GetRequired(config, env, "Services:CatalogServiceUrl", "http://localhost:5201"),
+            ["catalog-read-service"] = ConfigurationGuard.GetRequired(config, env, "Services:CatalogReadServiceUrl", "http://localhost:5211"),
             ["cart-service"] = ConfigurationGuard.GetRequired(config, env, "Services:CartServiceUrl", "https://localhost:7202"),
             ["inventory-service"] = ConfigurationGuard.GetRequired(config, env, "Services:InventoryServiceUrl", "http://localhost:5203"),
             ["order-service"] = ConfigurationGuard.GetRequired(config, env, "Services:OrderServiceUrl", "https://localhost:7204"),

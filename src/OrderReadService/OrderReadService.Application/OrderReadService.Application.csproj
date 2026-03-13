@@ -8,7 +8,6 @@
 
     <ItemGroup>
       <ProjectReference Include="..\..\Shared\Shared.csproj" />
-      <ProjectReference Include="..\OrderReadService.Domain\OrderReadService.Domain.csproj" />
     </ItemGroup>
 
     <ItemGroup>

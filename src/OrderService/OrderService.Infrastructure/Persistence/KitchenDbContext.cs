@@ -13,7 +13,7 @@ public class KitchenDbContext : DbContext
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
-        modelBuilder.HasDefaultSchema("Kitchen");
+        modelBuilder.HasDefaultSchema("kitchen");
         
         modelBuilder.Entity<KitchenSlot>(entity =>
         {

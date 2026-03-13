@@ -1,6 +1,6 @@
-﻿using CatalogService.Application.Common;
-using CatalogService.Application.Models;
+﻿using CatalogService.Application.Models;
 using CatalogService.Application.Queries.SearchProducts;
+using Shared.Contracts;
 
 namespace CatalogService.Application.Interfaces;
 

@@ -12,6 +12,7 @@ if (builder.Environment.IsProduction())
     {
         "Services:AuthServiceUrl",
         "Services:CatalogServiceUrl",
+        "Services:CatalogReadServiceUrl",
         "Services:CartServiceUrl",
         "Services:InventoryServiceUrl",
         "Services:OrderServiceUrl",

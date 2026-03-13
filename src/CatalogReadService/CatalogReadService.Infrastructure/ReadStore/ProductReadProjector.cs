@@ -1,12 +1,14 @@
+using CatalogReadService.Application.Models;
 using Elastic.Clients.Elasticsearch;
 using Shared.Contracts.Events;
 using StackExchange.Redis;
 
-namespace CatalogService.Infrastructure.ReadStore;
+namespace CatalogReadService.Infrastructure.ReadStore;
 
 public sealed class ProductReadProjector
 {
     private const string IndexName = "products";
+    private static readonly RedisKey SearchVersionKey = "catalog:search:version";
     private readonly ElasticsearchClient _es;
     private readonly IConnectionMultiplexer _redis;
 
@@ -24,7 +26,7 @@ public sealed class ProductReadProjector
             throw new ArgumentException("Name cannot be empty", nameof(evt.Name));
         if (evt.PriceCents < 0)
             throw new ArgumentException("Price cannot be negative", nameof(evt.PriceCents));
-        
+
         var doc = new ProductReadModel
         {
             Id = evt.ProductId,
@@ -39,6 +41,7 @@ public sealed class ProductReadProjector
         {
             await EnsureIndexExistsAsync(ct);
             await _es.IndexAsync(doc, i => i.Index(IndexName).Id(evt.ProductId.ToString()), ct);
+            await _redis.GetDatabase().StringIncrementAsync(SearchVersionKey);
         }
         finally
         {
@@ -59,6 +62,7 @@ public sealed class ProductReadProjector
             Doc = new { PriceCents = evt.NewPriceCents, UpdatedAt = DateTime.UtcNow }
         };
         await _es.UpdateAsync(updateReq, ct);
+        await _redis.GetDatabase().StringIncrementAsync(SearchVersionKey);
         await _redis.GetDatabase().KeyDeleteAsync(CacheKey(evt.ProductId));
     }
 
@@ -74,6 +78,7 @@ public sealed class ProductReadProjector
             }
         };
         await _es.UpdateAsync(updateReq, ct);
+        await _redis.GetDatabase().StringIncrementAsync(SearchVersionKey);
         await _redis.GetDatabase().KeyDeleteAsync(CacheKey(evt.ProductId));
     }
 

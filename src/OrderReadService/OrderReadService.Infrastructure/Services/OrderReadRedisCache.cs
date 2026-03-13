@@ -1,6 +1,6 @@
 using System.Text.Json;
 using OrderReadService.Application.Interfaces;
-using OrderReadService.Domain.Models;
+using OrderReadService.Application.Models;
 using StackExchange.Redis;
 
 namespace OrderReadService.Infrastructure.Services;

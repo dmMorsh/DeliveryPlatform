@@ -1,4 +1,5 @@
-using CatalogService.Infrastructure.ReadStore;
+using CatalogReadService.Application.Models;
+using CatalogReadService.Infrastructure.ReadStore;
 using Elastic.Clients.Elasticsearch;
 using Moq;
 using StackExchange.Redis;

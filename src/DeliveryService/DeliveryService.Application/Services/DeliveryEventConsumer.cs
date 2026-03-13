@@ -31,7 +31,8 @@ public class DeliveryEventConsumer : KafkaEventConsumerBase
         ILogger<DeliveryEventConsumer> logger,
         IServiceScopeFactory scopeFactory,
         IEventProducer producer)
-        : base(config, env, logger, scopeFactory, producer, null, null, "order.events")
+        : base(config, env, logger, scopeFactory, producer, null, null,
+            "order.events")
     {
         _logger = logger;
     }

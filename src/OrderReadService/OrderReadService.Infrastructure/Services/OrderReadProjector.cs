@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using OrderReadService.Application.Interfaces;
-using OrderReadService.Domain.Models;
+using OrderReadService.Application.Models;
 using OrderReadService.Infrastructure.Persistence;
 using Shared.Contracts.Events;
 
@@ -91,11 +91,11 @@ public sealed class OrderReadProjector(OrderReadDbContext db) : IOrderReadProjec
             }
         }
 
-        if (!existing.KitchenSlotCounted && existing.KitchenSlotStart.HasValue)
-        {
-            await IncrementKitchenSlotAsync(existing.KitchenSlotStart.Value, ct);
-            existing.KitchenSlotCounted = true;
-        }
+        // if (!existing.KitchenSlotCounted && existing.KitchenSlotStart.HasValue)
+        // {
+        //     await IncrementKitchenSlotAsync(existing.KitchenSlotStart.Value, ct);
+        //     existing.KitchenSlotCounted = true;
+        // }
     }
 
     public async Task HandleAsync(OrderStatusChangedEvent evt, CancellationToken ct)
@@ -107,8 +107,8 @@ public sealed class OrderReadProjector(OrderReadDbContext db) : IOrderReadProjec
         order.Status = evt.NewStatus;
         order.UpdatedAt = evt.ChangedAt == default ? DateTime.UtcNow : evt.ChangedAt;
 
-        if (evt.NewStatus == (int)OrderStatusCode.Cancelled || evt.NewStatus == (int)OrderStatusCode.Failed)
-            await TryDecrementKitchenSlotAsync(order, ct);
+        // if (evt.NewStatus == (int)OrderStatusCode.Cancelled || evt.NewStatus == (int)OrderStatusCode.Failed)
+            // await TryDecrementKitchenSlotAsync(order, ct);
     }
 
     public async Task HandleAsync(OrderReadyEvent evt, CancellationToken ct)
@@ -141,7 +141,7 @@ public sealed class OrderReadProjector(OrderReadDbContext db) : IOrderReadProjec
         order.RejectedAt = evt.RejectedAt;
         order.RejectionReason = evt.Reason;
         order.UpdatedAt = DateTime.UtcNow;
-        await TryDecrementKitchenSlotAsync(order, ct);
+        // await TryDecrementKitchenSlotAsync(order, ct);
     }
 
     public async Task HandleAsync(OrderCanceledEvent evt, CancellationToken ct)
@@ -152,7 +152,7 @@ public sealed class OrderReadProjector(OrderReadDbContext db) : IOrderReadProjec
 
         order.Status = (int)OrderStatusCode.Cancelled;
         order.UpdatedAt = DateTime.UtcNow;
-        await TryDecrementKitchenSlotAsync(order, ct);
+        // await TryDecrementKitchenSlotAsync(order, ct);
     }
 
     public async Task HandleAsync(OrderKitchenDelayedEvent evt, CancellationToken ct)
@@ -195,29 +195,29 @@ public sealed class OrderReadProjector(OrderReadDbContext db) : IOrderReadProjec
         order.UpdatedAt = DateTime.UtcNow;
     }
 
-    private async Task IncrementKitchenSlotAsync(DateTime slotStart, CancellationToken ct)
+    private async Task _IncrementKitchenSlotAsync(DateTime slotStart, CancellationToken ct)
     {
         await db.Database.ExecuteSqlInterpolatedAsync($"""
-            INSERT INTO "order_read"."KitchenSlots" ("SlotStart", "Count")
+            INSERT INTO "kitchen"."KitchenSlots" ("SlotStart", "Count")
             VALUES ({slotStart}, 1)
             ON CONFLICT ("SlotStart")
             DO UPDATE SET "Count" = "KitchenSlots"."Count" + 1
         """, ct);
     }
 
-    private async Task TryDecrementKitchenSlotAsync(OrderReadModel order, CancellationToken ct)
+    private async Task _TryDecrementKitchenSlotAsync(OrderReadModel order, CancellationToken ct)
     {
         if (order.Status == (int)OrderStatusCode.Cancelled || order.Status == (int)OrderStatusCode.Failed)
         {
             await db.Database.ExecuteSqlInterpolatedAsync($"""
-                UPDATE "order_read"."KitchenSlots"
+                UPDATE "kitchen"."KitchenSlots"
                 SET "Count" = GREATEST("Count" - 1, 0)
                 WHERE "SlotStart" = {order.KitchenSlotStart}
             """, ct);
         }
     }
     
-    private async Task _TryDecrementKitchenSlotAsync(OrderReadModel order, CancellationToken ct)
+    private async Task __TryDecrementKitchenSlotAsync(OrderReadModel order, CancellationToken ct)
     {
         if (!order.KitchenSlotCounted || order.KitchenSlotStart == null)
             return;
@@ -225,7 +225,7 @@ public sealed class OrderReadProjector(OrderReadDbContext db) : IOrderReadProjec
             return;
         var slotStart = order.KitchenSlotStart.Value;
         await db.Database.ExecuteSqlInterpolatedAsync($"""
-            INSERT INTO "order_read"."KitchenSlots" ("SlotStart", "Count")
+            INSERT INTO "kitchen"."KitchenSlots" ("SlotStart", "Count")
             VALUES ({slotStart}, 0)
             ON CONFLICT ("SlotStart")
             DO UPDATE SET "Count" = GREATEST("KitchenSlots"."Count" - 1, 0)

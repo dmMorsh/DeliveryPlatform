@@ -1,6 +1,5 @@
 ﻿@model List<ProductViewModel>
 
-<a asp-action="AddItem">Add new</a>
 <h2>Catalog</h2>
 
 <table>
@@ -9,6 +8,9 @@
         <th>ID</th>
         <th>Name</th>
         <th>Price</th>
+        <th>Category</th>
+        <th>Available</th>
+        <th>Rating</th>
         <th></th>
     </tr>
     </thead>
@@ -18,7 +20,10 @@
         <tr>
             <td>@p.Id</td>
             <td>@p.Name</td>
-            <td>@p.Price $</td>
+            <td>@p.Price @((p.Currency ?? "USD"))</td>
+            <td>@(string.IsNullOrWhiteSpace(p.Category) ? "-" : p.Category)</td>
+            <td>@p.QuantityAvailable</td>
+            <td>@(p.Rating?.ToString("0.0") ?? "-")</td>
             <td>
                 <a asp-action="Details" asp-route-id="@p.Id">Details</a>
             </td>

@@ -21,7 +21,8 @@ public class CartEventConsumer : KafkaEventConsumerBase
         ILogger<CartEventConsumer> logger,
         IServiceScopeFactory scopeFactory,
         IEventProducer producer)
-        : base(config, env, logger, scopeFactory, producer, null, null, "")
+        : base(config, env, logger, scopeFactory, producer, null, null,
+            "")
     {
         _logger = logger;
     }

@@ -20,7 +20,8 @@ public class NotificationEventConsumer : KafkaEventConsumerBase
         INotificationService notificationService,
         IServiceScopeFactory scopeFactory,
         IEventProducer producer)
-        : base(config, env, logger, scopeFactory, producer, null, null, "order.events", "courier.events")
+        : base(config, env, logger, scopeFactory, producer, null, null,
+            "order.events", "courier.events")
     {
         _logger = logger;
         _notificationService = notificationService;

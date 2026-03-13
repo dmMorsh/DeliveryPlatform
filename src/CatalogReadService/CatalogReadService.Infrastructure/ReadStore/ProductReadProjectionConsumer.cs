@@ -7,11 +7,11 @@ using Microsoft.Extensions.Logging;
 using Shared.Contracts.Events;
 using Shared.Services;
 
-namespace CatalogService.Infrastructure.ReadStore;
+namespace CatalogReadService.Infrastructure.ReadStore;
 
 public sealed class ProductReadProjectionConsumer : KafkaEventConsumerBase
 {
-    private readonly ILogger<ProductReadProjectionConsumer> _logger;
+    private readonly new ILogger<ProductReadProjectionConsumer> _logger;
 
     public ProductReadProjectionConsumer(
         IConfiguration config,
@@ -19,7 +19,8 @@ public sealed class ProductReadProjectionConsumer : KafkaEventConsumerBase
         ILogger<ProductReadProjectionConsumer> logger,
         IServiceScopeFactory scopeFactory,
         IEventProducer producer)
-        : base(config, env, logger, scopeFactory, producer, null, "catalog-read-projection", "product.events", "inventory.events")
+        : base(config, env, logger, scopeFactory, producer, null, "catalog-read-projection",
+            "product.events", "inventory.events")
     {
         _logger = logger;
     }

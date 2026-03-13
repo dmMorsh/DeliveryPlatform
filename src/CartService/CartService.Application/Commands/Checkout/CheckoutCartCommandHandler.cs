@@ -9,13 +9,20 @@ namespace CartService.Application.Commands.Checkout;
 public class CheckoutCartCommandHandler : IRequestHandler<CheckoutCartCommand, ApiResponse<Guid>>
 {
     private readonly ICartRepository _repo;
+    private readonly ICartReadCache _readCache;
     private readonly IUnitOfWork _uow;
     private readonly ICartIntegrationEventMapper _eventMapper;
     private readonly IOrderService _orderService;
 
-    public CheckoutCartCommandHandler(ICartRepository repo, IUnitOfWork uow, ICartIntegrationEventMapper eventMapper, IOrderService orderService)
+    public CheckoutCartCommandHandler(
+        ICartRepository repo,
+        ICartReadCache readCache,
+        IUnitOfWork uow,
+        ICartIntegrationEventMapper eventMapper,
+        IOrderService orderService)
     {
         _repo = repo;
+        _readCache = readCache;
         _uow = uow;
         _eventMapper = eventMapper;
         _orderService = orderService;
@@ -40,7 +47,7 @@ public class CheckoutCartCommandHandler : IRequestHandler<CheckoutCartCommand, A
 
         await _uow.SaveChangesAsync(outboxMessages, ct);
         cart.ClearDomainEvents();
-        CartReadCache.Invalidate(request.CustomerId);
+        await _readCache.SetAsync(request.CustomerId, CartViewMapper.ToView(cart), ct);
 
         return ApiResponse<Guid>.SuccessResponse(orderId, "Cart checked out successfully");
     }

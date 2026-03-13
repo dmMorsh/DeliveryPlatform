@@ -19,9 +19,9 @@ using OrderService.Infrastructure.Jobs;
 using StackExchange.Redis;
 using Serilog;
 using Shared.Services;
-using Shared.HealthChecks;
 using Shared.Middleware;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
+using OrderService.Api;
 using OrderService.Infrastructure.Caching;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -53,9 +53,9 @@ if (useInMemory)
 else
 {
     postgresConnectionString = ConfigurationGuard.GetRequiredConnectionString(builder.Configuration, builder.Environment, "PostgreSQL");
-    builder.Services.AddDbContext<OrderDbContext>(options =>
+    builder.Services.AddDbContextPool<OrderDbContext>(options =>
         options.UseNpgsql(postgresConnectionString));
-    builder.Services.AddDbContext<KitchenDbContext>(options =>
+    builder.Services.AddDbContextPool<KitchenDbContext>(options =>
         options.UseNpgsql(postgresConnectionString));
     
     builder.Services.AddHangfire(config =>
@@ -65,9 +65,9 @@ else
 
         var connectionString = builder.Configuration.GetConnectionString("Hangfire");
         if (!string.IsNullOrWhiteSpace(connectionString))
-            config.UsePostgreSqlStorage(connectionString);
+            config.UsePostgreSqlStorage(c=>c.UseNpgsqlConnection(connectionString));
         else
-            config.UsePostgreSqlStorage(postgresConnectionString);
+            config.UsePostgreSqlStorage(c=>c.UseNpgsqlConnection(postgresConnectionString));
     });
     builder.Services.AddHangfireServer();
     
@@ -150,15 +150,16 @@ if (!useInMemory && !string.IsNullOrWhiteSpace(postgresConnectionString))
 {
     healthChecks.AddNpgSql(postgresConnectionString, name: "db", tags: new[] { "ready" });    
     // Outbox lag health check
-    healthChecks.AddOutboxLagCheck(
-        async () =>
-        {
-            using var scope = builder.Services.BuildServiceProvider().CreateScope();
-            var db = scope.ServiceProvider.GetRequiredService<OrderDbContext>();
-            return await db.OutboxMessages.CountAsync();
-        },
-        warningThreshold: 100,
-        criticalThreshold: 500);
+    healthChecks.AddCheck<OutboxLagHealthCheck>("outbox_lag", tags: new[] { "ready" });
+    //// healthChecks.AddOutboxLagCheck(
+    //     async () =>
+    //     {
+    //         using var scope = builder.Services.BuildServiceProvider().CreateScope();
+    //         var db = scope.ServiceProvider.GetRequiredService<OrderDbContext>();
+    //         return await db.OutboxMessages.CountAsync();
+    //     },
+    //     warningThreshold: 100,
+    //     criticalThreshold: 500);
 }
 
 // Adaptive throttle service monitors health and adjusts rate limits

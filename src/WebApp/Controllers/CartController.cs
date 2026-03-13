@@ -56,7 +56,7 @@ public class CartController : Controller
             return View(model);
         }
 
-        return Redirect($"/orders/{orderId}");
+        return Redirect($"/orders");
     }
 
 }

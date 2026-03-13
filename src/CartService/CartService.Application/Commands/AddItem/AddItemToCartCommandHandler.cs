@@ -10,12 +10,18 @@ namespace CartService.Application.Commands.AddItem;
 public class AddItemToCartCommandHandler : IRequestHandler<AddItemToCartCommand, ApiResponse<Guid>>
 {
     private readonly ICartRepository _repo;
+    private readonly ICartReadCache _readCache;
     private readonly IUnitOfWork _uow;
     private readonly ICartIntegrationEventMapper _eventMapper;
 
-    public AddItemToCartCommandHandler(ICartRepository repo, IUnitOfWork uow, ICartIntegrationEventMapper eventMapper)
+    public AddItemToCartCommandHandler(
+        ICartRepository repo,
+        ICartReadCache readCache,
+        IUnitOfWork uow,
+        ICartIntegrationEventMapper eventMapper)
     {
         _repo = repo;
+        _readCache = readCache;
         _uow = uow;
         _eventMapper = eventMapper;
     }
@@ -39,7 +45,7 @@ public class AddItemToCartCommandHandler : IRequestHandler<AddItemToCartCommand,
 
         await _uow.SaveChangesAsync(outboxMessages, ct);
         cart.ClearDomainEvents();
-        CartReadCache.Invalidate(request.CustomerId);
+        await _readCache.SetAsync(request.CustomerId, CartViewMapper.ToView(cart), ct);
 
         return ApiResponse<Guid>.SuccessResponse(cart.Id, "Item added to cart");
     }

@@ -45,7 +45,7 @@ else
 {   // DbContext
     // Для OutboxProcessor-а и Hangfire
     var connectionString = ConfigurationGuard.GetRequiredConnectionString(builder.Configuration, builder.Environment, "PostgreSQL");
-    builder.Services.AddDbContext<InventoryDbContext>(options =>
+    builder.Services.AddDbContextPool<InventoryDbContext>(options =>
         options.UseNpgsql(connectionString));
     // Outbox processor
     builder.Services.AddHostedService<OutboxProcessor>();
@@ -119,7 +119,7 @@ catch (Exception ex)
 }
 
 builder.Services.AddScoped<IInventoryReadCache, InventoryReadRedisCache>();
-builder.Services.AddDbContext<InventoryReadDbContext>(options =>
+builder.Services.AddDbContextPool<InventoryReadDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("PostgreSQL")));
 builder.Services.AddScoped<IInventoryReadRepository, InventoryReadRepository>();
 builder.Services.AddScoped<InventoryReadProjector>();

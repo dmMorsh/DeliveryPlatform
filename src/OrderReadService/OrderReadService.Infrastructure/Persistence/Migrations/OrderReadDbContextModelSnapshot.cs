@@ -23,7 +23,7 @@ namespace OrderReadService.Infrastructure.Persistence.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
-            modelBuilder.Entity("OrderReadService.Domain.Models.OrderReadItem", b =>
+            modelBuilder.Entity("OrderReadService.Application.Models.OrderReadItem", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -52,7 +52,7 @@ namespace OrderReadService.Infrastructure.Persistence.Migrations
                     b.ToTable("OrderItems", "order_read");
                 });
 
-            modelBuilder.Entity("OrderReadService.Domain.Models.OrderReadModel", b =>
+            modelBuilder.Entity("OrderReadService.Application.Models.OrderReadModel", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -256,16 +256,16 @@ namespace OrderReadService.Infrastructure.Persistence.Migrations
                     b.ToTable("ProcessedEvents", "order_read");
                 });
 
-            modelBuilder.Entity("OrderReadService.Domain.Models.OrderReadItem", b =>
+            modelBuilder.Entity("OrderReadService.Application.Models.OrderReadItem", b =>
                 {
-                    b.HasOne("OrderReadService.Domain.Models.OrderReadModel", null)
+                    b.HasOne("OrderReadService.Application.Models.OrderReadModel", null)
                         .WithMany("Items")
                         .HasForeignKey("OrderId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("OrderReadService.Domain.Models.OrderReadModel", b =>
+            modelBuilder.Entity("OrderReadService.Application.Models.OrderReadModel", b =>
                 {
                     b.Navigation("Items");
                 });

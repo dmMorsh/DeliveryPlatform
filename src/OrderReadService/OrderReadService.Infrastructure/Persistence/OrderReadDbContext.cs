@@ -1,5 +1,5 @@
 using Microsoft.EntityFrameworkCore;
-using OrderReadService.Domain.Models;
+using OrderReadService.Application.Models;
 using Shared.Contracts.Events;
 
 namespace OrderReadService.Infrastructure.Persistence;

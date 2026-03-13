@@ -1,8 +1,11 @@
 using Confluent.Kafka;
+using MediatR;
 using Microsoft.EntityFrameworkCore;
 using OrderReadService.Application.Interfaces;
+using OrderReadService.Application.MediatR;
 using OrderReadService.Infrastructure.Inbox;
 using OrderReadService.Infrastructure.Persistence;
+using OrderReadService.Infrastructure.Repositories;
 using OrderReadService.Infrastructure.Services;
 using Shared.Services;
 using StackExchange.Redis;
@@ -14,9 +17,10 @@ var connectionString = ConfigurationGuard.GetRequiredConnectionString(builder.Co
 if (string.IsNullOrWhiteSpace(connectionString))
     throw new InvalidOperationException("PostgreSQL connection string is required.");
 
-services.AddDbContext<OrderReadDbContext>(options =>
+services.AddDbContextPool<OrderReadDbContext>(options =>
     options.UseNpgsql(connectionString));
 
+services.AddScoped<IOrderReadRepository, OrderReadRepository>();
 services.AddScoped<OrderReadProjector>();
 services.AddScoped<IEventInbox, OrderReadEventInbox>();
 // services.AddScoped<OrderReadProjectionConsumer>();
@@ -27,6 +31,14 @@ builder.Services.AddHostedService<KafkaEventConsumerHostedService<OrderReadProje
 
 services.AddControllers();
 services.AddEndpointsApiExplorer();
+
+// Register MediatR handlers from Application assembly
+builder.Services.AddMediatR(typeof(ApplicationMarker).Assembly);
+
+// Auth
+builder.AddExtendedAuthentication();
+builder.Services.AddAuthorization();
+builder.AddExtendedCors();
 
 // redis cache for order reads
 services.AddSingleton<IConnectionMultiplexer>(sp =>

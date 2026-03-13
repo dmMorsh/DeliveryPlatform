@@ -2,6 +2,7 @@
 using CatalogService.Application.Interfaces;
 using CatalogService.Application.Models;
 using MediatR;
+using Shared.Contracts;
 using Shared.Utilities;
 
 namespace CatalogService.Application.Queries.SearchProducts;

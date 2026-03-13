@@ -19,7 +19,7 @@ builder.Host.UseSerilog((ctx, cfg) =>
 
 // Db
 var identityConnectionString = ConfigurationGuard.GetRequiredConnectionString(builder.Configuration, builder.Environment, "Default");
-builder.Services.AddDbContext<IdentityDbContext>(options =>
+builder.Services.AddDbContextPool<IdentityDbContext>(options =>
     options.UseNpgsql(identityConnectionString));
 
 // Identity
