@@ -1,4 +1,5 @@
 using MediatR;
+using Shared.Services;
 using Shared.Utilities;
 
 namespace DeliveryService.Application.Commands.CreateDeliveryFromOrder;
@@ -17,4 +18,7 @@ public record CreateDeliveryFromOrderCommand(
     int? DeliveryPickupSlaMinutes,
     int? DeliveryTransitSlaMinutes,
     double? DeliveryFeeMultiplier,
-    double? DeliveryZoneDistanceKm) : IRequest<ApiResponse>;
+    double? DeliveryZoneDistanceKm) : IRequest<ApiResponse>, IHangfireRetryable
+{
+    public Guid CorrelationId => DeterministicGuid.FromComponents(OrderId);
+}

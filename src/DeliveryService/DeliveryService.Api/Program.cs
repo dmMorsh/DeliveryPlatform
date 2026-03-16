@@ -27,6 +27,7 @@ builder.UseExtededSerilog();
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
 builder.Services.AddMediatR(typeof(ApplicationMarker).Assembly);
+builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(HangfireRetryBehavior<,>));
 var httpTimeoutSeconds = int.TryParse(builder.Configuration["Http:TimeoutSeconds"], out var httpTimeout)
     ? httpTimeout
     : 10;
@@ -75,8 +76,15 @@ if (!useInMemory)
             schema: "delivery"));
     builder.Services.AddHostedService<OutboxCleanupHostedService<DeliveryDbContext, OutboxMessage>>();
     builder.Services.AddHostedService<ProcessedEventCleanupHostedService<DeliveryDbContext>>();
+    builder.Services.AddHostedService<ProcessedCommandCleanupHostedService<DeliveryDbContext, ProcessedCommand>>();
     builder.Services.AddSingleton<IDeliverySlaJob, DeliverySlaJob>();
 }
+
+builder.Services.AddScoped<IHangfireCommandExecutor>(sp =>
+    new HangfireCommandExecutor<DeliveryDbContext>(
+        sp.GetRequiredService<IMediator>(),
+        sp.GetRequiredService<DeliveryDbContext>(),
+        "delivery"));
 
 builder.Services.AddScoped<IDeliveryRepository, DeliveryRepository>();
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();

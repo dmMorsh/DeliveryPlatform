@@ -25,14 +25,7 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 builder.AddServiceTelemetry("payment-service");
 
-builder.Host.UseSerilog((ctx, cfg) =>
-    cfg
-        .WriteTo.OpenTelemetry()
-        .WriteTo.Console(outputTemplate: "[{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz}] [{Level:u3}] [{SourceContext}] {Message:lj}{NewLine}{Exception}")
-        .WriteTo.File("../../logs/PaymentService-.log",
-           rollingInterval: RollingInterval.Day,
-           outputTemplate: "[{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz}] [{Level:u3}] [{SourceContext}] {Message:lj}{NewLine}{Exception}")
-       .MinimumLevel.Information());
+builder.UseExtededSerilog();
 
 var postgresConnectionString = ConfigurationGuard.GetRequiredConnectionString(builder.Configuration, builder.Environment, "PostgreSQL");
 builder.Services.AddDbContextPool<PaymentDbContext>(options =>
@@ -68,7 +61,13 @@ catch (Exception ex)
 }
 
 builder.Services.AddMediatR(typeof(ApplicationMarker).Assembly);
+builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(HangfireRetryBehavior<,>));
 builder.Services.AddScoped<IUnitOfWorkFactory, UnitOfWorkFactory>();
+builder.Services.AddScoped<IHangfireCommandExecutor>(sp =>
+    new HangfireCommandExecutor<PaymentDbContext>(
+        sp.GetRequiredService<IMediator>(),
+        sp.GetRequiredService<PaymentDbContext>(),
+        "payment"));
 builder.Services.AddSingleton<IPaymentStatusCache, PaymentStatusRedisCache>();
 builder.Services.AddSingleton<IPaymentDbContextFactory, PaymentDbContextFactory>();
 builder.Services.Configure<PaymentShardOptions>(builder.Configuration.GetSection("Payments:Sharding"));
@@ -116,6 +115,7 @@ builder.Services.AddSingleton<PaymentEventConsumer>();
 builder.Services.AddHostedService<KafkaEventConsumerHostedService<PaymentEventConsumer>>();
 builder.Services.AddScoped<IEventInbox, DbEventInbox<PaymentDbContext>>();
 builder.Services.AddHostedService<ProcessedEventCleanupHostedService<PaymentDbContext>>();
+builder.Services.AddHostedService<ProcessedCommandCleanupHostedService<PaymentDbContext, ProcessedCommand>>();
 
 // Auth
 builder.AddExtendedAuthentication();

@@ -7,6 +7,9 @@ using CartService.Infrastructure.Persistence;
 using CartService.Infrastructure.Repositories;
 using CartService.Infrastructure.Services;
 using Confluent.Kafka;
+using Hangfire;
+using Hangfire.MemoryStorage;
+using Hangfire.PostgreSql;
 using MediatR;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.EntityFrameworkCore;
@@ -94,6 +97,7 @@ builder.Services.AddScoped<IEventInbox, DbEventInbox<CartDbContext>>();
 // Cart DDD services
 builder.Services.AddMediatR(typeof(ApplicationMarker).Assembly);
 builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
+builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(HangfireRetryBehavior<,>));
 builder.Services.AddScoped<ICartRepository, CartRepository>();
 builder.Services.AddScoped<ICartReadRepository, CartReadRepository>();
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
@@ -112,7 +116,30 @@ if (!useInMemory)
             schema: "cart"));
     builder.Services.AddHostedService<OutboxCleanupHostedService<CartDbContext, OutboxMessage>>();
     builder.Services.AddHostedService<ProcessedEventCleanupHostedService<CartDbContext>>();
+    builder.Services.AddHostedService<ProcessedCommandCleanupHostedService<CartDbContext, ProcessedCommand>>();
 }
+
+builder.Services.AddHangfire(config =>
+{
+    config.UseSimpleAssemblyNameTypeSerializer()
+        .UseRecommendedSerializerSettings();
+
+    //var connectionString = builder.Configuration.GetConnectionString("Hangfire");
+    if (!string.IsNullOrWhiteSpace(connectionString))
+        config.UsePostgreSqlStorage(connectionString);
+    else
+    {
+        if (builder.Environment.IsProduction())
+            throw new InvalidOperationException("Hangfire connection string is required in production.");
+        config.UseMemoryStorage();
+    }
+});
+builder.Services.AddHangfireServer();
+builder.Services.AddScoped<IHangfireCommandExecutor>(sp =>
+    new HangfireCommandExecutor<CartDbContext>(
+        sp.GetRequiredService<IMediator>(),
+        sp.GetRequiredService<CartDbContext>(),
+        "cart"));
 
 // Auth
 builder.AddExtendedAuthentication();
@@ -139,6 +166,7 @@ app.MapHealthChecks("/health/ready", new HealthCheckOptions
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
+    app.UseHangfireDashboard("/hangfire");
 }
 app.UseHttpsRedirection();
 

@@ -125,6 +125,7 @@ if (!useInMemory)
             schema: "order"));
     builder.Services.AddHostedService<OutboxCleanupHostedService<OrderDbContext, OutboxMessage>>();
     builder.Services.AddHostedService<ProcessedEventCleanupHostedService<OrderDbContext>>();
+    builder.Services.AddHostedService<ProcessedCommandCleanupHostedService<OrderDbContext, ProcessedCommand>>();
     builder.Services.AddSingleton<IOrderPaymentTtlJob, OrderPaymentTtlJob>();
     builder.Services.AddSingleton<IOrderAssigningTtlJob, OrderAssigningTtlJob>();
     builder.Services.AddSingleton<IOrderKitchenAcceptanceTtlJob, OrderKitchenAcceptanceTtlJob>();
@@ -135,7 +136,13 @@ if (!useInMemory)
 builder.Services
     .AddMediatR(typeof(ApplicationMarker).Assembly)
     .AddTransient(typeof(IPipelineBehavior<,>), typeof(ExceptionBehavior<,>))
-    .AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
+    .AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>))
+    .AddTransient(typeof(IPipelineBehavior<,>), typeof(HangfireRetryBehavior<,>));
+builder.Services.AddScoped<IHangfireCommandExecutor>(sp =>
+    new HangfireCommandExecutor<OrderDbContext>(
+        sp.GetRequiredService<IMediator>(),
+        sp.GetRequiredService<OrderDbContext>(),
+        "order"));
 // Auth
 builder.AddExtendedAuthentication();
 builder.Services.AddAuthorization();

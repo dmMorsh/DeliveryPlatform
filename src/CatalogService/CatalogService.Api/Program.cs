@@ -6,6 +6,9 @@ using CatalogService.Infrastructure.Persistence;
 using CatalogService.Infrastructure.Repositories;
 using CatalogService.Infrastructure.Services;
 using Confluent.Kafka;
+using Hangfire;
+using Hangfire.MemoryStorage;
+using Hangfire.PostgreSql;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
@@ -40,6 +43,7 @@ else
 builder.Services.AddControllers();
 builder.Services.AddMediatR(typeof(ApplicationMarker).Assembly);
 builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
+builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(HangfireRetryBehavior<,>));
 builder.Services.AddScoped<IProductRepository, ProductRepository>();
 builder.Services.AddScoped<IProductReadRepository, ProductReadRepository>();
 
@@ -88,7 +92,30 @@ if (!useInMemory)
             schema: "catalog"));
     builder.Services.AddHostedService<OutboxCleanupHostedService<CatalogDbContext, OutboxMessage>>();
     builder.Services.AddHostedService<ProcessedEventCleanupHostedService<CatalogDbContext>>();
+    builder.Services.AddHostedService<ProcessedCommandCleanupHostedService<CatalogDbContext, ProcessedCommand>>();
 }
+
+builder.Services.AddHangfire(config =>
+{
+    config.UseSimpleAssemblyNameTypeSerializer()
+        .UseRecommendedSerializerSettings();
+
+    //var connectionString = builder.Configuration.GetConnectionString("Hangfire");
+    if (!string.IsNullOrWhiteSpace(connectionString))
+        config.UsePostgreSqlStorage(connectionString);
+    else
+    {
+        if (builder.Environment.IsProduction())
+            throw new InvalidOperationException("Hangfire connection string is required in production.");
+        config.UseMemoryStorage();
+    }
+});
+builder.Services.AddHangfireServer();
+builder.Services.AddScoped<IHangfireCommandExecutor>(sp =>
+    new HangfireCommandExecutor<CatalogDbContext>(
+        sp.GetRequiredService<IMediator>(),
+        sp.GetRequiredService<CatalogDbContext>(),
+        "catalog"));
 
 // Auth
 builder.AddExtendedAuthentication();
@@ -112,6 +139,11 @@ app.MapHealthChecks("/health/ready", new Microsoft.AspNetCore.Diagnostics.Health
 {
     Predicate = reg => reg.Tags.Contains("ready")
 });
+
+if (app.Environment.IsDevelopment())
+{
+    app.UseHangfireDashboard("/hangfire");
+}
 
 if (!useInMemory)
 {

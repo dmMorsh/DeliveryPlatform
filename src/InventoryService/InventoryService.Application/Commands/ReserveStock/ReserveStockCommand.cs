@@ -1,4 +1,4 @@
-﻿using InventoryService.Application.Interfaces;
+﻿using Shared.Services;
 using InventoryService.Application.Models;
 using MediatR;
 using Shared.Utilities;

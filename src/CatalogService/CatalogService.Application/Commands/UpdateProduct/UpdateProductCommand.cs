@@ -1,5 +1,6 @@
 using CatalogService.Application.Models;
 using MediatR;
+using Shared.Services;
 using Shared.Utilities;
 
 namespace CatalogService.Application.Commands.UpdateProduct;
@@ -11,4 +12,13 @@ public record UpdateProductCommand(
     long? PriceCents,
     string? Currency,
     bool? IsActive) 
-    : IRequest<ApiResponse<ProductView>>;
+    : IRequest<ApiResponse<ProductView>>, IHangfireRetryable
+{
+    public Guid CorrelationId => DeterministicGuid.FromComponents(
+        ProductId,
+        Name ?? string.Empty,
+        Description ?? string.Empty,
+        PriceCents,
+        Currency ?? string.Empty,
+        IsActive);
+}

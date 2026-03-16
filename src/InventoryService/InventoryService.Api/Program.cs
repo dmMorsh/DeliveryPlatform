@@ -6,7 +6,6 @@ using InventoryService.Application.MediatR;
 using InventoryService.Application.Services;
 using InventoryService.Application.Utils;
 using InventoryService.Application.Read;
-using InventoryService.Infrastructure.Hangfire;
 using InventoryService.Infrastructure.Mapping;
 using InventoryService.Infrastructure.Persistence;
 using InventoryService.Infrastructure.Jobs;
@@ -64,7 +63,11 @@ else
             new PostgreSqlStorageOptions { PrepareSchemaIfNecessary = true })
         );
     builder.Services.AddHangfireServer();
-    builder.Services.AddScoped<IHangfireCommandExecutor, HangfireCommandExecutor>();
+    builder.Services.AddScoped<IHangfireCommandExecutor>(sp =>
+        new HangfireCommandExecutor<InventoryDbContext>(
+            sp.GetRequiredService<IMediator>(),
+            sp.GetRequiredService<InventoryDbContext>(),
+            "inventory"));
     builder.Services.AddSingleton<IInventoryReservationAlertJob, InventoryReservationAlertJob>();
     
     // Sharding

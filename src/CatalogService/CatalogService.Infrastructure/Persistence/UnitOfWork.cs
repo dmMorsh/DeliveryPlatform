@@ -1,6 +1,5 @@
 ﻿using CatalogService.Application.Interfaces;
 using Shared.Contracts;
-using Shared.Services;
 
 namespace CatalogService.Infrastructure.Persistence;
 
@@ -18,6 +17,6 @@ public class UnitOfWork : IUnitOfWork
         if (outboxMessages.Count > 0)
             _db.OutboxMessages.AddRange(outboxMessages);
 
-        await _db.SaveChangesWithConcurrencyRetryAsync(maxRetries: 3, ct);
+        await _db.SaveChangesAsync(ct);
     }
 }

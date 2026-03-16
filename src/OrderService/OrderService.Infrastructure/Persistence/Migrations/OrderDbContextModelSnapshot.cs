@@ -23,50 +23,6 @@ namespace OrderService.Infrastructure.Persistence.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
-            modelBuilder.Entity("OrderService.Application.Models.OutboxMessage", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("AggregateId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("EventId")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("LastError")
-                        .HasColumnType("text");
-
-                    b.Property<DateTime?>("NextRetryAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateTime>("OccurredAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Payload")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<DateTime?>("PublishedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<int>("RetryCount")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("Topic")
-                        .HasColumnType("text");
-
-                    b.Property<string>("Type")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("OutboxMessages", "order");
-                });
-
             modelBuilder.Entity("OrderService.Domain.Aggregates.Order", b =>
                 {
                     b.Property<Guid>("Id")
@@ -236,6 +192,75 @@ namespace OrderService.Infrastructure.Persistence.Migrations
                         .IsUnique();
 
                     b.ToTable("ProcessedEvents", "order");
+                });
+
+            modelBuilder.Entity("Shared.Contracts.OutboxMessage", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AggregateId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("EventId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("LastError")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("NextRetryAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("OccurredAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Payload")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("PublishedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("RetryCount")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Topic")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("OutboxMessages", "order");
+                });
+
+            modelBuilder.Entity("Shared.Contracts.ProcessedCommand", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("CommandType")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<Guid>("CorrelationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("ProcessedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CorrelationId", "CommandType")
+                        .IsUnique();
+
+                    b.ToTable("ProcessedCommands", "order");
                 });
 
             modelBuilder.Entity("OrderService.Domain.Aggregates.Order", b =>

@@ -1,5 +1,6 @@
 using MediatR;
 using OrderService.Application.Models;
+using Shared.Services;
 using Shared.Utilities;
 
 namespace OrderService.Application.Commands.CreateOrder;
@@ -20,6 +21,9 @@ public record CreateOrderCommand(
     IReadOnlyCollection<CreateOrderItemDto>? Items,
     Guid? CheckoutId,
     DateTime? DesiredReadyAt
-) : IRequest<ApiResponse<OrderView>>;
+) : IRequest<ApiResponse<OrderView>>, IHangfireRetryable
+{
+    public Guid CorrelationId => CheckoutId ?? Guid.Empty;
+}
 
 public record CreateOrderItemDto(Guid ProductId, string Name, int PriceCents, int Quantity);

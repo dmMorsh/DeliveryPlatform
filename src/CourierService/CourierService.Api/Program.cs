@@ -5,6 +5,9 @@ using CourierService.Application.Services;
 using CourierService.Infrastructure.Mapping;
 using CourierService.Infrastructure.Persistence;
 using CourierService.Infrastructure.Repositories;
+using Hangfire;
+using Hangfire.MemoryStorage;
+using Hangfire.PostgreSql;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
@@ -23,6 +26,7 @@ builder.Services.AddControllers();
 builder.Services.AddOpenApi();
 builder.Services.AddMediatR(typeof(ApplicationMarker).Assembly);
 builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
+builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(HangfireRetryBehavior<,>));
 
 // Allow using an in-memory DB for local quick tests by setting USE_INMEMORY_DB=true
 var useInMemory = Environment.GetEnvironmentVariable("USE_INMEMORY_DB") == "true"
@@ -59,7 +63,30 @@ if (!useInMemory)
             schema: "couriers"));
     builder.Services.AddHostedService<OutboxCleanupHostedService<CourierDbContext, OutboxMessage>>();
     builder.Services.AddHostedService<ProcessedEventCleanupHostedService<CourierDbContext>>();
+    builder.Services.AddHostedService<ProcessedCommandCleanupHostedService<CourierDbContext, ProcessedCommand>>();
 }
+
+builder.Services.AddHangfire(config =>
+{
+    config.UseSimpleAssemblyNameTypeSerializer()
+        .UseRecommendedSerializerSettings();
+
+    //var connectionString = builder.Configuration.GetConnectionString("Hangfire");
+    if (!string.IsNullOrWhiteSpace(connectionString))
+        config.UsePostgreSqlStorage(connectionString);
+    else
+    {
+        if (builder.Environment.IsProduction())
+            throw new InvalidOperationException("Hangfire connection string is required in production.");
+        config.UseMemoryStorage();
+    }
+});
+builder.Services.AddHangfireServer();
+builder.Services.AddScoped<IHangfireCommandExecutor>(sp =>
+    new HangfireCommandExecutor<CourierDbContext>(
+        sp.GetRequiredService<IMediator>(),
+        sp.GetRequiredService<CourierDbContext>(),
+        "courier"));
 
 builder.Services.AddScoped<ICourierRepository, CourierRepository>();
 // Cache for active couriers list
@@ -112,6 +139,7 @@ var app = builder.Build();
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
+    app.UseHangfireDashboard("/hangfire");
 }
 
 app.UseHttpsRedirection();

@@ -86,7 +86,7 @@ for SERVICE in "${SERVICES[@]}"; do
     UP=$(get_method_body "$CONTENT" "Up")
     DOWN=$(get_method_body "$CONTENT" "Down")
 
-    if ! echo "$UP$DOWN" | grep -q "migrationBuilder."; then
+    if ! echo "$UP$DOWN" | grep -q "migrationBuilder\."; then
       echo "⚠ Empty migration detected for $CONTEXT → removing"
 
       dotnet ef migrations remove \

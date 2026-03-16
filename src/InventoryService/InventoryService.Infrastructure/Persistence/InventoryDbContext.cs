@@ -1,6 +1,5 @@
 ﻿using InventoryService.Domain.Aggregates;
 using InventoryService.Domain.Entities;
-using InventoryService.Infrastructure.Hangfire;
 using Microsoft.EntityFrameworkCore;
 using Shared.Contracts;
 using Shared.Contracts.Events;

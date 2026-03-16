@@ -1,4 +1,4 @@
-﻿namespace InventoryService.Application.Interfaces;
+namespace Shared.Services;
 
 public interface IHangfireRetryable
 {

@@ -14,6 +14,7 @@ public class CourierDbContext : DbContext
     public DbSet<Courier> Couriers => Set<Courier>();
     public DbSet<OutboxMessage> OutboxMessages => Set<OutboxMessage>();
     public DbSet<ProcessedEvent> ProcessedEvents => Set<ProcessedEvent>();
+    public DbSet<ProcessedCommand> ProcessedCommands => Set<ProcessedCommand>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -51,6 +52,14 @@ public class CourierDbContext : DbContext
                 .IsRequired()
                 .HasMaxLength(255);
             entity.Property(x => x.Status).IsRequired();
+        });
+
+        modelBuilder.Entity<ProcessedCommand>(entity =>
+        {
+            entity.HasKey(x => x.Id);
+            entity.HasIndex(x => new { x.CorrelationId, x.CommandType }).IsUnique();
+            entity.Property(x => x.CommandType).IsRequired().HasMaxLength(255);
+            entity.Property(x => x.ProcessedAt).IsRequired();
         });
     }
 }
