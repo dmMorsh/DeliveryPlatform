@@ -1,7 +1,6 @@
 using CartService.Api;
 using CartService.Application.Interfaces;
 using CartService.Application.MediatR;
-using CartService.Infrastructure.Inbox;
 using CartService.Infrastructure.Grpc;
 using CartService.Infrastructure.Mapping;
 using CartService.Infrastructure.Persistence;
@@ -90,7 +89,7 @@ builder.Services.AddScoped<IOrderService, OrderGrpcService>();
 builder.Services.AddSingleton<IEventProducer, KafkaEventProducer>();
 // Ensure Kafka topics exist on startup
 builder.Services.AddHostedService<KafkaTopicBootstrapper>();
-builder.Services.AddScoped<IEventInbox, CartEventInbox>();
+builder.Services.AddScoped<IEventInbox, DbEventInbox<CartDbContext>>();
 
 // Cart DDD services
 builder.Services.AddMediatR(typeof(ApplicationMarker).Assembly);

@@ -2,7 +2,6 @@ using Confluent.Kafka;
 using CourierService.Application.Interfaces;
 using CourierService.Application.MediatR;
 using CourierService.Application.Services;
-using CourierService.Infrastructure.Inbox;
 using CourierService.Infrastructure.Mapping;
 using CourierService.Infrastructure.Persistence;
 using CourierService.Infrastructure.Repositories;
@@ -48,7 +47,7 @@ builder.Services.AddSingleton<IEventProducer, KafkaEventProducer>();
 
 // Ensure Kafka topics exist on startup
 builder.Services.AddHostedService<KafkaTopicBootstrapper>();
-builder.Services.AddScoped<IEventInbox, CourierEventInbox>();
+builder.Services.AddScoped<IEventInbox, DbEventInbox<CourierDbContext>>();
 // Outbox processor
 if (!useInMemory)
 {

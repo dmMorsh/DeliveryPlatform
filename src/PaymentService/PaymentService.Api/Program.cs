@@ -7,7 +7,6 @@ using PaymentService.Application.Services;
 using PaymentService.Api.Security;
 using PaymentService.Infrastructure.Jobs;
 using PaymentService.Infrastructure.Mapping;
-using PaymentService.Infrastructure.Inbox;
 using PaymentService.Infrastructure.Persistence;
 using PaymentService.Infrastructure.Providers;
 using PaymentService.Infrastructure.Sharding;
@@ -115,7 +114,7 @@ builder.Services.AddHostedService<OutboxCleanupHostedService<PaymentDbContext, O
 builder.Services.AddSingleton<IPaymentIntegrationEventMapper, PaymentIntegrationEventMapper>();
 builder.Services.AddSingleton<PaymentEventConsumer>();
 builder.Services.AddHostedService<KafkaEventConsumerHostedService<PaymentEventConsumer>>();
-builder.Services.AddScoped<IEventInbox, PaymentEventInbox>();
+builder.Services.AddScoped<IEventInbox, DbEventInbox<PaymentDbContext>>();
 builder.Services.AddHostedService<ProcessedEventCleanupHostedService<PaymentDbContext>>();
 
 // Auth

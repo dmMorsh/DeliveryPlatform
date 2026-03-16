@@ -1,16 +1,15 @@
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
-using PaymentService.Infrastructure.Persistence;
 using Shared.Contracts.Events;
-using Shared.Services;
 
-namespace PaymentService.Infrastructure.Inbox;
+namespace Shared.Services;
 
-public sealed class PaymentEventInbox : IEventInbox
+public sealed class DbEventInbox<TDbContext> : IEventInbox
+    where TDbContext : DbContext
 {
-    private readonly PaymentDbContext _db;
+    private readonly TDbContext _db;
 
-    public PaymentEventInbox(PaymentDbContext db)
+    public DbEventInbox(TDbContext db)
     {
         _db = db;
     }
@@ -27,8 +26,8 @@ public sealed class PaymentEventInbox : IEventInbox
         if (string.IsNullOrWhiteSpace(eventId))
             return false;
 
-        var existing = await _db.ProcessedEvents
-            .FirstOrDefaultAsync(x => x.EventId == eventId, ct);
+        var events = _db.Set<ProcessedEvent>();
+        var existing = await events.FirstOrDefaultAsync(x => x.EventId == eventId, ct);
         if (existing != null)
         {
             if (existing.Status == "failed")
@@ -62,7 +61,7 @@ public sealed class PaymentEventInbox : IEventInbox
             ReceivedAt = DateTime.UtcNow
         };
 
-        _db.ProcessedEvents.Add(entry);
+        events.Add(entry);
         try
         {
             await _db.SaveChangesAsync(ct);
@@ -76,7 +75,7 @@ public sealed class PaymentEventInbox : IEventInbox
 
     public async Task MarkProcessedAsync(string eventId, CancellationToken ct = default)
     {
-        var entry = await _db.ProcessedEvents.FirstOrDefaultAsync(x => x.EventId == eventId, ct);
+        var entry = await _db.Set<ProcessedEvent>().FirstOrDefaultAsync(x => x.EventId == eventId, ct);
         if (entry is null) return;
         entry.Status = "processed";
         entry.ProcessedAt = DateTime.UtcNow;
@@ -86,7 +85,7 @@ public sealed class PaymentEventInbox : IEventInbox
 
     public async Task MarkFailedAsync(string eventId, string error, CancellationToken ct = default)
     {
-        var entry = await _db.ProcessedEvents.FirstOrDefaultAsync(x => x.EventId == eventId, ct);
+        var entry = await _db.Set<ProcessedEvent>().FirstOrDefaultAsync(x => x.EventId == eventId, ct);
         if (entry is null) return;
         entry.Status = "failed";
         entry.ProcessedAt = DateTime.UtcNow;

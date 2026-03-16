@@ -12,7 +12,6 @@ using OrderService.Application.Utils;
 using OrderService.Infrastructure.Mapping;
 using OrderService.Infrastructure.Persistence;
 using OrderService.Infrastructure.Repositories;
-using OrderService.Infrastructure.Inbox;
 using OrderService.Infrastructure.Jobs;
 using StackExchange.Redis;
 using Serilog;
@@ -88,7 +87,7 @@ builder.Services.AddSingleton<IOrderIntegrationEventMapper, IntegrationEventMapp
 // Event Consumer from other services
 builder.Services.AddSingleton<OrderEventConsumer>();
 builder.Services.AddHostedService<KafkaEventConsumerHostedService<OrderEventConsumer>>();
-builder.Services.AddScoped<IEventInbox, OrderEventInbox>();
+builder.Services.AddScoped<IEventInbox, DbEventInbox<OrderDbContext>>();
 
 builder.Services.AddScoped<IOrderRepository, OrderRepository>();
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();

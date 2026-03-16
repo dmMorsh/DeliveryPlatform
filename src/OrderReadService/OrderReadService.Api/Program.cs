@@ -3,7 +3,6 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using OrderReadService.Application.Interfaces;
 using OrderReadService.Application.MediatR;
-using OrderReadService.Infrastructure.Inbox;
 using OrderReadService.Infrastructure.Persistence;
 using OrderReadService.Infrastructure.Repositories;
 using OrderReadService.Infrastructure.Services;
@@ -22,7 +21,7 @@ services.AddDbContextPool<OrderReadDbContext>(options =>
 
 services.AddScoped<IOrderReadRepository, OrderReadRepository>();
 services.AddScoped<OrderReadProjector>();
-services.AddScoped<IEventInbox, OrderReadEventInbox>();
+services.AddScoped<IEventInbox, DbEventInbox<OrderReadDbContext>>();
 // services.AddScoped<OrderReadProjectionConsumer>();
 // services.AddScoped<IEventConsumer>(sp => sp.GetRequiredService<OrderReadProjectionConsumer>());
 

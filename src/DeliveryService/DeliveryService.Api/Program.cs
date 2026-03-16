@@ -4,7 +4,6 @@ using Hangfire.PostgreSql;
 using DeliveryService.Application.Interfaces;
 using DeliveryService.Application.MediatR;
 using DeliveryService.Application.Services;
-using DeliveryService.Infrastructure.Inbox;
 using DeliveryService.Infrastructure.Mapping;
 using DeliveryService.Infrastructure.Persistence;
 using DeliveryService.Infrastructure.Repositories;
@@ -65,7 +64,7 @@ else
 
 builder.Services.AddSingleton<IEventProducer, KafkaEventProducer>();
 builder.Services.AddHostedService<KafkaTopicBootstrapper>();
-builder.Services.AddScoped<IEventInbox, DeliveryEventInbox>();
+builder.Services.AddScoped<IEventInbox, DbEventInbox<DeliveryDbContext>>();
 if (!useInMemory)
 {
     builder.Services.AddHostedService(sp =>

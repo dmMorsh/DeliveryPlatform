@@ -1,7 +1,6 @@
 using CatalogService.Application.Interfaces;
 using CatalogService.Application.MediatR;
 using CatalogService.Application.Services;
-using CatalogService.Infrastructure.Inbox;
 using CatalogService.Infrastructure.Mapping;
 using CatalogService.Infrastructure.Persistence;
 using CatalogService.Infrastructure.Repositories;
@@ -74,7 +73,7 @@ builder.Services.AddSingleton<ICatalogMetricsStore, RedisCatalogMetricsStore>();
 builder.Services.AddSingleton<IEventProducer, KafkaEventProducer>();
 // Ensure Kafka topics exist on startup
 builder.Services.AddHostedService<KafkaTopicBootstrapper>();
-builder.Services.AddScoped<IEventInbox, CatalogEventInbox>();
+builder.Services.AddScoped<IEventInbox, DbEventInbox<CatalogDbContext>>();
 // Event Consumer from OrderService and InventoryService
 builder.Services.AddSingleton<CatalogEventConsumer>();
 builder.Services.AddHostedService<KafkaEventConsumerHostedService<CatalogEventConsumer>>();

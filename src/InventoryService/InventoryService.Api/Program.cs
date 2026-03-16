@@ -7,7 +7,6 @@ using InventoryService.Application.Services;
 using InventoryService.Application.Utils;
 using InventoryService.Application.Read;
 using InventoryService.Infrastructure.Hangfire;
-using InventoryService.Infrastructure.Inbox;
 using InventoryService.Infrastructure.Mapping;
 using InventoryService.Infrastructure.Persistence;
 using InventoryService.Infrastructure.Jobs;
@@ -104,7 +103,7 @@ builder.Services.AddHostedService<KafkaTopicBootstrapper>();
 // Event Consumer from OrderService
 builder.Services.AddSingleton<InventoryEventConsumer>();
 builder.Services.AddHostedService<KafkaEventConsumerHostedService<InventoryEventConsumer>>();
-builder.Services.AddScoped<IEventInbox, InventoryEventInbox>();
+builder.Services.AddScoped<IEventInbox, DbEventInbox<InventoryDbContext>>();
 
 // read‑store context for inventory
 var redisConnection = ConfigurationGuard.GetRequired(builder.Configuration, builder.Environment, "Redis:Connection", "localhost:6379");
