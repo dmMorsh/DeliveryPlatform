@@ -25,6 +25,8 @@ public class ProductIntegrationEventMapper : IProductIntegrationEventMapper
             Name = e.Name,
             Description = e.Description,
             PriceCents = e.PriceCents.AmountCents,
+            Currency = e.PriceCents.Currency,
+            WeightGrams = e.WeightGrams.Value,
             QuantityAvailable = e.QuantityAvailable
         };
     }

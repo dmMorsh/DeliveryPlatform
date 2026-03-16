@@ -2,9 +2,9 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using OrderService.Application.Models;
 using OrderService.Domain.Aggregates;
 using OrderService.Infrastructure.Persistence;
+using Shared.Contracts;
 using Shared.Contracts.Events;
 
 namespace OrderService.Infrastructure.Jobs;

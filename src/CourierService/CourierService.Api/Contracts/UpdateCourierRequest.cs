@@ -1,6 +1,6 @@
-﻿namespace CourierService.Application.Models;
+﻿namespace CourierService.Api.Contracts;
 
-public record UpdateCourierModel
+public record UpdateCourierRequest
 {
     public int? Status { get; set; }
     public double? CurrentLatitude { get; set; }

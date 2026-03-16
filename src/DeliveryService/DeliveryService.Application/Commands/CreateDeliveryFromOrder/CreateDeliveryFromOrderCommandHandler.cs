@@ -1,9 +1,9 @@
 using DeliveryService.Application.Interfaces;
 using DeliveryService.Application.Mapping;
-using DeliveryService.Application.Models;
 using DeliveryService.Application.Services;
 using MediatR;
 using Microsoft.Extensions.Logging;
+using Shared.Contracts;
 using Shared.Utilities;
 
 namespace DeliveryService.Application.Commands.CreateDeliveryFromOrder;

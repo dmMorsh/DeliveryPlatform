@@ -1,9 +1,8 @@
 ﻿using CatalogService.Application.Common.Enums;
-using CatalogService.Application.Queries;
 
 namespace CatalogService.Api.Contracts;
 
-public class SearchProductsRequest
+public record SearchProductsRequest
 {
     public string? Text { get; init; }
     public Guid? CategoryId { get; init; }

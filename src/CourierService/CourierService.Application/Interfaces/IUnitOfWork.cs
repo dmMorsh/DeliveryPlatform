@@ -1,4 +1,4 @@
-using CourierService.Application.Models;
+using Shared.Contracts;
 
 namespace CourierService.Application.Interfaces;
 

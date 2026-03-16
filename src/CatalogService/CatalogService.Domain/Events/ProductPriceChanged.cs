@@ -16,5 +16,6 @@ public record ProductCreated : DomainEvent
     public string Name { get; init; } = string.Empty;
     public string Description { get; init; } = string.Empty;
     public Money PriceCents { get; init; }
+    public Weight WeightGrams { get; init; }
     public int QuantityAvailable { get; init; }
 }

@@ -1,6 +1,6 @@
-﻿namespace CourierService.Application.Models;
+﻿namespace CourierService.Api.Contracts;
 
-public record CreateCourierModel
+public record CreateCourierRequest
 {
     public string FullName { get; set; } = string.Empty;
     public string Phone { get; set; } = string.Empty;

@@ -1,7 +1,6 @@
 using CatalogService.Api.Contracts;
 using CatalogService.Application.Commands.CreateProduct;
 using CatalogService.Application.Commands.UpdateProduct;
-using CatalogService.Application.Models;
 using CatalogService.Application.Queries.GetProductById;
 using CatalogService.Application.Queries.SearchProducts;
 using MediatR;
@@ -34,8 +33,8 @@ public class CatalogController : ControllerBase
         if (!result.Success)
             return BadRequest(result);
         
-        // return Ok(result);
-        return CreatedAtAction(nameof(GetProductById), new { id = result.Data?.Id }, result);
+        return Ok(result);
+        // return CreatedAtAction(nameof(GetProductById), new { id = result.Data?.Id }, result);
     }
 
     [HttpGet("{id}")]

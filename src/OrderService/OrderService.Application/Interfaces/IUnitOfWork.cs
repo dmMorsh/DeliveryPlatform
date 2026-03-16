@@ -1,4 +1,4 @@
-using OrderService.Application.Models;
+using Shared.Contracts;
 
 namespace OrderService.Application.Interfaces;
 

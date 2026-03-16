@@ -1,8 +1,10 @@
 using CatalogService.Application.Interfaces;
+using CatalogService.Application.Mapping;
 using CatalogService.Application.Models;
 using CatalogService.Application.Services;
 using CatalogService.Domain.ValueObjects;
 using MediatR;
+using Shared.Contracts;
 using Shared.Utilities;
 
 namespace CatalogService.Application.Commands.UpdateProduct;
@@ -55,7 +57,7 @@ public class UpdateProductCommandHandler : IRequestHandler<UpdateProductCommand,
         product.ClearDomainEvents();
         ProductReadCache.Invalidate(product.Id);
 
-        var view = new ProductView(product.Id, product.Name, product.Description, product.PriceCents.AmountCents, product.PriceCents.Currency, product.WeightGrams.Value);
+        var view = ProductViewFactory.FromProduct(product);
         return ApiResponse<ProductView>.SuccessResponse(view, "Product updated successfully");
     }
 }

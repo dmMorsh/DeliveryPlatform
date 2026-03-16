@@ -29,6 +29,7 @@ public class Product : AggregateRoot
             Name = Name,
             Description = Description ?? string.Empty,
             PriceCents = PriceCents,
+            WeightGrams = weightGrams,
             QuantityAvailable = 0
         });
     }

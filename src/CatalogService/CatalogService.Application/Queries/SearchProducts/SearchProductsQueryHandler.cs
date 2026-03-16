@@ -1,5 +1,4 @@
-﻿using CatalogService.Application.Common;
-using CatalogService.Application.Interfaces;
+﻿using CatalogService.Application.Interfaces;
 using CatalogService.Application.Models;
 using MediatR;
 using Shared.Contracts;

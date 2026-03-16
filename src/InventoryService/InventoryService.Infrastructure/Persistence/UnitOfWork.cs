@@ -1,6 +1,6 @@
 ﻿using InventoryService.Application.Interfaces;
-using InventoryService.Application.Models;
 using InventoryService.Infrastructure.Repositories;
+using Shared.Contracts;
 using Shared.Services;
 
 namespace InventoryService.Infrastructure.Persistence;

@@ -1,5 +1,4 @@
 using InventoryService.Infrastructure.ReadStore;
-using InventoryService.Domain.Events;
 using Microsoft.EntityFrameworkCore;
 using Shared.Contracts.Events;
 

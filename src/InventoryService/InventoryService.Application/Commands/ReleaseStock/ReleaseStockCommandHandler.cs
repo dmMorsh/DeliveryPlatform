@@ -4,6 +4,7 @@ using InventoryService.Domain.Aggregates;
 using InventoryService.Domain.Entities;
 using InventoryService.Domain.Events;
 using MediatR;
+using Shared.Contracts;
 using Shared.Contracts.Events;
 using Shared.Utilities;
 

@@ -1,5 +1,5 @@
 using DeliveryService.Application.Interfaces;
-using DeliveryService.Application.Models;
+using Shared.Contracts;
 using Shared.Services;
 
 namespace DeliveryService.Infrastructure.Persistence;

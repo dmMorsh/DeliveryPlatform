@@ -1,10 +1,10 @@
 using System.Diagnostics.Metrics;
 using DeliveryService.Application.Interfaces;
-using DeliveryService.Application.Models;
 using DeliveryService.Domain.Aggregates;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Shared.Contracts;
 
 namespace DeliveryService.Infrastructure.Services;
 

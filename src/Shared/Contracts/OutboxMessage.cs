@@ -1,7 +1,7 @@
 using Shared.Contracts.Events;
 using Shared.Utilities;
 
-namespace OrderService.Application.Models;
+namespace Shared.Contracts;
 
 public class OutboxMessage
 {

@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
-using PaymentService.Application.Models;
 using PaymentService.Domain.Aggregates;
+using Shared.Contracts;
 using Shared.Contracts.Events;
 
 namespace PaymentService.Infrastructure.Persistence;

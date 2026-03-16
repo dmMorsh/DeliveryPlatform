@@ -1,6 +1,5 @@
 using CatalogReadService.Application.Interfaces;
 using CatalogReadService.Application.Models;
-using CatalogReadService.Application.Services;
 using MediatR;
 using Shared.Services;
 using Shared.Utilities;
@@ -21,15 +20,10 @@ public class GetProductByIdQueryHandler : IRequestHandler<GetProductByIdQuery, A
         GetProductByIdQuery request,
         CancellationToken ct)
     {
-        if (!ProductReadCache.TryGet(request.Id, out var result))
-        {
-            var task = SingleFlight.RunAsync(
-                request.Id,
-                token => ProductReadCache.LoadAsync(
-                    () => _readRepo.GetByIdAsync(request.Id, token)));
-            result = await task.WaitAsync(ct);
-            ProductReadCache.Set(request.Id, result);
-        }
+        var task = SingleFlight.RunAsync(
+            request.Id,
+            token => _readRepo.GetByIdAsync(request.Id, token));
+        var result = await task.WaitAsync(ct);
 
         if (result == null)
             return ApiResponse<ProductView>.ErrorResponse("Product not found");

@@ -3,6 +3,7 @@ using Microsoft.Extensions.Options;
 using PaymentService.Application.Interfaces;
 using PaymentService.Application.Models;
 using PaymentService.Domain.Aggregates;
+using Shared.Contracts;
 using Shared.Contracts.Events;
 
 namespace PaymentService.Infrastructure.Jobs;

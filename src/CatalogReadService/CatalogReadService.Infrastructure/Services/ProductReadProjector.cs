@@ -3,7 +3,7 @@ using Elastic.Clients.Elasticsearch;
 using Shared.Contracts.Events;
 using StackExchange.Redis;
 
-namespace CatalogReadService.Infrastructure.ReadStore;
+namespace CatalogReadService.Infrastructure.Services;
 
 public sealed class ProductReadProjector
 {
@@ -33,6 +33,8 @@ public sealed class ProductReadProjector
             Name = evt.Name,
             Description = evt.Description,
             PriceCents = evt.PriceCents,
+            Currency = evt.Currency,
+            WeightGrams = evt.WeightGrams,
             QuantityAvailable = evt.QuantityAvailable,
             UpdatedAt = evt.Timestamp
         };

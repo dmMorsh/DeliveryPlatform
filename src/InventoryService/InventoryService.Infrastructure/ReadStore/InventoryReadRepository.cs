@@ -22,7 +22,9 @@ public class InventoryReadRepository : IInventoryReadRepository
         if (cached != null) return cached;
 
         // Fallback to DB
-        var model = await _context.StockItems.FirstOrDefaultAsync(x => x.ProductId == productId, ct);
+        var model = await _context.StockItems
+            .AsNoTracking()
+            .FirstOrDefaultAsync(x => x.ProductId == productId, ct);
         if (model == null) return null;
 
         var view = new StockItemView

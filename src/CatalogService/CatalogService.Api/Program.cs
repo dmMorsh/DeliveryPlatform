@@ -1,10 +1,8 @@
 using CatalogService.Application.Interfaces;
 using CatalogService.Application.MediatR;
-using CatalogService.Application.Models;
 using CatalogService.Application.Services;
 using CatalogService.Infrastructure.Inbox;
 using CatalogService.Infrastructure.Mapping;
-using CatalogService.Infrastructure.Outbox;
 using CatalogService.Infrastructure.Persistence;
 using CatalogService.Infrastructure.Repositories;
 using CatalogService.Infrastructure.Services;
@@ -12,12 +10,14 @@ using Confluent.Kafka;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
+using Shared.Contracts;
 using Shared.Services;
 using StackExchange.Redis;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.AddServiceTelemetry("catalog-service");
+builder.AddServiceTelemetry("catalog-service"); 
+var connectionString = ConfigurationGuard.GetRequiredConnectionString(builder.Configuration, builder.Environment, "PostgreSQL");
 
 // Add services to the container.
 // Allow using an in-memory DB for local quick tests by setting USE_INMEMORY_DB=true
@@ -34,7 +34,6 @@ if (useInMemory)
 }
 else
 {
-    var connectionString = ConfigurationGuard.GetRequiredConnectionString(builder.Configuration, builder.Environment, "PostgreSQL");
     builder.Services.AddDbContextPool<CatalogDbContext>(options =>
         options.UseNpgsql(connectionString));
 }
@@ -50,8 +49,7 @@ var catalogHealthChecks = builder.Services.AddHealthChecks()
     .AddKafka(new ProducerConfig { BootstrapServers = kafkaBrokers }, name: "kafka");
 if (!useInMemory)
 {
-    var pg = builder.Configuration.GetConnectionString("PostgreSQL") ?? string.Empty;
-    catalogHealthChecks.AddNpgSql(pg, name: "db", tags: new[] { "ready" });
+    catalogHealthChecks.AddNpgSql(connectionString, name: "db", tags: new[] { "ready" });
 }
 
 var redisConnection = ConfigurationGuard.GetRequired(builder.Configuration, builder.Environment, "Redis:Connection", "localhost:6379");
@@ -83,7 +81,12 @@ builder.Services.AddHostedService<KafkaEventConsumerHostedService<CatalogEventCo
 // Outbox processor
 if (!useInMemory)
 {
-    builder.Services.AddHostedService<OutboxProcessor>();
+    builder.Services.AddHostedService(sp =>
+        new OutboxProcessor<CatalogDbContext>(
+            sp.GetRequiredService<IServiceScopeFactory>(),
+            sp.GetRequiredService<IEventProducer>(),
+            sp.GetRequiredService<ILogger<OutboxProcessor<CatalogDbContext>>>(),
+            schema: "catalog"));
     builder.Services.AddHostedService<OutboxCleanupHostedService<CatalogDbContext, OutboxMessage>>();
     builder.Services.AddHostedService<ProcessedEventCleanupHostedService<CatalogDbContext>>();
 }

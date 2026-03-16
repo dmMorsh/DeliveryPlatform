@@ -1,6 +1,6 @@
-using DeliveryService.Application.Models;
 using DeliveryService.Domain.Aggregates;
 using Microsoft.EntityFrameworkCore;
+using Shared.Contracts;
 using Shared.Contracts.Events;
 
 namespace DeliveryService.Infrastructure.Persistence;

@@ -1,13 +1,13 @@
-using DeliveryService.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Shared.Services;
+using Shared.Contracts;
 
-namespace DeliveryService.Infrastructure.Outbox;
+namespace Shared.Services;
 
-public class OutboxProcessor : BackgroundService
+public sealed class OutboxProcessor<TDbContext> : BackgroundService
+    where TDbContext : DbContext
 {
     private const int BatchSize = 50;
     private static readonly TimeSpan PollDelay = TimeSpan.FromMilliseconds(5000);
@@ -15,13 +15,25 @@ public class OutboxProcessor : BackgroundService
 
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly IEventProducer _producer;
-    private readonly ILogger<OutboxProcessor> _logger;
+    private readonly ILogger<OutboxProcessor<TDbContext>> _logger;
+    private readonly string _schema;
+    private readonly string _defaultTopic;
 
-    public OutboxProcessor(IServiceScopeFactory scopeFactory, IEventProducer producer, ILogger<OutboxProcessor> logger)
+    public OutboxProcessor(
+        IServiceScopeFactory scopeFactory,
+        IEventProducer producer,
+        ILogger<OutboxProcessor<TDbContext>> logger,
+        string schema,
+        string? defaultTopic = null)
     {
+        if (string.IsNullOrWhiteSpace(schema))
+            throw new ArgumentException("Schema name is required.", nameof(schema));
+
         _scopeFactory = scopeFactory;
         _producer = producer;
         _logger = logger;
+        _schema = schema;
+        _defaultTopic = string.IsNullOrWhiteSpace(defaultTopic) ? "events" : defaultTopic;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -44,35 +56,39 @@ public class OutboxProcessor : BackgroundService
     private async Task ProcessBatch(CancellationToken ct)
     {
         using var scope = _scopeFactory.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<DeliveryDbContext>();
+        var db = scope.ServiceProvider.GetRequiredService<TDbContext>();
 
-        var messages = await db.OutboxMessages
-            .FromSqlRaw("""
-                SELECT *
-                    FROM "delivery"."OutboxMessages" 
-                    where "PublishedAt" IS NULL
-                      AND ("NextRetryAt" IS NULL OR "NextRetryAt" <= NOW())
-                    ORDER BY "OccurredAt"
-                LIMIT {0}
-                FOR UPDATE SKIP LOCKED
-            """, BatchSize)
+        var sql = $"""
+            SELECT *
+                FROM "{_schema}"."OutboxMessages" 
+                where "PublishedAt" IS NULL
+                  AND ("NextRetryAt" IS NULL OR "NextRetryAt" <= NOW())
+                ORDER BY "OccurredAt"
+            LIMIT {BatchSize}
+            FOR UPDATE SKIP LOCKED
+        """;
+
+        var messages = await db.Set<OutboxMessage>()
+            .FromSqlRaw(sql)
             .TagWith("INFRA_BACKGROUND_POLL")
             .ToListAsync(ct);
 
-        if (messages.Count == 0) return;
+        if (messages.Count == 0)
+            return;
 
         foreach (var msg in messages)
         {
             try
             {
                 await _producer.PublishAsync(
-                    topic: msg.Topic ?? "events",
+                    topic: msg.Topic ?? _defaultTopic,
                     key: msg.AggregateId.ToString(),
                     payload: msg.Payload,
                     headers: new Dictionary<string, string>
                     {
-                        { "event-id", msg.EventId },
-                        { "event-type", msg.Type ?? "" }
+                        ["event-id"] = msg.EventId,
+                        ["event-type"] = msg.Type,
+                        ["occurred-at"] = msg.OccurredAt.ToString("O")
                     },
                     ct);
                 msg.PublishedAt = DateTime.UtcNow;

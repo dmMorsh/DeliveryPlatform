@@ -9,9 +9,7 @@ using OrderService.Application.Interfaces;
 using OrderService.Application.MediatR;
 using OrderService.Application.Services;
 using OrderService.Application.Utils;
-using OrderService.Application.Models;
 using OrderService.Infrastructure.Mapping;
-using OrderService.Infrastructure.Outbox;
 using OrderService.Infrastructure.Persistence;
 using OrderService.Infrastructure.Repositories;
 using OrderService.Infrastructure.Inbox;
@@ -23,6 +21,7 @@ using Shared.Middleware;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using OrderService.Api;
 using OrderService.Infrastructure.Caching;
+using Shared.Contracts;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -119,7 +118,12 @@ else
 // Only run OutboxProcessor when using a real relational DB
 if (!useInMemory)
 {
-    builder.Services.AddHostedService<OutboxProcessor>();
+    builder.Services.AddHostedService(sp =>
+        new OutboxProcessor<OrderDbContext>(
+            sp.GetRequiredService<IServiceScopeFactory>(),
+            sp.GetRequiredService<IEventProducer>(),
+            sp.GetRequiredService<ILogger<OutboxProcessor<OrderDbContext>>>(),
+            schema: "order"));
     builder.Services.AddHostedService<OutboxCleanupHostedService<OrderDbContext, OutboxMessage>>();
     builder.Services.AddHostedService<ProcessedEventCleanupHostedService<OrderDbContext>>();
     builder.Services.AddSingleton<IOrderPaymentTtlJob, OrderPaymentTtlJob>();
@@ -151,15 +155,6 @@ if (!useInMemory && !string.IsNullOrWhiteSpace(postgresConnectionString))
     healthChecks.AddNpgSql(postgresConnectionString, name: "db", tags: new[] { "ready" });    
     // Outbox lag health check
     healthChecks.AddCheck<OutboxLagHealthCheck>("outbox_lag", tags: new[] { "ready" });
-    //// healthChecks.AddOutboxLagCheck(
-    //     async () =>
-    //     {
-    //         using var scope = builder.Services.BuildServiceProvider().CreateScope();
-    //         var db = scope.ServiceProvider.GetRequiredService<OrderDbContext>();
-    //         return await db.OutboxMessages.CountAsync();
-    //     },
-    //     warningThreshold: 100,
-    //     criticalThreshold: 500);
 }
 
 // Adaptive throttle service monitors health and adjusts rate limits
@@ -171,7 +166,8 @@ if (!useInMemory && redisConnection != null)
             sp.GetRequiredService<HealthCheckService>(),
             sp.GetRequiredService<ILogger<AdaptiveThrottleService>>(),
             async () => (await sp.GetRequiredService<OrderDbContext>().OutboxMessages.CountAsync())));
-    builder.Services.AddHostedService(sp => sp.GetRequiredService<AdaptiveThrottleService>());}
+    builder.Services.AddHostedService(sp => sp.GetRequiredService<AdaptiveThrottleService>());
+}
 
 var app = builder.Build();
 

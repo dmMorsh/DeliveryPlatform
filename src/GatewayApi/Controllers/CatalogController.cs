@@ -1,5 +1,4 @@
-﻿using GatewayApi.Contracts.Catalog;
-using GatewayApi.DTOs;
+﻿using GatewayApi.DTOs;
 using GatewayApi.Services;
 using Microsoft.AspNetCore.Mvc;
 

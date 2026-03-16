@@ -1,6 +1,6 @@
-﻿using CatalogService.Application.Models;
-using CatalogService.Domain.Aggregates;
+﻿using CatalogService.Domain.Aggregates;
 using Microsoft.EntityFrameworkCore;
+using Shared.Contracts;
 using Shared.Contracts.Events;
 
 namespace CatalogService.Infrastructure.Persistence;

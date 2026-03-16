@@ -1,6 +1,6 @@
-using CartService.Application.Models;
 using CartService.Domain.Aggregates;
 using Microsoft.EntityFrameworkCore;
+using Shared.Contracts;
 using Shared.Contracts.Events;
 
 namespace CartService.Infrastructure.Persistence;

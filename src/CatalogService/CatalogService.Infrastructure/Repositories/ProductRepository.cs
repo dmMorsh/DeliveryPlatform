@@ -2,7 +2,6 @@ using CatalogService.Application.Interfaces;
 using CatalogService.Domain.Aggregates;
 using CatalogService.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
-using Shared.Contracts;
 
 namespace CatalogService.Infrastructure.Repositories;
 

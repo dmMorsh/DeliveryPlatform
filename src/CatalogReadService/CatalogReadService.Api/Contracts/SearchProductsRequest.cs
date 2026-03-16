@@ -1,5 +1,4 @@
 using CatalogReadService.Application.Common.Enums;
-using CatalogReadService.Application.Queries;
 
 namespace CatalogReadService.Api.Contracts;
 

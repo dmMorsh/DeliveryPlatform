@@ -1,5 +1,5 @@
 using CartService.Application.Interfaces;
-using CartService.Application.Models;
+using Shared.Contracts;
 using Shared.Services;
 
 namespace CartService.Infrastructure.Persistence;

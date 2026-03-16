@@ -1,6 +1,6 @@
+using CourierService.Api.Contracts;
 using CourierService.Application.Commands.RegisterCourier;
 using CourierService.Application.Commands.UpdateCourierStatus;
-using CourierService.Application.Models;
 using CourierService.Application.Queries.GetActiveCouriers;
 using CourierService.Application.Queries.GetCourier;
 using MediatR;
@@ -29,16 +29,16 @@ public class CouriersController : ControllerBase
     }
 
     [HttpPost]
-    public async Task<IActionResult> CreateCourier([FromBody] CreateCourierModel model, CancellationToken ct)
+    public async Task<IActionResult> CreateCourier([FromBody] CreateCourierRequest request, CancellationToken ct)
     {
         if (!ModelState.IsValid)
             return BadRequest(ModelState);
 
         var result = await _mediator.Send(new RegisterCourierCommand(
-            model.FullName,
-            model.Phone,
-            model.Email,
-            model.DocumentNumber
+            request.FullName,
+            request.Phone,
+            request.Email,
+            request.DocumentNumber
         ), ct);
         if (!result.Success)
             return BadRequest(result);
@@ -47,14 +47,14 @@ public class CouriersController : ControllerBase
     }
 
     [HttpPut("{id}")]
-    public async Task<IActionResult> UpdateCourier(Guid id, [FromBody] UpdateCourierModel model, CancellationToken ct)
+    public async Task<IActionResult> UpdateCourier(Guid id, [FromBody] UpdateCourierRequest request, CancellationToken ct)
     {
         var result = await _mediator.Send(new UpdateCourierStatusCommand(
             id,
-            model.Status,
-            model.CurrentLatitude,
-            model.CurrentLongitude,
-            model.IsActive
+            request.Status,
+            request.CurrentLatitude,
+            request.CurrentLongitude,
+            request.IsActive
         ), ct);
         if (!result.Success)
             return BadRequest(result);

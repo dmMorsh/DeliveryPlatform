@@ -57,11 +57,7 @@ builder.Services.AddHttpClient("proxy")
 builder.Services.AddScoped<IProxyService, ProxyService>();
 builder.AddServiceTelemetry("gateway-api");
 // gRPC Location Tracking Client for GatewayApi
-builder.Services.AddScoped<ILocationTrackingClient>(sp => 
-    new LocationTrackingClient(
-        sp.GetRequiredService<IConfiguration>(),
-        sp.GetRequiredService<IHostEnvironment>(),
-        sp.GetRequiredService<ILogger<LocationTrackingClient>>()));
+builder.Services.AddScoped<ILocationTrackingClient,LocationTrackingClient>();
 
 // Auth
 builder.AddExtendedAuthentication();

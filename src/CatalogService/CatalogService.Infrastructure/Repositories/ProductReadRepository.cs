@@ -1,7 +1,6 @@
 ﻿using CatalogService.Application.Common.Enums;
 using CatalogService.Application.Interfaces;
 using CatalogService.Application.Models;
-using CatalogService.Application.Queries;
 using CatalogService.Application.Queries.SearchProducts;
 using CatalogService.Domain.Aggregates;
 using CatalogService.Infrastructure.Persistence;

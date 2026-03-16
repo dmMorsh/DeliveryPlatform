@@ -94,11 +94,7 @@ builder.Services.AddHttpClient<DeliveryApiClient>(client =>
         HttpResiliencePolicies.CreatePolicyWrap(sp.GetRequiredService<ILogger<DeliveryApiClient>>()))
     .AddHttpMessageHandler<AuthTokenHandler>();
 
-builder.Services.AddScoped<ILocationTrackingClient>(sp =>
-    new LocationTrackingClient(
-        sp.GetRequiredService<IConfiguration>(),
-        sp.GetRequiredService<IHostEnvironment>(),
-        sp.GetRequiredService<ILogger<LocationTrackingClient>>()));
+builder.Services.AddScoped<ILocationTrackingClient, LocationTrackingClient>();
 
 var app = builder.Build();
 

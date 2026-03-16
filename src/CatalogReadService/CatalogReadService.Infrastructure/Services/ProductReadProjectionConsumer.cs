@@ -7,7 +7,7 @@ using Microsoft.Extensions.Logging;
 using Shared.Contracts.Events;
 using Shared.Services;
 
-namespace CatalogReadService.Infrastructure.ReadStore;
+namespace CatalogReadService.Infrastructure.Services;
 
 public sealed class ProductReadProjectionConsumer : KafkaEventConsumerBase
 {

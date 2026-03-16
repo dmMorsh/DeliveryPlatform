@@ -1,20 +1,20 @@
 using Confluent.Kafka;
 using CourierService.Application.Interfaces;
-using CourierService.Application.Models;
 using CourierService.Application.MediatR;
 using CourierService.Application.Services;
 using CourierService.Infrastructure.Inbox;
 using CourierService.Infrastructure.Mapping;
-using CourierService.Infrastructure.Outbox;
 using CourierService.Infrastructure.Persistence;
 using CourierService.Infrastructure.Repositories;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
+using Shared.Contracts;
 using Shared.Services;
 using StackExchange.Redis;
 
 var builder = WebApplication.CreateBuilder(args);
+var connectionString = ConfigurationGuard.GetRequiredConnectionString(builder.Configuration, builder.Environment, "PostgreSQL");
 
 builder.AddServiceTelemetry("courier-service");
 
@@ -39,7 +39,6 @@ if (useInMemory)
 }
 else
 {
-    var connectionString = ConfigurationGuard.GetRequiredConnectionString(builder.Configuration, builder.Environment, "PostgreSQL");
     builder.Services.AddDbContextPool<CourierDbContext>(options =>
         options.UseNpgsql(connectionString));
 }
@@ -53,7 +52,12 @@ builder.Services.AddScoped<IEventInbox, CourierEventInbox>();
 // Outbox processor
 if (!useInMemory)
 {
-    builder.Services.AddHostedService<OutboxProcessor>();
+    builder.Services.AddHostedService(sp =>
+        new OutboxProcessor<CourierDbContext>(
+            sp.GetRequiredService<IServiceScopeFactory>(),
+            sp.GetRequiredService<IEventProducer>(),
+            sp.GetRequiredService<ILogger<OutboxProcessor<CourierDbContext>>>(),
+            schema: "couriers"));
     builder.Services.AddHostedService<OutboxCleanupHostedService<CourierDbContext, OutboxMessage>>();
     builder.Services.AddHostedService<ProcessedEventCleanupHostedService<CourierDbContext>>();
 }
@@ -64,11 +68,7 @@ builder.Services.AddSingleton<ICourierActiveCourierListCache, CourierActiveCouri
 // Mapper for domain->integration events for courier
 builder.Services.AddSingleton<ICourierEventMapper, CourierEventMapper>();
 // gRPC Location Tracking Client
-builder.Services.AddScoped<ILocationTrackingClient>(sp => 
-    new LocationTrackingClient(
-        sp.GetRequiredService<IConfiguration>(),
-        sp.GetRequiredService<IHostEnvironment>(),
-        sp.GetRequiredService<ILogger<LocationTrackingClient>>()));
+builder.Services.AddScoped<ILocationTrackingClient, LocationTrackingClient>();
 // Event Consumer from OrderService
 builder.Services.AddSingleton<CourierEventConsumer>();
 builder.Services.AddHostedService<KafkaEventConsumerHostedService<CourierEventConsumer>>();
@@ -79,10 +79,6 @@ builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.AddExtendedAuthentication();
 builder.Services.AddAuthorization();
 builder.AddExtendedCors();
-
-var connectionString1 = builder.Configuration.GetConnectionString("PostgreSQL");
-if (string.IsNullOrWhiteSpace(connectionString1))
-    throw new InvalidOperationException("PostgreSQL connection string is required.");
 
 var kafkaBrokers = ConfigurationGuard.GetRequired(builder.Configuration, builder.Environment, "Kafka:Brokers", "localhost:29092");
 var redisConnection = ConfigurationGuard.GetRequired(builder.Configuration, builder.Environment, "Redis:Connection", "localhost:6379");
@@ -101,7 +97,7 @@ catch (Exception ex)
 }
 
 builder.Services.AddHealthChecks()
-    .AddNpgSql(connectionString1, name: "db", tags: new[] { "ready" })
+    .AddNpgSql(connectionString, name: "db", tags: new[] { "ready" })
     .AddRedis(redisConnection,
         name: "redis",
         tags: new[] { "ready" })

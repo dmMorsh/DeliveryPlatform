@@ -1,4 +1,4 @@
-using InventoryService.Application.Models;
+using Shared.Contracts;
 
 namespace InventoryService.Application.Interfaces;
 

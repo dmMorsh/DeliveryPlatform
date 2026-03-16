@@ -5,6 +5,7 @@ using InventoryService.Domain.Entities;
 using InventoryService.Domain.Events;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Shared.Contracts;
 using Shared.Contracts.Events;
 using Shared.Utilities;
 

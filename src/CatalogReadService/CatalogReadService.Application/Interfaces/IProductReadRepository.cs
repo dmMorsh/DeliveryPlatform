@@ -6,6 +6,6 @@ namespace CatalogReadService.Application.Interfaces;
 
 public interface IProductReadRepository
 {
-    Task<PagedResult<ProductView>> SearchAsync(SearchProductsQuery query, CancellationToken ct);
+    Task<PagedResult<ProductView>> SearchAsync(string requestHash, SearchProductsQuery query, CancellationToken ct);
     Task<ProductView?> GetByIdAsync(Guid id, CancellationToken ct);
 }

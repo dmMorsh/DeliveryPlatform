@@ -1,7 +1,7 @@
 using CartService.Application.Models;
 using CartService.Domain.Aggregates;
 
-namespace CartService.Application.Services;
+namespace CartService.Application.Mapping;
 
 internal static class CartViewMapper
 {

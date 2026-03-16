@@ -1,6 +1,6 @@
 using OrderService.Application.Interfaces;
-using OrderService.Application.Models;
 using OrderService.Infrastructure.Repositories;
+using Shared.Contracts;
 using Shared.Services;
 
 namespace OrderService.Infrastructure.Persistence;

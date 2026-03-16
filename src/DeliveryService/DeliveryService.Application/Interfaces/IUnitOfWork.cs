@@ -1,4 +1,4 @@
-using DeliveryService.Application.Models;
+using Shared.Contracts;
 
 namespace DeliveryService.Application.Interfaces;
 

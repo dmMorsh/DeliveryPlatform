@@ -1,12 +1,9 @@
 using CatalogReadService.Application.Interfaces;
 using CatalogReadService.Application.Models;
 using CatalogReadService.Application.Queries.SearchProducts;
-using CatalogReadService.Infrastructure.ReadStore;
 using Elastic.Clients.Elasticsearch;
 using Elastic.Clients.Elasticsearch.QueryDsl;
 using StackExchange.Redis;
-using System.Security.Cryptography;
-using System.Text;
 using System.Text.Json;
 using Shared.Contracts;
 
@@ -27,9 +24,10 @@ public class ProductReadRepository : IProductReadRepository
         _cache = redis.GetDatabase();
     }
 
-    public async Task<PagedResult<ProductView>> SearchAsync(SearchProductsQuery request, CancellationToken ct)
+    public async Task<PagedResult<ProductView>> SearchAsync(string requestHash, SearchProductsQuery request,
+        CancellationToken ct)
     {
-        var cacheKey = await BuildSearchCacheKeyAsync(request);
+        var cacheKey = await BuildSearchCacheKeyAsync(requestHash);
         var cached = await _cache.StringGetAsync(cacheKey);
         if (cached.HasValue)
         {
@@ -62,8 +60,8 @@ public class ProductReadRepository : IProductReadRepository
             h.Source.Name,
             h.Source.Description,
             h.Source.PriceCents,
-            "USD",
-            0,
+            h.Source.Currency,
+            h.Source.WeightGrams,
             h.Source.QuantityAvailable,
             h.Source.Category,
             h.Source.Colors,
@@ -100,8 +98,8 @@ public class ProductReadRepository : IProductReadRepository
             resp.Source.Name,
             resp.Source.Description,
             resp.Source.PriceCents,
-            "USD",
-            0,
+            resp.Source.Currency,
+            resp.Source.WeightGrams,
             resp.Source.QuantityAvailable,
             resp.Source.Category,
             resp.Source.Colors,
@@ -113,27 +111,10 @@ public class ProductReadRepository : IProductReadRepository
         return view;
     }
 
-    private async Task<RedisKey> BuildSearchCacheKeyAsync(SearchProductsQuery request)
+    private async Task<RedisKey> BuildSearchCacheKeyAsync(string hash)
     {
         var version = await _cache.StringGetAsync(SearchVersionKey);
         var versionValue = version.HasValue ? version.ToString()! : "0";
-
-        var normalized = string.Join("|", new[]
-        {
-            (request.Text ?? string.Empty).Trim(),
-            request.CategoryId?.ToString() ?? string.Empty,
-            request.MinPrice?.ToString() ?? string.Empty,
-            request.MaxPrice?.ToString() ?? string.Empty,
-            request.SortBy.ToString(),
-            request.SortDirection.ToString(),
-            request.Page.ToString(),
-            request.PageSize.ToString()
-        });
-
-        using var sha = SHA256.Create();
-        var hashBytes = sha.ComputeHash(Encoding.UTF8.GetBytes(normalized));
-        var hash = Convert.ToHexString(hashBytes).ToLowerInvariant();
-
         return $"catalog:search:v{versionValue}:{hash}";
     }
 }

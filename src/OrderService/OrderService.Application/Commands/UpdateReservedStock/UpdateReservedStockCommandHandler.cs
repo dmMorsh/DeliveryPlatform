@@ -1,9 +1,9 @@
 ﻿using MediatR;
 using Microsoft.Extensions.Logging;
 using OrderService.Application.Interfaces;
-using OrderService.Application.Models;
 using OrderService.Domain.Aggregates;
 using OrderService.Domain.Entities;
+using Shared.Contracts;
 using Shared.Contracts.Events;
 using Shared.Utilities;
 

@@ -1,4 +1,4 @@
-using CatalogService.Application.Models;
+using Shared.Contracts;
 
 namespace CatalogService.Application.Interfaces;
 

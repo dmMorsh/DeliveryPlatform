@@ -1,6 +1,6 @@
-using CourierService.Application.Models;
 using CourierService.Domain.Aggregates;
 using Microsoft.EntityFrameworkCore;
+using Shared.Contracts;
 using Shared.Contracts.Events;
 
 namespace CourierService.Infrastructure.Persistence;

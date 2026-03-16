@@ -24,6 +24,7 @@ public class CartReadRepository : ICartReadRepository
 
         // Fallback to DB
         var cart = await _context.Carts
+            .AsNoTracking()
             .Where(c => c.CustomerId == customerId)
             .Select(c => new CartView
             { 

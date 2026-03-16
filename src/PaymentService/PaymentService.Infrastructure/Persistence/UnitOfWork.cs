@@ -1,7 +1,7 @@
 ﻿using PaymentService.Application.Interfaces;
-using PaymentService.Application.Models;
 using PaymentService.Infrastructure.Repositories;
 using PaymentService.Infrastructure.Sharding;
+using Shared.Contracts;
 using Shared.Services;
 
 namespace PaymentService.Infrastructure.Persistence;

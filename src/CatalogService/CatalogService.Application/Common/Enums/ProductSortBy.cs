@@ -1,4 +1,4 @@
-namespace CatalogReadService.Application.Queries;
+﻿namespace CatalogService.Application.Common.Enums;
 
 public enum ProductSortBy
 {

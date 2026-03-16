@@ -9,16 +9,15 @@ using PaymentService.Infrastructure.Jobs;
 using PaymentService.Infrastructure.Mapping;
 using PaymentService.Infrastructure.Inbox;
 using PaymentService.Infrastructure.Persistence;
-using PaymentService.Infrastructure.Outbox;
 using PaymentService.Infrastructure.Providers;
 using PaymentService.Infrastructure.Sharding;
-using PaymentService.Application.Models;
 using Hangfire;
 using Hangfire.MemoryStorage;
 using Hangfire.PostgreSql;
 using Microsoft.EntityFrameworkCore;
 using PaymentService.Application.MediatR;
 using Serilog;
+using Shared.Contracts;
 using Shared.Services;
 using StackExchange.Redis;
 
@@ -105,7 +104,13 @@ builder.Services.AddScoped<IPaymentStatusCheckScheduler, PaymentStatusCheckSched
 builder.Services.AddSingleton<IWebhookValidator, WebhookValidator>();
 builder.Services.AddSingleton<IEventProducer, KafkaEventProducer>();
 builder.Services.AddHostedService<KafkaTopicBootstrapper>();
-builder.Services.AddHostedService<OutboxProcessor>();
+builder.Services.AddHostedService(sp =>
+    new OutboxProcessor<PaymentDbContext>(
+        sp.GetRequiredService<IServiceScopeFactory>(),
+        sp.GetRequiredService<IEventProducer>(),
+        sp.GetRequiredService<ILogger<OutboxProcessor<PaymentDbContext>>>(),
+        schema: "payment",
+        defaultTopic: "payment.events"));
 builder.Services.AddHostedService<OutboxCleanupHostedService<PaymentDbContext, OutboxMessage>>();
 builder.Services.AddSingleton<IPaymentIntegrationEventMapper, PaymentIntegrationEventMapper>();
 builder.Services.AddSingleton<PaymentEventConsumer>();

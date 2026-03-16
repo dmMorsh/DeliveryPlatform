@@ -1,5 +1,5 @@
 ﻿using CatalogService.Application.Interfaces;
-using CatalogService.Application.Models;
+using Shared.Contracts;
 using Shared.Services;
 
 namespace CatalogService.Infrastructure.Persistence;

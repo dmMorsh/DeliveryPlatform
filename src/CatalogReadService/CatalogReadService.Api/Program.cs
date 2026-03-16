@@ -1,7 +1,7 @@
 using CatalogReadService.Application.Interfaces;
 using CatalogReadService.Application.MediatR;
-using CatalogReadService.Infrastructure.ReadStore;
 using CatalogReadService.Infrastructure.Repositories;
+using CatalogReadService.Infrastructure.Services;
 using Confluent.Kafka;
 using Elastic.Clients.Elasticsearch;
 using MediatR;
@@ -14,7 +14,6 @@ builder.AddServiceTelemetry("catalog-read-service");
 
 builder.Services.AddControllers();
 builder.Services.AddMediatR(typeof(ApplicationMarker).Assembly);
-builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
 builder.Services.AddScoped<IProductReadRepository, ProductReadRepository>();
 
 // Elasticsearch client
@@ -24,13 +23,7 @@ builder.Services.AddSingleton(new ElasticsearchClient(esSettings));
 
 // Read-store projector and consumer
 builder.Services.AddScoped<ProductReadProjector>();
-builder.Services.AddSingleton<ProductReadProjectionConsumer>(sp =>
-    new ProductReadProjectionConsumer(
-        builder.Configuration,
-        builder.Environment,
-        sp.GetRequiredService<ILogger<ProductReadProjectionConsumer>>(),
-        sp.GetRequiredService<IServiceScopeFactory>(),
-        sp.GetRequiredService<IEventProducer>()));
+builder.Services.AddSingleton<ProductReadProjectionConsumer>();
 builder.Services.AddHostedService<KafkaEventConsumerHostedService<ProductReadProjectionConsumer>>();
 
 // Redis connection

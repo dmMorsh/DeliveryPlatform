@@ -2,11 +2,11 @@
 using Hangfire.Server;
 using InventoryService.Application.Commands.ReserveStock;
 using InventoryService.Application.Interfaces;
-using InventoryService.Application.Models;
 using InventoryService.Infrastructure.Persistence;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
+using Shared.Contracts;
 using Shared.Contracts.Events;
 
 namespace InventoryService.Infrastructure.Hangfire;

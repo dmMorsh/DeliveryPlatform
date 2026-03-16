@@ -1,4 +1,4 @@
-using CartService.Application.Models;
+using Shared.Contracts;
 
 namespace CartService.Application.Interfaces;
 

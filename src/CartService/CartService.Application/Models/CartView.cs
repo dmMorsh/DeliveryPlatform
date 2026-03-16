@@ -2,8 +2,8 @@
 
 public record CartView
 {
-    public Guid Id { get; set; }
-    public IReadOnlyCollection<CartViewItem> Items { get; init; } = Array.Empty<CartViewItem>();
+    public Guid Id { get; init; }
+    public IReadOnlyCollection<CartViewItem> Items { get; init; } = [];
 }
 
 public record CartViewItem(Guid ProductId, string Name, int PriceCents, int Quantity);

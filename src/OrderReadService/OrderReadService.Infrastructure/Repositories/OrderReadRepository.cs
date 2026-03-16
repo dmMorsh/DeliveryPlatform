@@ -65,6 +65,7 @@ public class OrderReadRepository : IOrderReadRepository
     public async Task<List<OrderView>> GetByClientIdAsync(Guid clientId, CancellationToken ct)
     {
         return await _context.Orders
+            .AsNoTracking()
             .Where(o => o.ClientId == clientId)
             .OrderByDescending(o => o.CreatedAt)
             .Select(o=> new OrderView

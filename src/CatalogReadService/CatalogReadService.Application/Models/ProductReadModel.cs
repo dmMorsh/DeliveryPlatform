@@ -6,6 +6,8 @@ public sealed class ProductReadModel
     public string Name { get; set; } = string.Empty;
     public string? Description { get; set; }
     public long PriceCents { get; set; }
+    public string Currency { get; set; }
+    public long WeightGrams { get; set; }
     public int QuantityAvailable { get; set; }
     // additional fields for future filters
     public string? Category { get; set; }

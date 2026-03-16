@@ -1,8 +1,8 @@
-﻿using InventoryService.Application.Models;
-using InventoryService.Domain.Aggregates;
+﻿using InventoryService.Domain.Aggregates;
 using InventoryService.Domain.Entities;
 using InventoryService.Infrastructure.Hangfire;
 using Microsoft.EntityFrameworkCore;
+using Shared.Contracts;
 using Shared.Contracts.Events;
 
 namespace InventoryService.Infrastructure.Persistence;

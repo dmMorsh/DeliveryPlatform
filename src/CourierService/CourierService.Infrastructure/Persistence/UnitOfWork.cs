@@ -1,5 +1,5 @@
 using CourierService.Application.Interfaces;
-using CourierService.Application.Models;
+using Shared.Contracts;
 using Shared.Services;
 
 namespace CourierService.Infrastructure.Persistence;

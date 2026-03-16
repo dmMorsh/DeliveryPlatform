@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
-using OrderService.Application.Models;
 using OrderService.Domain.Aggregates;
+using Shared.Contracts;
 using Shared.Contracts.Events;
 
 namespace OrderService.Infrastructure.Persistence;

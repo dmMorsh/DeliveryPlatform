@@ -5,12 +5,10 @@ using InventoryService.Application.Interfaces;
 using InventoryService.Application.MediatR;
 using InventoryService.Application.Services;
 using InventoryService.Application.Utils;
-using InventoryService.Application.Models;
 using InventoryService.Application.Read;
 using InventoryService.Infrastructure.Hangfire;
 using InventoryService.Infrastructure.Inbox;
 using InventoryService.Infrastructure.Mapping;
-using InventoryService.Infrastructure.Outbox;
 using InventoryService.Infrastructure.Persistence;
 using InventoryService.Infrastructure.Jobs;
 using InventoryService.Infrastructure.ReadStore;
@@ -18,6 +16,7 @@ using MediatR;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
+using Shared.Contracts;
 using StackExchange.Redis;
 using Shared.Services;
 
@@ -48,7 +47,12 @@ else
     builder.Services.AddDbContextPool<InventoryDbContext>(options =>
         options.UseNpgsql(connectionString));
     // Outbox processor
-    builder.Services.AddHostedService<OutboxProcessor>();
+    builder.Services.AddHostedService(sp =>
+        new OutboxProcessor<InventoryDbContext>(
+            sp.GetRequiredService<IServiceScopeFactory>(),
+            sp.GetRequiredService<IEventProducer>(),
+            sp.GetRequiredService<ILogger<OutboxProcessor<InventoryDbContext>>>(),
+            schema: "inventory"));
     builder.Services.AddHostedService<OutboxCleanupHostedService<InventoryDbContext, OutboxMessage>>();
     builder.Services.AddHostedService<ProcessedEventCleanupHostedService<InventoryDbContext>>();
     builder.Services.AddHostedService<ProcessedCommandCleanupHostedService<InventoryDbContext, ProcessedCommand>>();

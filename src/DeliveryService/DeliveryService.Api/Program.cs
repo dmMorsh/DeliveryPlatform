@@ -2,12 +2,10 @@ using Confluent.Kafka;
 using Hangfire;
 using Hangfire.PostgreSql;
 using DeliveryService.Application.Interfaces;
-using DeliveryService.Application.Models;
 using DeliveryService.Application.MediatR;
 using DeliveryService.Application.Services;
 using DeliveryService.Infrastructure.Inbox;
 using DeliveryService.Infrastructure.Mapping;
-using DeliveryService.Infrastructure.Outbox;
 using DeliveryService.Infrastructure.Persistence;
 using DeliveryService.Infrastructure.Repositories;
 using DeliveryService.Infrastructure.Services;
@@ -16,6 +14,7 @@ using MediatR;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
+using Shared.Contracts;
 using Shared.Services;
 using StackExchange.Redis;
 
@@ -69,7 +68,12 @@ builder.Services.AddHostedService<KafkaTopicBootstrapper>();
 builder.Services.AddScoped<IEventInbox, DeliveryEventInbox>();
 if (!useInMemory)
 {
-    builder.Services.AddHostedService<OutboxProcessor>();
+    builder.Services.AddHostedService(sp =>
+        new OutboxProcessor<DeliveryDbContext>(
+            sp.GetRequiredService<IServiceScopeFactory>(),
+            sp.GetRequiredService<IEventProducer>(),
+            sp.GetRequiredService<ILogger<OutboxProcessor<DeliveryDbContext>>>(),
+            schema: "delivery"));
     builder.Services.AddHostedService<OutboxCleanupHostedService<DeliveryDbContext, OutboxMessage>>();
     builder.Services.AddHostedService<ProcessedEventCleanupHostedService<DeliveryDbContext>>();
     builder.Services.AddSingleton<IDeliverySlaJob, DeliverySlaJob>();
@@ -97,11 +101,7 @@ builder.Services.Configure<CourierAvailabilityOptions>(
     builder.Configuration.GetSection("Delivery:Courier"));
 builder.Services.AddSingleton<ICourierActivityStore, CourierActivityRedisStore>();
 
-builder.Services.AddScoped<ILocationTrackingClient>(sp =>
-    new LocationTrackingClient(
-        sp.GetRequiredService<IConfiguration>(),
-        sp.GetRequiredService<IHostEnvironment>(),
-        sp.GetRequiredService<ILogger<LocationTrackingClient>>()));
+builder.Services.AddScoped<ILocationTrackingClient, LocationTrackingClient>();
 
 builder.Services.AddSingleton<DeliveryEventConsumer>();
 builder.Services.AddHostedService<KafkaEventConsumerHostedService<DeliveryEventConsumer>>();

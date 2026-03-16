@@ -1,12 +1,9 @@
 using CartService.Api;
 using CartService.Application.Interfaces;
-using CartService.Application.Models;
 using CartService.Application.MediatR;
-using CartService.Application.Services;
 using CartService.Infrastructure.Inbox;
 using CartService.Infrastructure.Grpc;
 using CartService.Infrastructure.Mapping;
-using CartService.Infrastructure.Outbox;
 using CartService.Infrastructure.Persistence;
 using CartService.Infrastructure.Repositories;
 using CartService.Infrastructure.Services;
@@ -15,11 +12,13 @@ using MediatR;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
+using Shared.Contracts;
 using Shared.Proto;
 using Shared.Services;
 using StackExchange.Redis;
 
 var builder = WebApplication.CreateBuilder(args);
+var connectionString = ConfigurationGuard.GetRequiredConnectionString(builder.Configuration, builder.Environment, "PostgreSQL");
 
 builder.AddServiceTelemetry("cart-service");
 
@@ -37,7 +36,6 @@ if (useInMemory)
 }
 else
 {
-    var connectionString = ConfigurationGuard.GetRequiredConnectionString(builder.Configuration, builder.Environment, "PostgreSQL");
     builder.Services.AddDbContextPool<CartDbContext>(options =>
         options.UseNpgsql(connectionString));
 }
@@ -71,11 +69,10 @@ var cartHealthChecks = builder.Services.AddHealthChecks()
     .AddKafka(new ProducerConfig { BootstrapServers = kafkaBrokers }, name: "kafka");
 if (!useInMemory)
 {
-    var pg = builder.Configuration.GetConnectionString("PostgreSQL") ?? string.Empty;
-    cartHealthChecks.AddNpgSql(pg, name: "db", tags: new[] { "ready" });
+    cartHealthChecks.AddNpgSql(connectionString, name: "db", tags: new[] { "ready" });
     cartHealthChecks.AddRedis(redisConnection, name: "redis", tags: new[] { "ready" });
 }
-
+// Grpc
 builder.Services.AddGrpcClient<OrderGrpc.OrderGrpcClient>(o =>
 {
     var orderGrpcUrl = ConfigurationGuard.GetRequired(builder.Configuration, builder.Environment, "gRPC:OrderService:Url", "https://localhost:7204");
@@ -105,14 +102,15 @@ builder.Services.AddSingleton<ICartIntegrationEventMapper, CartIntegrationEventM
 builder.Services.AddSingleton<ICartReadCache, CartReadRedisCache>();
 builder.Services.Configure<CartReadCacheOptions>(builder.Configuration.GetSection("CartCache"));
 
-// Event Consumers // Not using yet
-// builder.Services.AddSingleton<CartEventConsumer>();
-// builder.Services.AddHostedService<KafkaEventConsumerHostedService<CartEventConsumer>>();
-
 // Outbox processor
 if (!useInMemory)
 {
-    builder.Services.AddHostedService<OutboxProcessor>();
+    builder.Services.AddHostedService(sp =>
+        new OutboxProcessor<CartDbContext>(
+            sp.GetRequiredService<IServiceScopeFactory>(),
+            sp.GetRequiredService<IEventProducer>(),
+            sp.GetRequiredService<ILogger<OutboxProcessor<CartDbContext>>>(),
+            schema: "cart"));
     builder.Services.AddHostedService<OutboxCleanupHostedService<CartDbContext, OutboxMessage>>();
     builder.Services.AddHostedService<ProcessedEventCleanupHostedService<CartDbContext>>();
 }
