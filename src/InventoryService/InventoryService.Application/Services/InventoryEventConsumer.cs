@@ -8,9 +8,9 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Shared.Contracts;
 using Shared.Contracts.Events;
 using Shared.Services;
-using Shared.Utilities;
 
 namespace InventoryService.Application.Services;
 

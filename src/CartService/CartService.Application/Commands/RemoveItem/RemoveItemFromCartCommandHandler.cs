@@ -2,7 +2,6 @@ using CartService.Application.Interfaces;
 using CartService.Application.Mapping;
 using MediatR;
 using Shared.Contracts;
-using Shared.Utilities;
 
 namespace CartService.Application.Commands.RemoveItem;
 

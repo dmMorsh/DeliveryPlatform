@@ -1,6 +1,7 @@
 ﻿using MediatR;
 using OrderService.Application.Models;
 using OrderService.Domain.Aggregates;
+using Shared.Contracts;
 using Shared.Services;
 using Shared.Utilities;
 

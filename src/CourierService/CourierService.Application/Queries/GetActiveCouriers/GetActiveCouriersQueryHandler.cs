@@ -3,7 +3,7 @@ using CourierService.Application.Models;
 using Mapster;
 using MediatR;
 using Microsoft.Extensions.Logging;
-using Shared.Utilities;
+using Shared.Contracts;
 
 namespace CourierService.Application.Queries.GetActiveCouriers;
 

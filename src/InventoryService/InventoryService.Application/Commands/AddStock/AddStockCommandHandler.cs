@@ -3,7 +3,6 @@ using InventoryService.Application.Models;
 using InventoryService.Domain.Aggregates;
 using MediatR;
 using Shared.Contracts;
-using Shared.Utilities;
 
 namespace InventoryService.Application.Commands.AddStock;
 

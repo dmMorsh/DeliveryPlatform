@@ -5,8 +5,8 @@ using CourierService.Domain.Aggregates;
 using Mapster;
 using MediatR;
 using Microsoft.Extensions.Logging;
+using Shared.Contracts;
 using Shared.Services;
-using Shared.Utilities;
 
 namespace CourierService.Application.Queries.GetCourier;
 

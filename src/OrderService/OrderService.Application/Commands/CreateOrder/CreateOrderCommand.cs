@@ -1,7 +1,7 @@
 using MediatR;
 using OrderService.Application.Models;
+using Shared.Contracts;
 using Shared.Services;
-using Shared.Utilities;
 
 namespace OrderService.Application.Commands.CreateOrder;
 

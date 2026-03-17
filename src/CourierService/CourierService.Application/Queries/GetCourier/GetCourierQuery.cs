@@ -1,6 +1,6 @@
 using CourierService.Application.Models;
 using MediatR;
-using Shared.Utilities;
+using Shared.Contracts;
 
 namespace CourierService.Application.Queries.GetCourier;
 

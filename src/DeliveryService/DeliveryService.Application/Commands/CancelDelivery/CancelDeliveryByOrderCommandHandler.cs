@@ -3,7 +3,6 @@ using DeliveryService.Application.Services;
 using DeliveryService.Domain.Aggregates;
 using MediatR;
 using Shared.Contracts;
-using Shared.Utilities;
 
 namespace DeliveryService.Application.Commands.CancelDelivery;
 

@@ -7,7 +7,6 @@ using OrderService.Application.Interfaces;
 using OrderService.Application.Models;
 using OrderService.Application.Services;
 using Shared.Contracts;
-using Shared.Utilities;
 
 namespace OrderService.Application.Commands.CreateOrder;
 

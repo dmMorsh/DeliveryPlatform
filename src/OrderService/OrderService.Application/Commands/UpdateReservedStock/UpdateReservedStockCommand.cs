@@ -1,4 +1,5 @@
 ﻿using MediatR;
+using Shared.Contracts;
 using Shared.Services;
 using Shared.Utilities;
 

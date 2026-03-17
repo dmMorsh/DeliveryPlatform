@@ -7,8 +7,8 @@ using PaymentService.Application.Commands.CreatePayment;
 using PaymentService.Application.Commands.RefundPayment;
 using PaymentService.Application.Commands.StartPayment;
 using PaymentService.Application.Interfaces;
+using Shared.Contracts;
 using Shared.Proto;
-using Shared.Utilities;
 
 namespace PaymentService.Api.Grpc;
 

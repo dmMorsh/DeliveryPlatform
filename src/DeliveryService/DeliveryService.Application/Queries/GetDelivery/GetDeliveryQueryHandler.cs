@@ -3,8 +3,8 @@ using DeliveryService.Application.Models;
 using DeliveryService.Application.Services;
 using DeliveryService.Domain.Aggregates;
 using MediatR;
+using Shared.Contracts;
 using Shared.Services;
-using Shared.Utilities;
 
 namespace DeliveryService.Application.Queries.GetDelivery;
 

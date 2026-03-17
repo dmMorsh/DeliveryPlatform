@@ -1,4 +1,4 @@
-namespace Shared.Utilities;
+namespace Shared.Contracts;
 
 /// <summary>
 /// Результат операции для стандартизованного ответа API

@@ -2,8 +2,8 @@
 using OrderReadService.Application.Interfaces;
 using OrderReadService.Application.Models;
 using OrderReadService.Application.Services;
+using Shared.Contracts;
 using Shared.Services;
-using Shared.Utilities;
 
 namespace OrderReadService.Application.Queries.GetOrder;
 

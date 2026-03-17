@@ -1,6 +1,6 @@
 using System.Text.Json;
 using MediatR;
-using Shared.Utilities;
+using Shared.Contracts;
 
 namespace PaymentService.Application.Commands.ProcessYooMoneyWebhook;
 

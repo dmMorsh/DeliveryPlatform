@@ -7,7 +7,6 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Shared.Contracts;
 using Shared.Contracts.Events;
-using Shared.Utilities;
 
 namespace InventoryService.Application.Commands.ReserveStock;
 

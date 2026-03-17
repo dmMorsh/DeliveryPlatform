@@ -2,8 +2,8 @@
 using CatalogService.Application.Models;
 using MediatR;
 using CatalogService.Application.Services;
+using Shared.Contracts;
 using Shared.Services;
-using Shared.Utilities;
 
 namespace CatalogService.Application.Queries.GetProductById;
 

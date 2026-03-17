@@ -8,9 +8,9 @@ using Microsoft.Extensions.Logging;
 using PaymentService.Application.Commands.CreatePayment;
 using PaymentService.Application.Commands.MarkPaymentReady;
 using PaymentService.Application.Commands.ProcessOrderCanceled;
+using Shared.Contracts;
 using Shared.Contracts.Events;
 using Shared.Services;
-using Shared.Utilities;
 
 namespace PaymentService.Application.Services;
 

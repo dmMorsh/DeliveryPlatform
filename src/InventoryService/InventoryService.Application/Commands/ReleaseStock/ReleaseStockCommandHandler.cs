@@ -6,7 +6,6 @@ using InventoryService.Domain.Events;
 using MediatR;
 using Shared.Contracts;
 using Shared.Contracts.Events;
-using Shared.Utilities;
 
 namespace InventoryService.Application.Commands.ReleaseStock;
 

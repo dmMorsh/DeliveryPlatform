@@ -1,8 +1,8 @@
 ﻿using CartService.Application.Interfaces;
 using CartService.Application.Models;
 using MediatR;
+using Shared.Contracts;
 using Shared.Services;
-using Shared.Utilities;
 
 namespace CartService.Application.Queries.GetCart;
 

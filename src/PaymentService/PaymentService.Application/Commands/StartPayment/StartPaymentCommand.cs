@@ -1,6 +1,6 @@
 using MediatR;
 using PaymentService.Application.Models;
-using Shared.Utilities;
+using Shared.Contracts;
 
 namespace PaymentService.Application.Commands.StartPayment;
 

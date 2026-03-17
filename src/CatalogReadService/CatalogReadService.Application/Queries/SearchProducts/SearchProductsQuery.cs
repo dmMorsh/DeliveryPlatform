@@ -4,7 +4,6 @@ using CatalogReadService.Application.Common.Enums;
 using CatalogReadService.Application.Models;
 using MediatR;
 using Shared.Contracts;
-using Shared.Utilities;
 
 namespace CatalogReadService.Application.Queries.SearchProducts;
 

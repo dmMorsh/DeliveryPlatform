@@ -1,7 +1,7 @@
 ﻿using MediatR;
 using OrderReadService.Application.Interfaces;
 using OrderReadService.Application.Models;
-using Shared.Utilities;
+using Shared.Contracts;
 
 namespace OrderReadService.Application.Queries.GetClientOrders;
 

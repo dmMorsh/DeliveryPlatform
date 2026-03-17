@@ -3,7 +3,6 @@ using CartService.Application.Mapping;
 using CartService.Domain.Aggregates;
 using MediatR;
 using Shared.Contracts;
-using Shared.Utilities;
 
 namespace CartService.Application.Commands.AddItem;
 

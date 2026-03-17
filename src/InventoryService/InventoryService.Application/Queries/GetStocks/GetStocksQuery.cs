@@ -1,6 +1,6 @@
 ﻿using InventoryService.Application.Models;
 using MediatR;
-using Shared.Utilities;
+using Shared.Contracts;
 
 namespace InventoryService.Application.Queries.GetStocks;
 

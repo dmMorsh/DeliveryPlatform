@@ -2,7 +2,7 @@ using MediatR;
 using PaymentService.Application.Interfaces;
 using PaymentService.Application.Models;
 using PaymentService.Domain.Aggregates;
-using Shared.Utilities;
+using Shared.Contracts;
 
 namespace PaymentService.Application.Commands.StartPayment;
 

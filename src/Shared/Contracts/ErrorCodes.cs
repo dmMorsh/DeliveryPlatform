@@ -1,4 +1,4 @@
-namespace Shared.Utilities;
+namespace Shared.Contracts;
 
 public static class ErrorCodes
 {

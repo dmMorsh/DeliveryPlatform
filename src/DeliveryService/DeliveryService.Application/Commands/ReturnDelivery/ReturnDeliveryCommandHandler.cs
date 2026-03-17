@@ -2,7 +2,6 @@ using DeliveryService.Application.Interfaces;
 using DeliveryService.Application.Services;
 using MediatR;
 using Shared.Contracts;
-using Shared.Utilities;
 
 namespace DeliveryService.Application.Commands.ReturnDelivery;
 

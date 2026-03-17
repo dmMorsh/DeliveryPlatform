@@ -1,5 +1,6 @@
 using CourierService.Application.Models;
 using MediatR;
+using Shared.Contracts;
 using Shared.Services;
 using Shared.Utilities;
 

@@ -1,6 +1,6 @@
 ﻿using CartService.Application.Models;
 using MediatR;
-using Shared.Utilities;
+using Shared.Contracts;
 
 namespace CartService.Application.Queries.GetCart;
 

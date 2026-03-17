@@ -7,7 +7,6 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Shared.Contracts;
-using Shared.Utilities;
 
 namespace CourierService.Application.Commands.RegisterCourier;
 

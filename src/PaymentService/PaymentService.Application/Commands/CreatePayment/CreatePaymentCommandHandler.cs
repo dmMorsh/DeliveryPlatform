@@ -4,7 +4,6 @@ using Npgsql;
 using PaymentService.Application.Interfaces;
 using PaymentService.Domain.Aggregates;
 using Shared.Contracts;
-using Shared.Utilities;
 
 namespace PaymentService.Application.Commands.CreatePayment;
 

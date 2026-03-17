@@ -3,7 +3,6 @@ using Microsoft.Extensions.Logging;
 using OrderService.Application.Interfaces;
 using OrderService.Domain.Aggregates;
 using Shared.Contracts;
-using Shared.Utilities;
 
 namespace OrderService.Application.Commands.UpdateOrderStatusFromPayment;
 

@@ -4,7 +4,6 @@ using PaymentService.Application.Models;
 using PaymentService.Domain.Aggregates;
 using Shared.Contracts;
 using Shared.Contracts.Events;
-using Shared.Utilities;
 
 namespace PaymentService.Application.Commands.ProcessYooMoneyWebhook;
 

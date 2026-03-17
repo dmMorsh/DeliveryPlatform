@@ -1,4 +1,4 @@
-﻿using Shared.Utilities;
+﻿using Shared.Contracts;
 using WebApp.Models;
 
 namespace WebApp.Services;

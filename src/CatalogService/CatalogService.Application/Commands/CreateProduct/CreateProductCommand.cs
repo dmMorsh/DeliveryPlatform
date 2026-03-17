@@ -1,6 +1,6 @@
 using CatalogService.Application.Models;
 using MediatR;
-using Shared.Utilities;
+using Shared.Contracts;
 
 namespace CatalogService.Application.Commands.CreateProduct;
 

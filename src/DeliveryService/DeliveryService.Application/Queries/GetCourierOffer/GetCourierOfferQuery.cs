@@ -1,6 +1,6 @@
 using DeliveryService.Application.Models;
 using MediatR;
-using Shared.Utilities;
+using Shared.Contracts;
 
 namespace DeliveryService.Application.Queries.GetCourierOffer;
 

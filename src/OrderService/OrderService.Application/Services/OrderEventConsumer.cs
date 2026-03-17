@@ -10,9 +10,9 @@ using OrderService.Application.Commands.UpdateOrderStatusFromPayment;
 using OrderService.Application.Commands.UpdateReservedStock;
 using OrderService.Application.Commands.UpdateOrder;
 using OrderService.Domain.Aggregates;
+using Shared.Contracts;
 using Shared.Contracts.Events;
 using Shared.Services;
-using Shared.Utilities;
 
 namespace OrderService.Application.Services;
 

@@ -9,7 +9,7 @@ using PaymentService.Application.Commands.RefundPayment;
 using PaymentService.Application.Commands.StartPayment;
 using PaymentService.Application.Interfaces;
 using PaymentService.Application.Models;
-using Shared.Utilities;
+using Shared.Contracts;
 
 namespace PaymentService.Api.Controllers;
 

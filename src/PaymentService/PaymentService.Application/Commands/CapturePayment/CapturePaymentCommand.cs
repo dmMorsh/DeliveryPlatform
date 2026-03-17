@@ -1,5 +1,5 @@
 using MediatR;
-using Shared.Utilities;
+using Shared.Contracts;
 
 namespace PaymentService.Application.Commands.CapturePayment;
 

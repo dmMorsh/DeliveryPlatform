@@ -18,8 +18,8 @@ using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
+using Shared.Contracts;
 using Shared.Services;
-using Shared.Utilities;
 using StackExchange.Redis;
 
 namespace DeliveryService.Api.Controllers;

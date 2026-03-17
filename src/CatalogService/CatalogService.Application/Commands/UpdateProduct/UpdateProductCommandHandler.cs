@@ -5,7 +5,6 @@ using CatalogService.Application.Services;
 using CatalogService.Domain.ValueObjects;
 using MediatR;
 using Shared.Contracts;
-using Shared.Utilities;
 
 namespace CatalogService.Application.Commands.UpdateProduct;
 

@@ -6,7 +6,6 @@ using Mapster;
 using MediatR;
 using Microsoft.Extensions.Logging;
 using Shared.Contracts;
-using Shared.Utilities;
 
 namespace CourierService.Application.Commands.UpdateCourierStatus;
 

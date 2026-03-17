@@ -1,5 +1,4 @@
 using Microsoft.EntityFrameworkCore;
-using PaymentService.Api.Security;
 using PaymentService.Infrastructure.Persistence;
 using PaymentService.Infrastructure.Providers;
 using Serilog;
