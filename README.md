@@ -37,6 +37,6 @@
 
 ## Репозиторий
 
-- [src](/Users/dmitrypletnev/RiderProjects/DeliveryPlatform/src) — все сервисы и общие библиотеки.
-- [docker-compose.yml](/Users/dmitrypletnev/RiderProjects/DeliveryPlatform/docker-compose.yml) — локальная инфраструктура и сервисы.
-- [Tests.IntegrationTests](/Users/dmitrypletnev/RiderProjects/DeliveryPlatform/src/Tests.IntegrationTests) — интеграционные тесты.
+- [src](/src) — все сервисы и общие библиотеки.
+- [docker-compose.yml](/docker-compose.yml) — локальная инфраструктура и сервисы.
+- [Tests.IntegrationTests](/src/Tests.IntegrationTests) — интеграционные тесты.
