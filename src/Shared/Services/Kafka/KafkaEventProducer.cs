@@ -1,10 +1,8 @@
 using System.Text;
-using System.Text.Json;
 using Confluent.Kafka;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Shared.Contracts.Events;
 
 namespace Shared.Services;
 
@@ -20,7 +18,6 @@ public interface IEventProducer
         string payload,
         IReadOnlyDictionary<string, string> headers,
         CancellationToken ct = default);
-    // Task PublishAsync<TEvent>(TEvent @event, string? topic = null) where TEvent : IntegrationEvent;
 }
 
 /// <summary>
@@ -97,45 +94,6 @@ public class KafkaEventProducer : IEventProducer, IAsyncDisposable
             result.Offset);
     }
     
-    public async Task _PublishAsync<TEvent>(TEvent @event, string? topic = null) where TEvent : IntegrationEvent
-    {
-        try
-        {
-            var topicName = topic ?? _defaultTopic;
-            var key = @event.AggregateId.ToString();
-            var value = JsonSerializer.Serialize(@event, new JsonSerializerOptions { WriteIndented = false });
-
-            var message = new Message<string, string>
-            {
-                Key = key,
-                Value = value,
-                Headers = new Headers
-                {
-                    { "event-id", Encoding.UTF8.GetBytes(@event.EventId) },
-                    { "event-type", Encoding.UTF8.GetBytes(@event.EventType) },
-                    { "aggregate-type", Encoding.UTF8.GetBytes(@event.AggregateType) },
-                    { "timestamp", Encoding.UTF8.GetBytes(@event.Timestamp.ToString("O")) }
-                }
-            };
-
-            var result = await _producer.ProduceAsync(topicName, message);
-
-            _logger.LogInformation(
-                "Event published: Type={EventType}, AggregateId={AggregateId}, Topic={Topic}, Partition={Partition}, Offset={Offset}",
-                @event.EventType,
-                @event.AggregateId,
-                topicName,
-                result.Partition.Value,
-                result.Offset.Value
-            );
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error publishing event {EventType} to Kafka", @event.EventType);
-            throw;
-        }
-    }
-
     /// <summary>
     /// Graceful shutdown
     /// </summary>
