@@ -1,7 +1,7 @@
 ﻿namespace GatewayApi.Contracts.Orders;
 
 /// <summary>
-/// DTO для проксирования запросов создания заказа
+/// DTO for proxying order creation requests
 /// </summary>
 public class CreateOrderRequest
 {

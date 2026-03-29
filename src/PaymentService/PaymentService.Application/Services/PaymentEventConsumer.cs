@@ -15,8 +15,8 @@ using Shared.Services;
 namespace PaymentService.Application.Services;
 
 /// <summary>
-/// Обработчик событий из OrderService для PaymentService
-/// Слушает: order.canceled
+/// Event handler from OrderService for PaymentService
+/// Listens to: order.canceled
 /// </summary>
 public class PaymentEventConsumer : KafkaEventConsumerBase
 {

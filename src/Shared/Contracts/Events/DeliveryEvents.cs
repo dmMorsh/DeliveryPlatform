@@ -1,7 +1,7 @@
 namespace Shared.Contracts.Events;
 
 /// <summary>
-/// Event: Доставка создана
+/// Event: Delivery created
 /// </summary>
 public record DeliveryCreatedEvent : IntegrationEvent
 {
@@ -14,7 +14,7 @@ public record DeliveryCreatedEvent : IntegrationEvent
 }
 
 /// <summary>
-/// Event: Курьер назначен на доставку
+/// Event: Courier assigned to delivery
 /// </summary>
 public record DeliveryAssignedEvent : IntegrationEvent
 {
@@ -32,7 +32,7 @@ public record DeliveryAssignedEvent : IntegrationEvent
 }
 
 /// <summary>
-/// Event: Курьер принял доставку
+/// Event: Courier accepted delivery
 /// </summary>
 public record DeliveryAcceptedEvent : IntegrationEvent
 {
@@ -46,7 +46,7 @@ public record DeliveryAcceptedEvent : IntegrationEvent
 }
 
 /// <summary>
-/// Event: Курьер отказался от доставки
+/// Event: Courier declined delivery
 /// </summary>
 public record DeliveryDeclinedEvent : IntegrationEvent
 {
@@ -61,7 +61,7 @@ public record DeliveryDeclinedEvent : IntegrationEvent
 }
 
 /// <summary>
-/// Event: Курьер забрал заказ
+/// Event: Courier picked up the order
 /// </summary>
 public record DeliveryPickedUpEvent : IntegrationEvent
 {
@@ -75,7 +75,7 @@ public record DeliveryPickedUpEvent : IntegrationEvent
 }
 
 /// <summary>
-/// Event: Доставка в пути
+/// Event: Delivery in transit
 /// </summary>
 public record DeliveryInTransitEvent : IntegrationEvent
 {
@@ -89,7 +89,7 @@ public record DeliveryInTransitEvent : IntegrationEvent
 }
 
 /// <summary>
-/// Event: Доставка завершена
+/// Event: Delivery completed
 /// </summary>
 public record DeliveryDeliveredEvent : IntegrationEvent
 {
@@ -106,7 +106,7 @@ public record DeliveryDeliveredEvent : IntegrationEvent
 }
 
 /// <summary>
-/// Event: Доставка отменена
+/// Event: Delivery canceled
 /// </summary>
 public record DeliveryCancelledEvent : IntegrationEvent
 {
@@ -121,7 +121,7 @@ public record DeliveryCancelledEvent : IntegrationEvent
 }
 
 /// <summary>
-/// Event: Доставка завершилась неуспешно
+/// Event: Delivery failed
 /// </summary>
 public record DeliveryFailedEvent : IntegrationEvent
 {
@@ -136,7 +136,7 @@ public record DeliveryFailedEvent : IntegrationEvent
 }
 
 /// <summary>
-/// Event: Доставка возвращена
+/// Event: Delivery returned
 /// </summary>
 public record DeliveryReturnedEvent : IntegrationEvent
 {

@@ -43,7 +43,7 @@ builder.Services
     .AddHttpClient("order-api")
     .AddPolicyHandler(circuitPolicy);
 
-// Регистрация сервисов
+// Service registrations
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
 var httpTimeoutSeconds = int.TryParse(builder.Configuration["Http:TimeoutSeconds"], out var httpTimeout)

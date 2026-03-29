@@ -1,7 +1,7 @@
 namespace Shared.Services;
 
 /// <summary>
-/// gRPC клиент для LocationTrackingService
+/// gRPC client for LocationTrackingService
 /// </summary>
 public interface ILocationTrackingClient
 {

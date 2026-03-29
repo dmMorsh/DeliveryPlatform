@@ -17,8 +17,8 @@ using Shared.Services;
 namespace OrderService.Application.Services;
 
 /// <summary>
-/// Обработчик событий из других сервисов для OrderService
-/// Слушает: payment.*, stock.*, delivery.*
+/// Event handler from other services for OrderService
+/// Listens to: payment.*, stock.*, delivery.*
 /// </summary>
 public class OrderEventConsumer : KafkaEventConsumerBase
 {
@@ -37,7 +37,7 @@ public class OrderEventConsumer : KafkaEventConsumerBase
     }
 
     /// <summary>
-    /// Обработка входящих событий от других сервисов
+    /// Handle incoming events from other services
     /// </summary>
     protected override async Task<bool> HandleMessageAsync(string eventType, string json, ConsumeResult<string, string> message)
     {

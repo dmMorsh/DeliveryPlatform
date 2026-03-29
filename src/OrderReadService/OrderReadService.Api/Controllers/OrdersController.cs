@@ -20,7 +20,7 @@ public class OrdersController : ControllerBase
     }
     
     /// <summary>
-    /// Получить заказ по ID
+    /// Get order by ID
     /// </summary>
     [HttpGet("{id}")]
     public async Task<IActionResult> GetOrder(Guid id, CancellationToken ct)
@@ -39,7 +39,7 @@ public class OrdersController : ControllerBase
     }
     
     /// <summary>
-    /// Получить заказы клиента
+    /// Get customer orders
     /// </summary>
     [HttpGet]
     public async Task<IActionResult> GetClientOrders(CancellationToken ct)

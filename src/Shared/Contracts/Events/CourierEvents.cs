@@ -1,7 +1,7 @@
 namespace Shared.Contracts.Events;
 
 /// <summary>
-/// Event: Курьер создан/зарегистрирован
+/// Event: Courier created/registered
 /// </summary>
 public record CourierRegisteredEvent : IntegrationEvent
 {
@@ -16,7 +16,7 @@ public record CourierRegisteredEvent : IntegrationEvent
 }
 
 /// <summary>
-/// Event: Статус курьера изменился
+/// Event: Courier status changed
 /// </summary>
 public record CourierStatusChangedEvent : IntegrationEvent
 {
@@ -31,7 +31,7 @@ public record CourierStatusChangedEvent : IntegrationEvent
 }
 
 /// <summary>
-/// Event: Рейтинг курьера обновлен
+/// Event: Courier rating updated
 /// </summary>
 public record CourierRatingUpdatedEvent : IntegrationEvent
 {
@@ -44,4 +44,3 @@ public record CourierRatingUpdatedEvent : IntegrationEvent
     public int TotalRatings { get; init; }
     public string? Feedback { get; init; }
 }
-

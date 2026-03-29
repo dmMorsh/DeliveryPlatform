@@ -17,7 +17,7 @@ public class AnalyticsController : ControllerBase
     }
 
     /// <summary>
-    /// Получить текущую статистику
+    /// Get current statistics
     /// </summary>
     [HttpGet("stats")]
     public IActionResult GetStats()

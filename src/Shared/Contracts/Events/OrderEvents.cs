@@ -1,7 +1,7 @@
 namespace Shared.Contracts.Events;
 
 /// <summary>
-/// Event: Заказ создан
+/// Event: Order created
 /// </summary>
 public record OrderCreatedEvent : IntegrationEvent
 {
@@ -36,7 +36,7 @@ public record OrderCreatedEvent : IntegrationEvent
 }
 
 /// <summary>
-/// Снимок позиции заказа для событий
+/// Order item snapshot for events
 /// </summary>
 public record IntegrationOrderItemSnapshot
 {
@@ -47,7 +47,7 @@ public record IntegrationOrderItemSnapshot
 }
 
 /// <summary>
-/// Event: Курьер назначен на заказ
+/// Event: Courier assigned to order
 /// </summary>
 public record OrderAssignedEvent : IntegrationEvent
 {
@@ -135,7 +135,7 @@ public record OrderKitchenDelayedEvent : IntegrationEvent
 }
 
 /// <summary>
-/// Event: Заказ доставлен
+/// Event: Order delivered
 /// </summary>
 public record OrderDeliveredEvent : IntegrationEvent
 {
@@ -151,7 +151,7 @@ public record OrderDeliveredEvent : IntegrationEvent
 }
 
 /// <summary>
-/// Event: Заказ отменен
+/// Event: Order canceled
 /// </summary>
 public record OrderCanceledEvent : IntegrationEvent
 {
@@ -164,7 +164,7 @@ public record OrderCanceledEvent : IntegrationEvent
 }
 
 /// <summary>
-/// Event: Запрос освобождения зарезервированных позиций
+/// Event: Request to release reserved items
 /// </summary>
 public record StockReservationReleaseRequestedEvent : IntegrationEvent
 {
@@ -177,7 +177,7 @@ public record StockReservationReleaseRequestedEvent : IntegrationEvent
 }
 
 /// <summary>
-/// Event: Запрос освобождения зарезервированных позиций
+/// Event: Request to release reserved items
 /// </summary>
 public record OrderCriticalErrorEvent : IntegrationEvent
 {

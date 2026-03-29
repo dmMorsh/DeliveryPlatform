@@ -14,8 +14,8 @@ using Shared.Services;
 namespace CourierService.Application.Services;
 
 /// <summary>
-/// Обработчик событий из OrderService для CourierService
-/// Слушает: order.assigned (для получения информации о заказе)
+/// Event handler from OrderService for CourierService
+/// Listens to: order.assigned (to receive order info)
 /// </summary>
 public class CourierEventConsumer : KafkaEventConsumerBase
 {
@@ -34,7 +34,7 @@ public class CourierEventConsumer : KafkaEventConsumerBase
     }
 
     /// <summary>
-    /// Обработка входящих событий от OrderService
+    /// Handle incoming events from OrderService
     /// </summary>
     protected override async Task<bool> HandleMessageAsync(string eventType, string json, ConsumeResult<string, string> message)
     {

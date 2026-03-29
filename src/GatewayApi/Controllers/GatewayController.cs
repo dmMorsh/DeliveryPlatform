@@ -4,8 +4,8 @@ using Microsoft.AspNetCore.Mvc;
 namespace GatewayApi.Controllers;
 
 /// <summary>
-/// Gateway Controller - единая точка входа для всех клиентов
-/// Проксирует запросы к микросервисам OrderService и CourierService
+/// Gateway Controller - single entry point for all clients
+/// Proxies requests to OrderService and CourierService microservices
 /// </summary>
 [ApiController]
 [Route("api")]
@@ -19,7 +19,7 @@ public class GatewayController : ControllerBase
     }
 
     /// <summary>
-    /// Проверка здоровья Gateway API
+    /// Gateway API health check
     /// </summary>
     [HttpGet("health")]
     public IActionResult Health()
@@ -33,7 +33,7 @@ public class GatewayController : ControllerBase
     }
 
     /// <summary>
-    /// Проверка здоровья всех микросервисов
+    /// Health check for all microservices
     /// </summary>
     [HttpGet("services-health")]
     public async Task<IActionResult> ServicesHealth(CancellationToken ct)

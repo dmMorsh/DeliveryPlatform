@@ -15,8 +15,8 @@ using Shared.Services;
 namespace InventoryService.Application.Services;
 
 /// <summary>
-/// Обработчик событий из OrderService для InventoryService
-/// Слушает: order.created (для резервирования stock)
+/// Event handler from OrderService for InventoryService
+/// Listens to: order.created (to reserve stock)
 /// </summary>
 public class InventoryEventConsumer : KafkaEventConsumerBase
 {
@@ -35,7 +35,7 @@ public class InventoryEventConsumer : KafkaEventConsumerBase
     }
 
     /// <summary>
-    /// Обработка входящих событий от OrderService
+    /// Handle incoming events from OrderService
     /// </summary>
     protected override async Task<bool> HandleMessageAsync(string eventType, string json, ConsumeResult<string, string> message)
     {

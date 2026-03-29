@@ -19,11 +19,11 @@ public class OrdersController : ControllerBase
     }
 
     /// <summary>
-    /// Получить заказ по ID
+    /// Get order by ID
     /// </summary>
-    /// <param name="orderId">ID заказа</param>
+    /// <param name="orderId">Order ID</param>
     /// <param name="ct"></param>
-    /// <returns>Данные заказа</returns>
+    /// <returns>Order data</returns>
     [HttpGet("{orderId}")]
     public async Task<IActionResult> GetOrder(Guid orderId, CancellationToken ct)
     {
@@ -49,15 +49,15 @@ public class OrdersController : ControllerBase
     }
 
     /// <summary>
-    /// Получить заказы с фильтрацией и пагинацией
+    /// Get orders with filtering and pagination
     /// </summary>
     /// <param name="ct"></param>
-    /// <param name="clientId">Фильтр по ID клиента (опционально)</param>
-    /// <param name="courierId">Фильтр по ID курьера (опционально)</param>
-    /// <param name="status">Фильтр по статусу (опционально)</param>
-    /// <param name="page">Номер страницы</param>
-    /// <param name="pageSize">Размер страницы</param>
-    /// <returns>Список заказов</returns>
+    /// <param name="clientId">Filter by client ID (optional)</param>
+    /// <param name="courierId">Filter by courier ID (optional)</param>
+    /// <param name="status">Filter by status (optional)</param>
+    /// <param name="page">Page number</param>
+    /// <param name="pageSize">Page size</param>
+    /// <returns>List of orders</returns>
     [HttpGet]
     public async Task<IActionResult> GetOrders(
         CancellationToken ct,
@@ -97,11 +97,11 @@ public class OrdersController : ControllerBase
 
     
     /// <summary>
-    /// Создать новый заказ
+    /// Create a new order
     /// </summary>
-    /// <param name="request">Данные заказа</param>
+    /// <param name="request">Order data</param>
     /// <param name="ct"></param>
-    /// <returns>Созданный заказ</returns>
+    /// <returns>Created order</returns>
     [Obsolete]
     [HttpPost]
     public async Task<IActionResult> CreateOrder([FromBody] CreateOrderRequest request, CancellationToken ct)
@@ -126,12 +126,12 @@ public class OrdersController : ControllerBase
     }
 
     /// <summary>
-    /// Обновить заказ (назначить курьера, изменить статус)
+    /// Update order (assign courier, change status)
     /// </summary>
-    /// <param name="orderId">ID заказа</param>
-    /// <param name="request">Данные для обновления</param>
+    /// <param name="orderId">Order ID</param>
+    /// <param name="request">Update data</param>
     /// <param name="ct"></param>
-    /// <returns>Обновленный заказ</returns>
+    /// <returns>Updated order</returns>
     [Obsolete]
     [HttpPut("{orderId}")]
     public async Task<IActionResult> UpdateOrder(int orderId, [FromBody] UpdateOrderRequest request, CancellationToken ct)

@@ -1,7 +1,7 @@
 namespace GatewayApi.DTOs;
 
 /// <summary>
-/// Обёртка для ошибок при проксировании
+/// Wrapper for proxying errors
 /// </summary>
 public class ProxyErrorResponse
 {

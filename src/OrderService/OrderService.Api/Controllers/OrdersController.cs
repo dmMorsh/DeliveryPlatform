@@ -23,24 +23,9 @@ public class OrdersController : ControllerBase
     {
         _mediator = mediator;
     }
-    
-    // /// <summary>
-    // /// Получить заказ по ID
-    // /// </summary>
-    // [HttpGet("{id}")]
-    // public async Task<IActionResult> GetOrder(Guid id, CancellationToken ct)
-    // {
-    //     var query = new GetOrderQuery(id);
-    //     
-    //     var result = await _mediator.Send(query, ct);
-    //     if (!result.Success)
-    //         return NotFound(result);
-    //     
-    //     return Ok(result);
-    // }
 
     /// <summary>
-    /// Создать новый заказ
+    /// Create a new order
     /// </summary>
     [HttpPost]
     public async Task<IActionResult> CreateOrder([FromBody] CreateOrderRequest createRequest, CancellationToken ct)
@@ -58,7 +43,7 @@ public class OrdersController : ControllerBase
     }
 
     /// <summary>
-    /// Обновить заказ
+    /// Update an order
     /// </summary>
     [HttpPut("{id}")]
     public async Task<IActionResult> UpdateOrder(Guid id, [FromBody] UpdateOrderRequest updateOrderRequest, CancellationToken ct)
@@ -77,7 +62,7 @@ public class OrdersController : ControllerBase
     }
 
     /// <summary>
-    /// Отменить заказ
+    /// Cancel an order
     /// </summary>
     [HttpPost("{id}/cancel")]
     public async Task<IActionResult> CancelOrder(Guid id, [FromBody] CancelOrderRequest request, CancellationToken ct)
@@ -90,7 +75,7 @@ public class OrdersController : ControllerBase
     }
 
     /// <summary>
-    /// Отметить заказ как готовый (например, кухня/поставщик)
+    /// Mark order as ready (for example, kitchen/supplier)
     /// </summary>
     [HttpPost("{id}/ready")]
     public async Task<IActionResult> MarkReady(Guid id, CancellationToken ct)
@@ -102,7 +87,7 @@ public class OrdersController : ControllerBase
     }
 
     /// <summary>
-    /// Принять заказ (кухня/поставщик)
+    /// Accept order (kitchen/supplier)
     /// </summary>
     [HttpPost("{id}/accept")]
     public async Task<IActionResult> MarkAccepted(Guid id, CancellationToken ct)
@@ -114,7 +99,7 @@ public class OrdersController : ControllerBase
     }
 
     /// <summary>
-    /// Отклонить заказ (кухня/поставщик)
+    /// Reject order (kitchen/supplier)
     /// </summary>
     [HttpPost("{id}/reject")]
     public async Task<IActionResult> MarkRejected(Guid id, [FromBody] CancelOrderRequest? request, CancellationToken ct)
@@ -124,26 +109,6 @@ public class OrdersController : ControllerBase
             return BadRequest(result);
         return Ok(result);
     }
-
-    /// <summary>
-    /// Получить заказы клиента
-    /// </summary>
-    // [HttpGet("client/{clientId}")]
-    // [HttpGet]
-    // public async Task<IActionResult> GetClientOrders(CancellationToken ct)
-    // {
-    //     var customerId = GetCustomerIdFromContext();
-    //     if (customerId == Guid.Empty)
-    //         return Unauthorized(new { error = "Customer ID not found in context" });
-    //     
-    //     var query = new GetClientOrdersQuery(customerId);
-    //     
-    //     var result = await _mediator.Send(query, ct);
-    //     if (!result.Success)
-    //         return NotFound(result);
-    //     
-    //     return Ok(result);
-    // }
     
     private Guid GetCustomerIdFromContext()
     {

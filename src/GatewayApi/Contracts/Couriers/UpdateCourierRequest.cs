@@ -1,7 +1,7 @@
 ﻿namespace GatewayApi.Contracts.Couriers;
 
 /// <summary>
-/// DTO для проксирования запросов обновления курьера
+/// DTO for proxying courier update requests
 /// </summary>
 public class UpdateCourierRequest
 {

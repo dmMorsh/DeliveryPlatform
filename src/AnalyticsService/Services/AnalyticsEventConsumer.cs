@@ -6,13 +6,13 @@ using Shared.Services;
 namespace AnalyticsService.Services;
 
 /// <summary>
-/// Сборщик аналитики из событий
+/// Analytics aggregator from events
 /// </summary>
 public class AnalyticsEventConsumer : KafkaEventConsumerBase
 {
     private new readonly ILogger<AnalyticsEventConsumer> _logger;
 
-    // In-memory статистика
+    // In-memory statistics
     private readonly object _lockObj = new();
     private int _totalOrders = 0;
     private int _deliveredOrders = 0;
@@ -35,7 +35,7 @@ public class AnalyticsEventConsumer : KafkaEventConsumerBase
     }
 
     /// <summary>
-    /// Обработка входящих сообщений (async)
+    /// Handle incoming messages (async)
     /// </summary>
     protected override Task<bool> HandleMessageAsync(string eventType, string json, ConsumeResult<string, string> message)
     {
@@ -228,7 +228,7 @@ public class AnalyticsEventConsumer : KafkaEventConsumerBase
     }
 
     /// <summary>
-    /// Получить текущую статистику (для /metrics endpoint)
+    /// Get current statistics (for /metrics endpoint)
     /// </summary>
     public AnalyticsSnapshot GetSnapshot()
     {
@@ -274,7 +274,7 @@ public class AnalyticsEventConsumer : KafkaEventConsumerBase
 }
 
 /// <summary>
-/// Снимок аналитики
+/// Analytics snapshot
 /// </summary>
 public class AnalyticsSnapshot
 {

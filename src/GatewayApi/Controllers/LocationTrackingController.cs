@@ -4,7 +4,7 @@ using Shared.Services;
 namespace GatewayApi.Controllers;
 
 /// <summary>
-/// Proxy контроллер для Location Tracking через GatewayApi
+/// Proxy controller for Location Tracking via GatewayApi
 /// </summary>
 [ApiController]
 [Route("api/[controller]")]
@@ -20,13 +20,13 @@ public class LocationTrackingController : ControllerBase
     }
 
     /// <summary>
-    /// Обновить локацию курьера
+    /// Update courier location
     /// </summary>
     /// <param name="ct"></param>
-    /// <param name="courierId">ID курьера</param>
-    /// <param name="latitude">Широта</param>
-    /// <param name="longitude">Долгота</param>
-    /// <param name="accuracy">Точность в метрах</param>
+    /// <param name="courierId">Courier ID</param>
+    /// <param name="latitude">Latitude</param>
+    /// <param name="longitude">Longitude</param>
+    /// <param name="accuracy">Accuracy in meters</param>
     [HttpPost("couriers/{courierId:guid}/location")]
     public async Task<IActionResult> UpdateCourierLocation(
         CancellationToken ct,
@@ -63,9 +63,9 @@ public class LocationTrackingController : ControllerBase
     }
 
     /// <summary>
-    /// Получить текущую локацию курьера
+    /// Get current courier location
     /// </summary>
-    /// <param name="courierId">ID курьера</param>
+    /// <param name="courierId">Courier ID</param>
     /// <param name="ct"></param>
     [HttpGet("couriers/{courierId:guid}/location")]
     public async Task<IActionResult> GetCourierLocation(Guid courierId, CancellationToken ct)
@@ -93,9 +93,9 @@ public class LocationTrackingController : ControllerBase
     }
 
     /// <summary>
-    /// Получить локацию нескольких курьеров
+    /// Get locations for multiple couriers
     /// </summary>
-    /// <param name="courierIds">Список ID курьеров (comma-separated)</param>
+    /// <param name="courierIds">List of courier IDs (comma-separated)</param>
     /// <param name="ct"></param>
     [HttpGet("couriers/locations")]
     public async Task<IActionResult> GetCouriersLocations([FromQuery] string courierIds, CancellationToken ct)

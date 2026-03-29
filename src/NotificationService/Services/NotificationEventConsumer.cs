@@ -6,7 +6,7 @@ using Shared.Services;
 namespace NotificationService.Services;
 
 /// <summary>
-/// Обработчик событий уведомлений
+/// Notification event handler
 /// </summary>
 public class NotificationEventConsumer : KafkaEventConsumerBase
 {
@@ -28,7 +28,7 @@ public class NotificationEventConsumer : KafkaEventConsumerBase
     }
 
     /// <summary>
-    /// Обработка входящих сообщений (async)
+    /// Handle incoming messages (async)
     /// </summary>
     protected override async Task<bool> HandleMessageAsync(string eventType, string json, ConsumeResult<string, string> message)
     {
@@ -78,7 +78,7 @@ public class NotificationEventConsumer : KafkaEventConsumerBase
             var @event = JsonSerializer.Deserialize<OrderCreatedEvent>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
             if (@event == null) throw new NonRetryableException("Invalid OrderCreatedEvent payload");
 
-            // Отправить уведомление клиенту
+            // Send notification to the client
             _logger.LogInformation("Order created notification: Order {OrderNumber} for client {ClientId}",
                 @event.OrderNumber, @event.ClientId);
 
@@ -184,7 +184,7 @@ public class NotificationEventConsumer : KafkaEventConsumerBase
 }
 
 /// <summary>
-/// Интерфейс для отправки уведомлений
+/// Interface for sending notifications
 /// </summary>
 public interface INotificationService
 {
@@ -192,7 +192,7 @@ public interface INotificationService
 }
 
 /// <summary>
-/// Mock реализация сервиса уведомлений
+/// Mock notification service implementation
 /// </summary>
 public class MockNotificationService : INotificationService
 {

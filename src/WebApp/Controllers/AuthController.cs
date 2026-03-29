@@ -38,11 +38,11 @@ public class AuthController : Controller
         Response.Cookies.Append("access_token", token, new CookieOptions
         {
             HttpOnly = true,
-            Secure = false, // true если https
+            Secure = false, // true if https
             SameSite = SameSiteMode.Strict
         });
 
-        // Создаем identity для MVC
+        // Create identity for MVC
         var claims = new List<Claim>
         {
             new(ClaimTypes.Name, model.Email),

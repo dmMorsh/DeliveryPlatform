@@ -1,7 +1,7 @@
 ﻿namespace GatewayApi.Contracts.Couriers;
 
 /// <summary>
-/// DTO для проксирования запросов создания курьера
+/// DTO for proxying courier creation requests
 /// </summary>
 public class CreateCourierRequest
 {

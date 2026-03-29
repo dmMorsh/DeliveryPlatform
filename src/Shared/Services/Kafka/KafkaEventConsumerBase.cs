@@ -9,16 +9,16 @@ using Microsoft.Extensions.Logging;
 namespace Shared.Services;
 
 /// <summary>
-/// Интерфейс для Kafka consumer
+/// Interface for Kafka consumer
 /// </summary>
 public interface IEventConsumer
 {
-    /// <summary>Начать слушать события</summary>
+    /// <summary>Start consuming events</summary>
     Task StartConsumingAsync(CancellationToken cancellationToken);
 }
 
 /// <summary>
-/// Реализация Kafka consumer с обработчиками событий
+/// Kafka consumer implementation with event handlers
 /// </summary>
 public abstract class KafkaEventConsumerBase : IEventConsumer
 {
@@ -85,7 +85,7 @@ public abstract class KafkaEventConsumerBase : IEventConsumer
             EnablePartitionEof = false,
             MaxPollIntervalMs = 300000, // 5 minutes
             SessionTimeoutMs = 30000,    // 30 seconds
-            //ClientRack = ""// привязка 
+            //ClientRack = ""// rack affinity
         };
 
         _consumer = new ConsumerBuilder<string, string>(consumerConfig)
@@ -105,7 +105,7 @@ public abstract class KafkaEventConsumerBase : IEventConsumer
     }
 
     /// <summary>
-    /// Начать слушать события
+    /// Start consuming events
     /// </summary>
     public virtual async Task StartConsumingAsync(CancellationToken cancellationToken)
     {
@@ -136,7 +136,7 @@ public abstract class KafkaEventConsumerBase : IEventConsumer
                             message.Message.Key
                         );
 
-                        // Получить тип события из headers
+                        // Get event type from headers
                         var eventType = GetHeaderValue(message.Message.Headers, "event-type");
 
                         if (eventType == null)
@@ -303,7 +303,7 @@ public abstract class KafkaEventConsumerBase : IEventConsumer
     }
 
     /// <summary>
-    /// Переопределить для обработки сообщений
+    /// Override to handle messages
     /// </summary>
     protected abstract Task<bool> HandleMessageAsync(string eventType, string json, ConsumeResult<string, string> message);
 

@@ -7,11 +7,11 @@ using Microsoft.Extensions.Logging;
 namespace Shared.Services;
 
 /// <summary>
-/// Kafka producer для публикации domain events
+/// Kafka producer for publishing domain events
 /// </summary>
 public interface IEventProducer
 {
-    /// <summary>Опубликовать событие в Kafka</summary>
+    /// <summary>Publish an event to Kafka</summary>
     Task PublishAsync(
         string topic,
         string key,
@@ -21,7 +21,7 @@ public interface IEventProducer
 }
 
 /// <summary>
-/// Реализация Kafka producer
+/// Kafka producer implementation
 /// </summary>
 public class KafkaEventProducer : IEventProducer, IAsyncDisposable
 {
@@ -44,8 +44,8 @@ public class KafkaEventProducer : IEventProducer, IAsyncDisposable
             MessageMaxBytes = 1000000, // 1MB
             LingerMs = 100, // Batch messages for 100ms for better throughput
             
-            //EnableIdempotence = true,  // Предотвращение дублирования сообщений // Acks = Acks.All
-            MessageSendMaxRetries = 3,  // Число повторных попыток
+            //EnableIdempotence = true,  // Prevent duplicate messages // Acks = Acks.All
+            MessageSendMaxRetries = 3,  // Number of retries
             RetryBackoffMs = 1000, 
             Partitioner = Partitioner.Murmur2,
         };
@@ -66,7 +66,7 @@ public class KafkaEventProducer : IEventProducer, IAsyncDisposable
     }
 
     /// <summary>
-    /// Опубликовать событие в Kafka
+    /// Publish an event to Kafka
     /// </summary>
     ///
     public async Task PublishAsync(string topic, string key, string payload, IReadOnlyDictionary<string, string> headers,

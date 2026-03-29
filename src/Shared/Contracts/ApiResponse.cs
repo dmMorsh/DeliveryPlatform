@@ -1,7 +1,7 @@
 namespace Shared.Contracts;
 
 /// <summary>
-/// Результат операции для стандартизованного ответа API
+/// Operation result for a standardized API response
 /// </summary>
 public class ApiResponse<T>
 {
@@ -31,7 +31,7 @@ public class ApiResponse<T>
 }
 
 /// <summary>
-/// Результат операции без возвращаемого значения
+/// Operation result without a return value
 /// </summary>
 public class ApiResponse
 {
@@ -51,7 +51,7 @@ public class ApiResponse
 }
 
 /// <summary>
-/// Информация об ошибке для логирования
+/// Error information for logging
 /// </summary>
 public class ErrorDetail
 {

@@ -11,8 +11,8 @@ using CatalogService.Application.Interfaces;
 namespace CatalogService.Application.Services;
 
 /// <summary>
-/// Обработчик событий для CatalogService
-/// Слушает: order.created (для обновления популярности), stock.reserved
+/// Event handler for CatalogService
+/// Listens to: order.created (to update popularity), stock.reserved
 /// </summary>
 public class CatalogEventConsumer : KafkaEventConsumerBase
 {
@@ -34,7 +34,7 @@ public class CatalogEventConsumer : KafkaEventConsumerBase
     }
 
     /// <summary>
-    /// Обработка входящих событий от OrderService и InventoryService
+    /// Handle incoming events from OrderService and InventoryService
     /// </summary>
     protected override async Task<bool> HandleMessageAsync(string eventType, string json, ConsumeResult<string, string> message)
     {

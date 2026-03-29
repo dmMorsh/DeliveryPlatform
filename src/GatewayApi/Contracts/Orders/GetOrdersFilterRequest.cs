@@ -1,7 +1,7 @@
 ﻿namespace GatewayApi.Contracts.Orders;
 
 /// <summary>
-/// Фильтр для получения заказов
+/// Filter for retrieving orders
 /// </summary>
 public class GetOrdersFilterRequest
 {

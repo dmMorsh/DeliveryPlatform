@@ -2,22 +2,22 @@ namespace Shared.Contracts.Events;
 
 public abstract record IntegrationEvent
 {
-    /// <summary>Timestamp события</summary>
+    /// <summary>Event timestamp</summary>
     public DateTime Timestamp { get; init; } = DateTime.UtcNow;
     
-    /// <summary>Тип события</summary>
+    /// <summary>Event type</summary>
     public abstract string EventType { get; }
     
-    /// <summary>Уникальный идентификатор события</summary>
+    /// <summary>Unique event identifier</summary>
     public string EventId { get; } = Guid.NewGuid().ToString();
     
     
-    /// <summary>Версия события для evolving schema</summary>
+    /// <summary>Event version for evolving schema</summary>
     public abstract int Version { get; }
     
-    /// <summary>Тип корневого агрегата (Order, Courier, etc.)</summary>
+    /// <summary>Root aggregate type (Order, Courier, etc.)</summary>
     public abstract string AggregateType { get; }
     
-    /// <summary>ID корневого агрегата</summary>
+    /// <summary>Root aggregate ID</summary>
     public abstract Guid AggregateId { get; }
 }

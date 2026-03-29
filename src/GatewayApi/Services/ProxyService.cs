@@ -5,7 +5,7 @@ using Shared.Services;
 namespace GatewayApi.Services;
 
 /// <summary>
-/// Сервис для проксирования запросов к микросервисам
+/// Service for proxying requests to microservices
 /// </summary>
 public interface IProxyService
 {

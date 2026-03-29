@@ -4,7 +4,7 @@ using StackExchange.Redis;
 namespace LocationTrackingService.Services;
 
 /// <summary>
-/// Интерфейс для работы с локациями курьеров
+/// Interface for working with courier locations
 /// </summary>
 public interface ILocationService
 {
@@ -14,7 +14,7 @@ public interface ILocationService
 }
 
 /// <summary>
-/// DTO для представления локации курьера
+/// DTO for representing courier location
 /// </summary>
 public class CourierLocationDto
 {
@@ -26,7 +26,7 @@ public class CourierLocationDto
 }
 
 /// <summary>
-/// Реализация сервиса работы с локациями курьеров
+/// Implementation of courier location service
 /// </summary>
 public class LocationService : ILocationService
 {
@@ -50,11 +50,13 @@ public class LocationService : ILocationService
 
     private readonly ILogger<LocationService> _logger;
     private readonly IDatabase _db;
+    private readonly ISubscriber _pub;
 
     public LocationService(ILogger<LocationService> logger, IConnectionMultiplexer mux)
     {
         _logger = logger;
         _db = mux.GetDatabase();
+        _pub = mux.GetSubscriber();
     }
 
     public async Task UpdateCourierLocationAsync(Guid courierId, double latitude, double longitude, int accuracy, DateTimeOffset timestamp)
@@ -75,6 +77,7 @@ public class LocationService : ILocationService
             await _db.StringSetAsync(locationKey, json, LocationTtl);
 
             await TryAppendHistoryAsync(courierId, payload, json);
+            await _pub.PublishAsync("courier.location.updated", json);
 
             _logger.LogInformation(
                 "Location updated for courier {CourierId}: ({Latitude}, {Longitude})",

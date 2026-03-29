@@ -19,11 +19,11 @@ public class CouriersController : ControllerBase
     }
 
     /// <summary>
-    /// Зарегистрировать нового курьера
+    /// Register a new courier
     /// </summary>
-    /// <param name="request">Данные курьера</param>
+    /// <param name="request">Courier data</param>
     /// <param name="ct"></param>
-    /// <returns>Созданный курьер</returns>
+    /// <returns>Created courier</returns>
     [HttpPost]
     public async Task<IActionResult> CreateCourier([FromBody] CreateCourierRequest request, CancellationToken ct)
     {
@@ -47,11 +47,11 @@ public class CouriersController : ControllerBase
     }
 
     /// <summary>
-    /// Получить данные курьера
+    /// Get courier data
     /// </summary>
-    /// <param name="courierId">ID курьера</param>
+    /// <param name="courierId">Courier ID</param>
     /// <param name="ct"></param>
-    /// <returns>Данные курьера</returns>
+    /// <returns>Courier data</returns>
     [HttpGet("{courierId}")]
     public async Task<IActionResult> GetCourier(int courierId, CancellationToken ct)
     {
@@ -77,9 +77,9 @@ public class CouriersController : ControllerBase
     }
 
     /// <summary>
-    /// Получить список активных курьеров (отсортированы по рейтингу)
+    /// Get the list of active couriers (sorted by rating)
     /// </summary>
-    /// <returns>Список активных курьеров</returns>
+    /// <returns>List of active couriers</returns>
     [HttpGet("active")]
     public async Task<IActionResult> GetActiveCouriers(CancellationToken ct)
     {
@@ -102,12 +102,12 @@ public class CouriersController : ControllerBase
     }
 
     /// <summary>
-    /// Получить всех курьеров с пагинацией
+    /// Get all couriers with pagination
     /// </summary>
-    /// <param name="page">Номер страницы</param>
-    /// <param name="pageSize">Размер страницы</param>
+    /// <param name="page">Page number</param>
+    /// <param name="pageSize">Page size</param>
     /// <param name="ct"></param>
-    /// <returns>Список курьеров</returns>
+    /// <returns>List of couriers</returns>
     [HttpGet]
     public async Task<IActionResult> GetCouriers(
         CancellationToken ct,
@@ -134,12 +134,12 @@ public class CouriersController : ControllerBase
     }
 
     /// <summary>
-    /// Обновить данные курьера (статус, локация, рейтинг)
+    /// Update courier data (status, location, rating)
     /// </summary>
-    /// <param name="courierId">ID курьера</param>
-    /// <param name="request">Данные для обновления</param>
+    /// <param name="courierId">Courier ID</param>
+    /// <param name="request">Update data</param>
     /// <param name="ct"></param>
-    /// <returns>Обновленный курьер</returns>
+    /// <returns>Updated courier</returns>
     [HttpPut("{courierId}")]
     public async Task<IActionResult> UpdateCourier(int courierId, [FromBody] UpdateCourierRequest request, CancellationToken ct)
     {

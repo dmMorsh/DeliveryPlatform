@@ -16,63 +16,7 @@ public class CatalogController : ControllerBase
         _logger = logger;
         _proxyService = proxyService;
     }
-
-    // /// <summary>
-    // /// Зарегистрировать новый продукт
-    // /// </summary>
-    // /// <param name="request">Данные продукта</param>
-    // /// <param name="ct"></param>
-    // /// <returns>Созданный продукт</returns>
-    // [HttpPost("product")]
-    // public async Task<IActionResult> CreateProduct([FromBody] CreateCatalogProductRequest request, CancellationToken ct)
-    // {
-    //     _logger.LogInformation("Gateway: Creating product {product}", request.Name);
-    //
-    //     var (data, statusCode, error) = await _proxyService.ProxyPostAsync<dynamic>(
-    //         "catalog-service",
-    //         "/api/catalog",
-    //         HttpContext,
-    //         request,
-    //         ct
-    //     );
-    //
-    //     if (statusCode >= 200 && statusCode < 300)
-    //     {
-    //         return StatusCode(statusCode, data);
-    //     }
-    //
-    //     _logger.LogError("Error creating product: {Error}", error);
-    //     return StatusCode(statusCode, new ProxyErrorResponse { Message = error });
-    // }
-    //
-    // /// <summary>
-    // /// Обновить продукт
-    // /// </summary>
-    // /// <param name="request">Данные продукта</param>
-    // /// <param name="ct"></param>
-    // /// <returns> продукт</returns>
-    // [HttpPut("product")]
-    // public async Task<IActionResult> UpdateProduct([FromBody] UpdateCatalogProductRequest request, CancellationToken ct)
-    // {
-    //     _logger.LogInformation("Gateway: Updating product {product}", request.Name);
-    //
-    //     var (data, statusCode, error) = await _proxyService.ProxyPutAsync<dynamic>(
-    //         "catalog-service",
-    //         $"/api/catalog/{request.Id}",
-    //         HttpContext,
-    //         request, 
-    //         ct
-    //     );
-    //
-    //     if (statusCode >= 200 && statusCode < 300)
-    //     {
-    //         return StatusCode(statusCode, data);
-    //     }
-    //
-    //     _logger.LogError("Error updating product: {Error}", error);
-    //     return StatusCode(statusCode, new ProxyErrorResponse { Message = error });
-    // }
-
+    
     [HttpGet("search")]
     public async Task<IActionResult> Search(CancellationToken ct)
     {

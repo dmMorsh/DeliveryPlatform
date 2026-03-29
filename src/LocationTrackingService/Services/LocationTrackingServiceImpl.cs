@@ -4,7 +4,7 @@ using LocationTracking;
 namespace LocationTrackingService.Services;
 
 /// <summary>
-/// gRPC сервис для трекинга локации курьеров
+/// gRPC service for courier location tracking
 /// </summary>
 public class LocationTrackingServiceImpl : LocationTracking.LocationTrackingService.LocationTrackingServiceBase
 {
@@ -18,7 +18,7 @@ public class LocationTrackingServiceImpl : LocationTracking.LocationTrackingServ
     }
 
     /// <summary>
-    /// Получить текущую локацию курьера
+    /// Get current courier location
     /// </summary>
     public override async Task<CourierLocation> GetCourierLocation(
         GetLocationRequest request,
@@ -56,7 +56,7 @@ public class LocationTrackingServiceImpl : LocationTracking.LocationTrackingServ
     }
 
     /// <summary>
-    /// Обновить локацию курьера (single request)
+    /// Update courier location (single request)
     /// </summary>
     public override async Task<LocationUpdate> UpdateLocation(
         UpdateLocationRequest request,
@@ -95,7 +95,7 @@ public class LocationTrackingServiceImpl : LocationTracking.LocationTrackingServ
     }
 
     /// <summary>
-    /// Обновить локацию курьера (streaming)
+    /// Update courier location (streaming)
     /// </summary>
     public override async Task StreamLocation(
         IAsyncStreamReader<UpdateLocationRequest> requestStream,
@@ -132,7 +132,7 @@ public class LocationTrackingServiceImpl : LocationTracking.LocationTrackingServ
     }
 
     /// <summary>
-    /// Получить историю локации курьера
+    /// Get courier location history
     /// </summary>
     public override async Task<CourierLocationHistory> GetCourierLocationHistory(
         GetLocationHistoryRequest request,

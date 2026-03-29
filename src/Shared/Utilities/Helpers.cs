@@ -3,12 +3,12 @@ namespace Shared.Utilities;
 using Contracts.Events;
 
 /// <summary>
-/// Утилита для сериализации событий в JSON
+/// Utility for serializing events to JSON
 /// </summary>
 public static class EventSerializer
 {
     /// <summary>
-    /// Сериализует интеграционный контракт события в JSON
+    /// Serialize integration event contract to JSON
     /// </summary>
     public static string SerializeEvent(IntegrationEvent @event)
     {
@@ -17,7 +17,7 @@ public static class EventSerializer
     }
 
     /// <summary>
-    /// Десериализует JSON в интеграционный контракт события по типу
+    /// Deserialize JSON into the integration event contract by type
     /// </summary>
     public static IntegrationEvent? DeserializeEvent(string json, string eventType)
     {
@@ -47,12 +47,12 @@ public static class EventSerializer
 }
 
 /// <summary>
-/// Утилита для работы с координатами
+/// Utility for coordinate calculations
 /// </summary>
 public static class GeoUtils
 {
     /// <summary>
-    /// Расстояние между двумя точками в метрах (формула Haversine)
+    /// Distance between two points in meters (Haversine formula)
     /// </summary>
     public static double DistanceInMeters(double lat1, double lon1, double lat2, double lon2)
     {
@@ -73,12 +73,12 @@ public static class GeoUtils
 }
 
 /// <summary>
-/// Утилита для генерации уникальных номеров заказов
+/// Utility for generating unique order numbers
 /// </summary>
 public static class OrderNumberGenerator
 {
     /// <summary>
-    /// Генерирует номер заказа в формате ORD-YYYYMMDD-XXXXXXXX (где X - случайные символы)
+    /// Generate an order number in ORD-YYYYMMDD-XXXXXXXX format (X = random digits)
     /// </summary>
     public static string GenerateOrderNumber()
     {

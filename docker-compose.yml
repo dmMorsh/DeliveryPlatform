@@ -78,7 +78,7 @@ services:
       KAFKA_JMX_PORT: 9101
       KAFKA_JMX_HOSTNAME: kafka
     ports:
-      - "29092:29092" # внешний адресс: localhost:29092
+      - "29092:29092" # external address: localhost:29092
       - "9101:9101"
     healthcheck:
       test:
